@@ -17,9 +17,17 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-from verify import ROOT, environment, run
+from verify import ROOT, environment, load_packages, run
 
 ARTIFACTS = ROOT / "artifacts"
+
+
+def manifest_package(language):
+    """Return the tools/packages.json entry for the given language."""
+    for package in load_packages():
+        if package["language"] == language:
+            return package
+    raise SystemExit(f"No package with language {language!r} in tools/packages.json")
 
 
 def write(path, content):
@@ -57,7 +65,14 @@ def main():
     run("shared package files", [sys.executable, "tools/sync-shared.py", "--check"], env=env)
     run(
         "npm tarball build",
-        [npm, "pack", "--workspace", "texthue", "--pack-destination", ARTIFACTS],
+        [
+            npm,
+            "pack",
+            "--workspace",
+            manifest_package("javascript")["publish"]["packageName"],
+            "--pack-destination",
+            ARTIFACTS,
+        ],
         env=env,
     )
     python_build(ROOT / "packages/python", ARTIFACTS, env, source=True)
@@ -75,35 +90,14 @@ def main():
     with tarfile.open(npm_archive) as archive:
         names = set(archive.getnames())
         required = {
-            "package/" + path
-            for path in (
-                "dist/index.js",
-                "dist/index.d.ts",
-                "src/index.ts",
-                "README.md",
-                "SPECIFICATION.md",
-                "LICENSE",
-                "THIRD_PARTY_NOTICES.md",
-                "examples/browser.html",
-                "examples/typescript.ts",
-            )
+            "package/" + path for path in manifest_package("javascript")["archiveRequiredFiles"]
         }
         if not required <= names:
             raise SystemExit(f"npm archive missing: {required - names}")
     with zipfile.ZipFile(wheel) as archive:
         names = set(archive.namelist())
         required = {
-            "texthue/" + path
-            for path in (
-                "__init__.py",
-                "_core.py",
-                "_types.py",
-                "py.typed",
-                "_docs/README.md",
-                "_docs/SPECIFICATION.md",
-                "_docs/LICENSE",
-                "_docs/THIRD_PARTY_NOTICES.md",
-            )
+            "texthue/" + path for path in manifest_package("python")["archiveRequiredFiles"]
         }
         if not required <= names:
             raise SystemExit(f"Python wheel missing: {required - names}")
@@ -245,7 +239,7 @@ print('Installed Python wheel passed all valid and invalid fixtures.')
             for name in package_files:
                 if original.read(name) != second.read(name):
                     raise SystemExit(f"Source distribution rebuild changed {name}")
-        module = "github.com/HusteDev/texthue/packages/go"
+        module = manifest_package("go")["publish"]["modulePath"]
         write(
             consumer / "go.mod",
             f'module example.com/texthue-consumer\n\ngo 1.23.0\n\nrequire {module} v0.0.0\nreplace {module} => "{(ROOT / "packages/go").as_posix()}"\n',

@@ -1,0 +1,61 @@
+{
+  "$comment": "Manifest of every TextHue distribution. tools/sync-shared.py, tools/check-version.py, and tools/lint-go.py read this file directly; tools/verify.py and tools/build-packages.py read package-specific paths and commands from it while keeping their own explicit, dependency-ordered step sequence (the steps are not independent enough to run as a generic per-package loop: Python and Go's tests both require the npm package to be built first, for example). See CONTRIBUTING.md for how to add a new package.",
+  "packages": [
+    {
+      "id": "npm",
+      "language": "javascript",
+      "dir": "packages/npm",
+      "versionFiles": [
+        { "path": "package.json", "kind": "json", "field": "version" },
+        { "path": "packages/npm/package.json", "kind": "json", "field": "version" }
+      ],
+      "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+      "conformanceRunner": ["node", "--input-type=module", "-e",
+        "import{resolveTextColors}from'./packages/npm/dist/index.js';import{readFileSync}from'node:fs';const cases=JSON.parse(readFileSync(0,'utf8'));const out=[];for(const c of cases)out.push(await resolveTextColors(c.text,c.options));process.stdout.write(JSON.stringify(out));"],
+      "coverageFlag": "javascript",
+      "archiveRequiredFiles": [
+        "dist/index.js", "dist/index.d.ts", "src/index.ts", "README.md",
+        "SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md",
+        "examples/browser.html", "examples/typescript.ts"
+      ],
+      "publish": { "registry": "npm", "packageName": "texthue" }
+    },
+    {
+      "id": "python",
+      "language": "python",
+      "dir": "packages/python",
+      "versionFiles": [
+        { "path": "packages/python/pyproject.toml", "kind": "toml", "field": ["project", "version"] },
+        { "path": "packages/python/src/texthue/__init__.py", "kind": "pyRegex",
+          "pattern": "^__version__ = \"([^\"]+)\"$" }
+      ],
+      "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+      "extraSyncTargets": [
+        { "source": "package:README.md", "dest": "src/texthue/_docs/README.md" },
+        { "source": "root:SPECIFICATION.md", "dest": "src/texthue/_docs/SPECIFICATION.md" },
+        { "source": "root:LICENSE", "dest": "src/texthue/_docs/LICENSE" },
+        { "source": "root:THIRD_PARTY_NOTICES.md", "dest": "src/texthue/_docs/THIRD_PARTY_NOTICES.md" }
+      ],
+      "conformanceRunner": null,
+      "coverageFlag": "python",
+      "archiveRequiredFiles": [
+        "__init__.py", "_core.py", "_types.py", "py.typed",
+        "_docs/README.md", "_docs/SPECIFICATION.md", "_docs/LICENSE", "_docs/THIRD_PARTY_NOTICES.md"
+      ],
+      "publish": { "registry": "pypi", "packageName": "texthue" }
+    },
+    {
+      "id": "go",
+      "language": "go",
+      "dir": "packages/go",
+      "versionFiles": [],
+      "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+      "extraSyncTargets": [
+        { "source": "root:conformance/vectors.json", "dest": "testdata/vectors.json" }
+      ],
+      "conformanceRunner": ["go", "-C", "packages/go", "run", "./cmd/conformance"],
+      "coverageFlag": "go",
+      "publish": { "registry": "go-module", "modulePath": "github.com/HusteDev/texthue/packages/go" }
+    }
+  ]
+}

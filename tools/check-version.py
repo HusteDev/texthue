@@ -2,9 +2,11 @@
 
 Usage: python tools/check-version.py [EXPECTED]
 
-Checks the root package.json, the npm package.json, the Python pyproject.toml,
-and the Python package's ``__version__``. With EXPECTED, also requires that
-shared version to equal it. Prints the version on success.
+Reads each package's ``versionFiles`` from tools/packages.json (a JSON
+field, a TOML field, or a ``__version__ = "..."`` regex match), requires
+they all agree, and, with EXPECTED, that the shared version also equals it.
+Prints the version on success. A package with no ``versionFiles`` (Go, whose
+release version comes from its Git tag; see docs/RELEASING.md) is skipped.
 """
 
 import json
@@ -16,29 +18,45 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def load_packages():
+    """Return the package list from tools/packages.json."""
+    manifest = json.loads((ROOT / "tools/packages.json").read_text(encoding="utf-8"))
+    return manifest["packages"]
+
+
+def read_version(spec):
+    """Read one version value from a versionFiles entry."""
+    path = ROOT / spec["path"]
+    if spec["kind"] == "json":
+        return json.loads(path.read_text(encoding="utf-8"))[spec["field"]]
+    if spec["kind"] == "toml":
+        document = tomllib.loads(path.read_text(encoding="utf-8"))
+        value = document
+        for key in spec["field"]:
+            value = value[key]
+        return value
+    if spec["kind"] == "pyRegex":
+        match = re.search(spec["pattern"], path.read_text(encoding="utf-8"), re.MULTILINE)
+        if not match:
+            raise SystemExit(f"{spec['pattern']!r} not found in {spec['path']}")
+        return match.group(1)
+    raise SystemExit(f"Unknown versionFiles kind: {spec['kind']!r}")
+
+
 def versions():
-    """Return {label: version} for every manifest that carries the release version."""
+    """Return {path: version} for every version file declared by every package."""
     found = {}
-    for label, path in (
-        ("package.json", "package.json"),
-        ("packages/npm/package.json", "packages/npm/package.json"),
-    ):
-        found[label] = json.loads((ROOT / path).read_text(encoding="utf-8"))["version"]
-    pyproject = ROOT / "packages/python/pyproject.toml"
-    found["packages/python/pyproject.toml"] = tomllib.loads(pyproject.read_text(encoding="utf-8"))[
-        "project"
-    ]["version"]
-    init = (ROOT / "packages/python/src/texthue/__init__.py").read_text(encoding="utf-8")
-    match = re.search(r'^__version__ = "([^"]+)"$', init, re.MULTILINE)
-    if not match:
-        raise SystemExit("__version__ not found in packages/python/src/texthue/__init__.py")
-    found["packages/python/src/texthue/__init__.py"] = match.group(1)
+    for package in load_packages():
+        for spec in package.get("versionFiles", []):
+            found[spec["path"]] = read_version(spec)
     return found
 
 
 def main():
     """Compare every manifest version, and the optional expected version, then print it."""
     found = versions()
+    if not found:
+        raise SystemExit("No versionFiles declared in tools/packages.json")
     distinct = set(found.values())
     if len(distinct) != 1:
         lines = "\n".join(f"  {label}: {version}" for label, version in found.items())

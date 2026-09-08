@@ -4,6 +4,16 @@ name: Publish
 # Start it manually from the Actions tab. Every target is opt-in and the build
 # job verifies the tree and the version before any upload happens.
 #
+# Resumability: the build job uploads the verified archives and a
+# release-manifest.json (commit, versions, algorithm identifier, archive
+# digests) as assets on a draft GitHub release before any registry upload.
+# Each publish-* job checks its own target's state (absent/matching/
+# conflicting/lookup-failed; see tools/release.py) before publishing, so
+# re-running this workflow with only the failed target(s) selected reuses
+# the same tested bytes rather than rebuilding, skips a target that already
+# matches, and refuses to overwrite a conflicting one. A lookup failure
+# (registry unreachable) is never treated as "safe to publish".
+#
 # One-time setup:
 #   * npm:  either an NPM_TOKEN repository secret (granular automation token
 #           with publish rights) or npm trusted publishing configured for
@@ -33,7 +43,7 @@ on:
         type: boolean
         default: true
       github_release:
-        description: Create a GitHub release with the built archives
+        description: Create (or promote the draft of) a GitHub release with the built archives
         type: boolean
         default: true
 
@@ -50,8 +60,10 @@ env:
 
 jobs:
   build:
-    name: Verify and build
+    name: Verify, build, and stage a draft release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
@@ -76,25 +88,59 @@ jobs:
         id: version
         env:
           REQUESTED: ${{ inputs.version }}
-        run: echo "version=$(python tools/check-version.py "$REQUESTED")" >> "$GITHUB_OUTPUT"
-      - name: Refuse to publish over an existing tag
+        # The version is read into a variable on its own line, not embedded
+        # in the echo/GITHUB_OUTPUT command, so a failing check-version.py
+        # stops this step under `set -e` instead of writing an empty-but-
+        # "successful" output that downstream jobs would then publish under.
+        run: |
+          set -euo pipefail
+          VERSION=$(python tools/release.py check-version "$REQUESTED")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - run: python tools/verify.py
+      - run: python tools/build-packages.py
+      - name: Write the release manifest (commit, versions, algorithm id, archive digests)
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          for tag in "v$VERSION" "packages/go/v$VERSION"; do
-            if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-              echo "::error::Tag $tag already exists. Bump the version before publishing."
-              exit 1
-            fi
-          done
-      - run: python tools/verify.py
-      - run: python tools/build-packages.py
+          set -euo pipefail
+          python tools/release.py manifest \
+            --version "$VERSION" \
+            --commit "$GITHUB_SHA" \
+            --algorithm-version text-to-color-v1 \
+            --artifacts artifacts \
+            --out artifacts/release-manifest.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: distributions
           path: artifacts/
           if-no-files-found: error
           retention-days: 14
+      - name: Create or reuse a draft GitHub release holding the tested bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        # A draft release is the durable, inspectable place the tested
+        # archives and manifest live before any registry sees them. If a
+        # prior run already created it (this run is a resume), reuse it and
+        # refuse to touch it if it was already published (never move/replace
+        # a released tag's assets). Re-running never rebuilds these bytes:
+        # every later job downloads this same "distributions" artifact.
+        run: |
+          set -euo pipefail
+          if gh release view "v${VERSION}" --json isDraft --jq .isDraft > draft_state.txt 2>/dev/null; then
+            if [ "$(cat draft_state.txt)" != "true" ]; then
+              echo "::error::v${VERSION} is already a published (non-draft) release. Bump the version to publish new bytes, or use the manual fallback in docs/RELEASING.md to attach a missed asset."
+              exit 1
+            fi
+            echo "Reusing existing draft release v${VERSION}."
+            gh release upload "v${VERSION}" artifacts/* --clobber
+          else
+            gh release create "v${VERSION}" artifacts/* \
+              --target "$GITHUB_SHA" \
+              --title "TextHue ${VERSION}" \
+              --generate-notes \
+              --draft
+          fi
 
   publish-npm:
     name: Publish npm
@@ -112,6 +158,10 @@ jobs:
         with:
           name: distributions
           path: artifacts
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: tools
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
@@ -119,7 +169,19 @@ jobs:
         run: |
           npm --version
           node -e "const [a,b,c]=process.versions.npm.split('.').map(Number); if (a<11||(a===11&&(b<5||(b===5&&c<1)))) { console.error('npm 11.5.1+ is required'); process.exit(1) }"
+      - name: Check the npm registry's current state for this version
+        id: state
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        # Exits nonzero (failing this job) for "conflicting" or
+        # "lookup-failed" — never silently republished over, and never
+        # skipped just because the registry could not be reached.
+        run: |
+          set -euo pipefail
+          STATE=$(python3 tools/release.py npm-state --package texthue --version "$VERSION" --tarball "artifacts/texthue-${VERSION}.tgz")
+          echo "state=$STATE" >> "$GITHUB_OUTPUT"
       - name: Configure npm authentication
+        if: steps.state.outputs.state == 'absent'
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
@@ -130,9 +192,13 @@ jobs:
             echo "No NPM_TOKEN secret; relying on npm trusted publishing (OIDC)."
           fi
       - name: Publish the tested tarball
+        if: steps.state.outputs.state == 'absent'
         env:
           VERSION: ${{ needs.build.outputs.version }}
         run: npm publish "artifacts/texthue-${VERSION}.tgz" --provenance --access public
+      - name: Already published with these exact bytes
+        if: steps.state.outputs.state == 'matching'
+        run: echo "npm already has texthue@${{ needs.build.outputs.version }} with matching bytes; skipping."
 
   publish-pypi:
     name: Publish PyPI
@@ -150,7 +216,23 @@ jobs:
         with:
           name: distributions
           path: artifacts
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: tools
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Check PyPI's current state for this version
+        id: state
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          STATE=$(python tools/release.py pypi-state --package texthue --version "$VERSION" --dist artifacts)
+          echo "state=$STATE" >> "$GITHUB_OUTPUT"
       - name: Select the wheel and source distribution
+        if: steps.state.outputs.state == 'absent'
         env:
           VERSION: ${{ needs.build.outputs.version }}
         run: |
@@ -158,8 +240,12 @@ jobs:
           cp "artifacts/texthue-${VERSION}-py3-none-any.whl" "artifacts/texthue-${VERSION}.tar.gz" dist/
           ls -l dist
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        if: steps.state.outputs.state == 'absent'
         with:
           print-hash: true
+      - name: Already published with these exact bytes
+        if: steps.state.outputs.state == 'matching'
+        run: echo "PyPI already has texthue==${{ needs.build.outputs.version }} with matching bytes; skipping."
 
   publish-go:
     name: Tag Go module
@@ -176,7 +262,18 @@ jobs:
         with:
           go-version: '1.23'
           cache: false
+      - name: Check the module proxy's current state for this version's tag
+        id: state
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        # A tag at a different commit than this release's is a hard
+        # conflict: the workflow must never move or replace an existing tag.
+        run: |
+          set -euo pipefail
+          STATE=$(python3 tools/release.py go-state --module-path "$MODULE" --version "$VERSION" --commit "$GITHUB_SHA")
+          echo "state=$STATE" >> "$GITHUB_OUTPUT"
       - name: Create and push the module tag
+        if: steps.state.outputs.state == 'absent'
         env:
           VERSION: ${{ needs.build.outputs.version }}
           GH_TOKEN: ${{ github.token }}
@@ -186,6 +283,7 @@ jobs:
           git tag -a "packages/go/v${VERSION}" -m "TextHue Go v${VERSION}" "$GITHUB_SHA"
           git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "refs/tags/packages/go/v${VERSION}"
       - name: Ask the Go module proxy to index the release
+        if: steps.state.outputs.state == 'absent'
         continue-on-error: true
         env:
           VERSION: ${{ needs.build.outputs.version }}
@@ -200,28 +298,24 @@ jobs:
             sleep 30
           done
           echo "::warning::proxy.golang.org did not confirm the release; it will index on first download."
+      - name: Already published at this commit
+        if: steps.state.outputs.state == 'matching'
+        run: echo "packages/go/v${{ needs.build.outputs.version }} already tags this commit; skipping."
 
   github-release:
-    name: GitHub release
+    name: Promote the draft GitHub release
     if: inputs.github_release && !failure() && !cancelled()
     needs: [build, publish-npm, publish-pypi, publish-go]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: distributions
-          path: artifacts
-      - name: Create the release with the built archives and checksums
+      - name: Publish the draft release created by the build job
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.build.outputs.version }}
-        run: |
-          gh release create "v${VERSION}" artifacts/* \
-            --target "$GITHUB_SHA" \
-            --title "TextHue ${VERSION}" \
-            --generate-notes
+        # The draft (with its archives, SHA256SUMS, and release-manifest.json
+        # already attached by the build job) is promoted in place rather
+        # than recreated, so the released assets are exactly the ones every
+        # publish-* job checked its target's state against.
+        run: gh release edit "v${VERSION}" --repo "$GITHUB_REPOSITORY" --draft=false

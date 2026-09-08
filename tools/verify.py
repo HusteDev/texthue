@@ -6,6 +6,7 @@ vectors, and validates shared-file copies and documentation links. It never
 publishes or uploads anything.
 """
 
+import json
 import os
 import re
 import shutil
@@ -14,6 +15,20 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_packages():
+    """Return the package list from tools/packages.json."""
+    manifest = json.loads((ROOT / "tools/packages.json").read_text(encoding="utf-8"))
+    return manifest["packages"]
+
+
+def package_dir(language):
+    """Return the directory (relative to ROOT) of the manifest package with the given language."""
+    for package in load_packages():
+        if package["language"] == language:
+            return package["dir"]
+    raise SystemExit(f"No package with language {language!r} in tools/packages.json")
 
 
 def run(label, command, *, cwd=ROOT, env=None, timeout=180):
@@ -94,13 +109,14 @@ def main():
         [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"],
         env=env,
     )
+    go_dir = package_dir("go")
     run(
         "Go conformance, concurrency, sweeps, and examples",
-        ["go", "-C", "packages/go", "test", "-count=1", "./..."],
+        ["go", "-C", go_dir, "test", "-count=1", "./..."],
         env=env,
     )
-    run("Go static checks", ["go", "-C", "packages/go", "vet", "./..."], env=env)
-    formatted = run("Go formatting", ["gofmt", "-l", "packages/go"], env=env)
+    run("Go static checks", ["go", "-C", go_dir, "vet", "./..."], env=env)
+    formatted = run("Go formatting", ["gofmt", "-l", go_dir], env=env)
     if formatted.strip():
         raise SystemExit("Go files need gofmt:\n" + formatted)
     run("Python lint (ruff)", [sys.executable, "-m", "ruff", "check", "."], env=env)
@@ -114,18 +130,22 @@ def main():
         run(
             "Go lint (golangci-lint)",
             ["golangci-lint", "run", "./..."],
-            cwd=ROOT / "packages/go",
+            cwd=ROOT / go_dir,
             env=env,
         )
     else:
         print("SKIP: Go lint (golangci-lint not on PATH; the pre-commit hook and CI run it)")
+    npm_package = next(p for p in load_packages() if p["language"] == "javascript")["publish"][
+        "packageName"
+    ]
     run(
         "JavaScript and CommonJS examples",
-        [npm, "run", "examples", "--workspace", "texthue"],
+        [npm, "run", "examples", "--workspace", npm_package],
         env=env,
     )
-    python_env = dict(env, PYTHONPATH=str(ROOT / "packages/python/src"))
-    for path in sorted((ROOT / "packages/python/examples").glob("*.py")):
+    python_dir = package_dir("python")
+    python_env = dict(env, PYTHONPATH=str(ROOT / python_dir / "src"))
+    for path in sorted((ROOT / python_dir / "examples").glob("*.py")):
         run(f"Python example {path.name}", [sys.executable, path], env=python_env)
     check_links()
     print("All local verification checks passed. No packages were published.")

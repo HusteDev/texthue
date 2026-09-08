@@ -2,14 +2,29 @@
 
 Runs from any working directory. golangci-lint must be on PATH; the
 pre-commit hook installs it into an isolated Go environment automatically.
+The module directory comes from the "go" package's "dir" in
+tools/packages.json.
 """
 
+import json
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-MODULE = Path(__file__).resolve().parents[1] / "packages" / "go"
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def go_module_dir():
+    """Return the directory of the manifest package whose language is "go"."""
+    manifest = json.loads((ROOT / "tools/packages.json").read_text(encoding="utf-8"))
+    for package in manifest["packages"]:
+        if package["language"] == "go":
+            return ROOT / package["dir"]
+    raise SystemExit('No package with "language": "go" in tools/packages.json')
+
+
+MODULE = go_module_dir()
 
 
 def run(command):
