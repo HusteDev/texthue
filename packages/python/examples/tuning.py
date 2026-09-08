@@ -1,0 +1,45 @@
+"""Exercise every option, fixed ranges, grayscale, and an unattainable contrast target."""
+
+import json
+
+from texthue import TextColorOptions, resolve_text_colors
+
+options: TextColorOptions = {
+    "namespace": "workspace:demo",
+    "backgrounds": {"light": "#f5f0e8", "dark": "#20242b"},
+    "contrastTarget": 7,
+    "profiles": {
+        "light": {
+            "fill": {"lightness": [0.74, 0.84], "chroma": [0.08, 0.14]},
+            "accent": {"lightness": [0.40, 0.52], "chroma": [0.10, 0.16]},
+        },
+        "dark": {
+            "fill": {"lightness": [0.38, 0.48], "chroma": [0.08, 0.14]},
+            "accent": {"lightness": [0.74, 0.86], "chroma": [0.10, 0.16]},
+        },
+    },
+}
+print(json.dumps(resolve_text_colors("project:atlas", options), indent=2))
+
+gray = resolve_text_colors(
+    "plain",
+    {
+        "profiles": {"light": {"fill": {"lightness": [0.75, 0.75], "chroma": [0, 0]}}},
+    },
+)
+print("Fixed preferred lightness, grayscale:", gray["light"]["fill"])
+
+impossible = resolve_text_colors(
+    "project:atlas",
+    {
+        "backgrounds": {"light": "#777777"},
+        "contrastTarget": 7,
+    },
+)
+status = impossible["light"]["contrast"]["accent"]
+if not status["meetsTarget"]:
+    print(
+        "Use the returned fallback or change the background/target:",
+        impossible["light"]["accent"]["hex"],
+        status,
+    )

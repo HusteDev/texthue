@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TextHue browser example</title>
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem auto; max-width: 58rem; padding: 0 1rem; }
+  label { display: block; margin: 1rem 0; }
+  input, select { font: inherit; padding: .35rem; }
+  #surface { padding: 1.5rem; border: 1px solid #888; }
+  #fill { display: inline-block; padding: .75rem 1rem; border-radius: .4rem; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+</style>
+<h1>TextHue</h1>
+<p>Exact text and settings generate the same colors. This example runs entirely in your browser.</p>
+<label>Text <input id="text" value="research"></label>
+<label>Namespace <input id="namespace" value=""></label>
+<label>Theme <select id="theme"><option value="light">Light</option><option value="dark">Dark</option></select></label>
+<p id="status" role="status"></p>
+<section id="surface" aria-label="Color preview">
+  <span id="fill">Fill with readable foreground</span>
+  <p id="accent">Accent text on the declared background</p>
+</section>
+<pre id="output"></pre>
+<script type="module">
+  import { resolveTextColors } from '../dist/index.js';
+
+  const text = document.querySelector('#text');
+  const namespace = document.querySelector('#namespace');
+  const theme = document.querySelector('#theme');
+  const output = document.querySelector('#output');
+  const status = document.querySelector('#status');
+  let revision = 0;
+  async function update() {
+    const current = ++revision;
+    try {
+      const colors = await resolveTextColors(text.value, { namespace: namespace.value });
+      if (current !== revision) return;
+      const palette = colors[theme.value];
+      document.querySelector('#surface').style.backgroundColor = palette.background.hex;
+      document.querySelector('#fill').style.backgroundColor = palette.fill.hex;
+      document.querySelector('#fill').style.color = palette.onFill.hex;
+      document.querySelector('#accent').style.color = palette.accent.hex;
+      output.textContent = JSON.stringify(palette, null, 2);
+      status.textContent = `Generated with ${colors.version}`;
+    } catch (error) {
+      if (current !== revision) return;
+      status.textContent = error.message;
+      output.textContent = '';
+    }
+  }
+  for (const control of [text, namespace, theme]) control.addEventListener('input', update);
+  update();
+</script>
+</html>

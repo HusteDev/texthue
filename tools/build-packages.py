@@ -1,0 +1,283 @@
+"""Build the npm tarball, Python wheel and sdist, and test them in isolated consumers.
+
+Outputs go to the ignored ``artifacts/`` directory with a ``SHA256SUMS`` file.
+Each archive is installed into a temporary consumer and checked against the
+frozen conformance vectors; the sdist is rebuilt and compared to the wheel;
+and a separate Go module consumes the package through a local replacement.
+Nothing is uploaded.
+"""
+
+import hashlib
+import json
+import os
+import shutil
+import sys
+import tarfile
+import tempfile
+import zipfile
+from pathlib import Path
+
+from verify import ROOT, environment, run
+
+ARTIFACTS = ROOT / "artifacts"
+
+
+def write(path, content):
+    """Write UTF-8 text to path, creating parent directories as needed."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
+def python_build(package, destination, env, *, source=False):
+    """Build a wheel (and optionally an sdist) from package into destination using setuptools directly.
+
+    Stale ``build/`` and ``*.egg-info`` outputs from earlier runs are removed
+    first; setuptools would otherwise package files that no longer exist in
+    the source tree.
+    """
+    for stale in [package / "build", *(package / "src").glob("*.egg-info")]:
+        shutil.rmtree(stale, ignore_errors=True)
+    script = (
+        "import setuptools.build_meta as backend; "
+        f"backend.build_wheel({str(destination)!r}); "
+        + (f"backend.build_sdist({str(destination)!r})" if source else "")
+    )
+    run("Python distribution build", [sys.executable, "-c", script], cwd=package, env=env)
+
+
+def main():
+    """Build all distributions, verify their contents, and exercise each in an isolated consumer."""
+    ARTIFACTS.mkdir(exist_ok=True)
+    cache = ROOT / ".cache"
+    cache.mkdir(exist_ok=True)
+    env = environment()
+    npm = shutil.which("npm.cmd" if os.name == "nt" else "npm")
+    if not npm:
+        raise SystemExit("npm is required; run npm ci first.")
+    run("shared package files", [sys.executable, "tools/sync-shared.py", "--check"], env=env)
+    run(
+        "npm tarball build",
+        [npm, "pack", "--workspace", "texthue", "--pack-destination", ARTIFACTS],
+        env=env,
+    )
+    python_build(ROOT / "packages/python", ARTIFACTS, env, source=True)
+    npm_version = json.loads((ROOT / "packages/npm/package.json").read_text(encoding="utf-8"))[
+        "version"
+    ]
+    import tomllib
+
+    python_version = tomllib.loads(
+        (ROOT / "packages/python/pyproject.toml").read_text(encoding="utf-8")
+    )["project"]["version"]
+    npm_archive = ARTIFACTS / f"texthue-{npm_version}.tgz"
+    wheel = ARTIFACTS / f"texthue-{python_version}-py3-none-any.whl"
+    sdist = ARTIFACTS / f"texthue-{python_version}.tar.gz"
+    with tarfile.open(npm_archive) as archive:
+        names = set(archive.getnames())
+        required = {
+            "package/" + path
+            for path in (
+                "dist/index.js",
+                "dist/index.d.ts",
+                "src/index.ts",
+                "README.md",
+                "SPECIFICATION.md",
+                "LICENSE",
+                "THIRD_PARTY_NOTICES.md",
+                "examples/browser.html",
+                "examples/typescript.ts",
+            )
+        }
+        if not required <= names:
+            raise SystemExit(f"npm archive missing: {required - names}")
+    with zipfile.ZipFile(wheel) as archive:
+        names = set(archive.namelist())
+        required = {
+            "texthue/" + path
+            for path in (
+                "__init__.py",
+                "_core.py",
+                "_types.py",
+                "py.typed",
+                "_docs/README.md",
+                "_docs/SPECIFICATION.md",
+                "_docs/LICENSE",
+                "_docs/THIRD_PARTY_NOTICES.md",
+            )
+        }
+        if not required <= names:
+            raise SystemExit(f"Python wheel missing: {required - names}")
+        if any(name.endswith(".py") and "/_docs/" in name for name in names):
+            raise SystemExit("Python wheel must not bundle example scripts")
+    with tempfile.TemporaryDirectory(prefix="package-check-", dir=cache) as temporary:
+        consumer = Path(temporary).resolve()
+        if not consumer.is_relative_to(cache.resolve()):
+            raise SystemExit("Temporary consumer escaped the workspace cache.")
+        write(
+            consumer / "package.json",
+            '{"name":"texthue-local-consumer","private":true,"type":"module"}\n',
+        )
+        run(
+            "isolated npm installation",
+            [
+                npm,
+                "install",
+                "--ignore-scripts",
+                "--no-audit",
+                "--no-fund",
+                "--offline",
+                npm_archive,
+            ],
+            cwd=consumer,
+            env=env,
+        )
+        shutil.copy2(ROOT / "conformance/vectors.json", consumer / "vectors.json")
+        write(
+            consumer / "check.mjs",
+            """import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolveTextColors, TextColorError } from 'texthue';
+const fixture = JSON.parse(readFileSync(new URL('./vectors.json', import.meta.url), 'utf8'));
+for (const item of fixture.vectors) {
+  const actual = await resolveTextColors(item.text, item.options);
+  for (const theme of ['light', 'dark']) for (const role of ['background', 'fill', 'onFill', 'accent']) {
+    assert.equal(actual[theme][role].hex, item.expected[theme][role].hex);
+    assert.deepEqual(actual[theme][role].rgb, item.expected[theme][role].rgb);
+  }
+}
+for (const item of fixture.invalid) {
+  await assert.rejects(resolveTextColors(item.text, item.options), error => error instanceof TextColorError && error.code === item.code);
+}
+console.log('Packed npm package passed all valid and invalid fixtures.');
+""",
+        )
+        run("packed npm conformance", ["node", "check.mjs"], cwd=consumer, env=env)
+        write(
+            consumer / "check.ts",
+            """import { resolveTextColors, type TextColorOptions, type ColorSet } from 'texthue';
+const options: TextColorOptions = { namespace: 'consumer', profiles: { light: { fill: { chroma: [0, 0] } } } };
+const result: ColorSet = await resolveTextColors('research', options);
+console.log(result.light.fill.hex);
+// @ts-expect-error contrastTarget is numeric, never a string.
+const invalid: TextColorOptions = { contrastTarget: '7' };
+void invalid;
+""",
+        )
+        write(
+            consumer / "tsconfig.json",
+            json.dumps(
+                {
+                    "compilerOptions": {
+                        "module": "NodeNext",
+                        "moduleResolution": "NodeNext",
+                        "target": "ES2022",
+                        "strict": True,
+                        "noEmit": True,
+                    },
+                    "files": ["check.ts"],
+                }
+            ),
+        )
+        tsc = ROOT / "node_modules/.bin" / ("tsc.cmd" if os.name == "nt" else "tsc")
+        run(
+            "packed TypeScript declarations",
+            [tsc, "-p", consumer / "tsconfig.json"],
+            cwd=consumer,
+            env=env,
+        )
+        target = consumer / "python-installed"
+        run(
+            "isolated wheel installation",
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "--disable-pip-version-check",
+                "--no-index",
+                "--no-deps",
+                "--target",
+                target,
+                wheel,
+            ],
+            cwd=consumer,
+            env=env,
+        )
+        write(
+            consumer / "check.py",
+            """import json
+from pathlib import Path
+import texthue
+from texthue import resolve_text_colors, TextColorError
+assert Path(texthue.__file__).resolve().is_relative_to(Path('python-installed').resolve())
+fixture = json.loads(Path('vectors.json').read_text(encoding='utf-8'))
+for item in fixture['vectors']:
+    actual = resolve_text_colors(item['text'], item['options'])
+    for theme in ('light', 'dark'):
+        for role in ('background', 'fill', 'onFill', 'accent'):
+            assert actual[theme][role]['hex'] == item['expected'][theme][role]['hex']
+            assert actual[theme][role]['rgb'] == item['expected'][theme][role]['rgb']
+for item in fixture['invalid']:
+    try:
+        resolve_text_colors(item['text'], item.get('options', {}))
+    except TextColorError as error:
+        assert error.code == item['code']
+    else:
+        raise AssertionError(item['id'])
+print('Installed Python wheel passed all valid and invalid fixtures.')
+""",
+        )
+        run(
+            "installed wheel conformance",
+            [sys.executable, "check.py"],
+            cwd=consumer,
+            env=dict(env, PYTHONPATH=str(target)),
+        )
+        source_root = consumer / "source"
+        source_root.mkdir()
+        with tarfile.open(sdist) as archive:
+            archive.extractall(source_root, filter="data")
+        rebuilt = consumer / "rebuilt"
+        rebuilt.mkdir()
+        python_build(source_root / f"texthue-{python_version}", rebuilt, env)
+        with zipfile.ZipFile(wheel) as original, zipfile.ZipFile(rebuilt / wheel.name) as second:
+            package_files = [name for name in original.namelist() if name.startswith("texthue/")]
+            for name in package_files:
+                if original.read(name) != second.read(name):
+                    raise SystemExit(f"Source distribution rebuild changed {name}")
+        module = "github.com/HusteDev/texthue/packages/go"
+        write(
+            consumer / "go.mod",
+            f'module example.com/texthue-consumer\n\ngo 1.23.0\n\nrequire {module} v0.0.0\nreplace {module} => "{(ROOT / "packages/go").as_posix()}"\n',
+        )
+        write(
+            consumer / "main.go",
+            f"""package main
+import (
+    "fmt"
+    texthue "{module}"
+)
+func main() {{
+    colors, err := texthue.Resolve("research", nil)
+    if err != nil {{ panic(err) }}
+    if colors.Light.Fill.Hex != "#bf97fc" {{ panic("unexpected color") }}
+    fmt.Println(colors.Light.Fill.Hex)
+}}
+""",
+        )
+        run("isolated Go module consumer", ["go", "run", "."], cwd=consumer, env=env)
+    checksums = {
+        path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in (npm_archive, wheel, sdist)
+    }
+    write(
+        ARTIFACTS / "SHA256SUMS",
+        "".join(f"{digest}  {name}\n" for name, digest in checksums.items()),
+    )
+    print(
+        "Package builds and isolated consumers passed. Artifacts are in artifacts/. Nothing was published."
+    )
+
+
+if __name__ == "__main__":
+    main()

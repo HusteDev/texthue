@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+node_modules/
+.DS_Store
+Thumbs.db
+dist/
+build/
+*.egg-info/
+.cache/
+artifacts/
+.pytest_cache/
+.ruff_cache/
+coverage/
+.coverage
+coverage.xml

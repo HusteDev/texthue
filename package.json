@@ -1,0 +1,29 @@
+{
+  "name": "texthue-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TextHue cross-language deterministic color libraries",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "workspaces": ["packages/npm"],
+  "scripts": {
+    "build": "npm run build --workspace texthue",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "test:types": "npm run test:types --workspace texthue",
+    "test:go": "go -C packages/go test ./...",
+    "test:python": "python -m unittest discover -s tests -p test_*.py",
+    "lint": "biome check --error-on-warnings .",
+    "lint:fix": "biome check --write .",
+    "lint:python": "ruff check . && black --check .",
+    "lint:go": "python tools/lint-go.py",
+    "coverage": "npm run build && node -e \"require('node:fs').mkdirSync('coverage', { recursive: true })\" && node --test --enable-source-maps --experimental-test-coverage --test-coverage-include=packages/npm/** --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/js.lcov tests/*.test.mjs",
+    "coverage:python": "coverage run -m unittest discover -s tests -p test_*.py && coverage xml",
+    "coverage:go": "node -e \"require('node:fs').mkdirSync('coverage', { recursive: true })\" && go -C packages/go test -count=1 -covermode=atomic -coverprofile=../../coverage/go.out ./...",
+    "vectors:check": "node tools/build-vectors.mjs --check"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.12",
+    "typescript": "7.0.2"
+  },
+  "license": "MIT AND W3C-20150513"
+}

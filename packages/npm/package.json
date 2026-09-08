@@ -1,0 +1,25 @@
+{
+  "name": "texthue",
+  "version": "0.1.0",
+  "description": "Deterministic text-to-color with matching Python and Go results, OKLCH, themes, and contrast controls",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "src", "examples", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md", "SPECIFICATION.md"],
+  "sideEffects": false,
+  "engines": { "node": ">=22" },
+  "license": "MIT AND W3C-20150513",
+  "repository": { "type": "git", "url": "git+https://github.com/HusteDev/texthue.git", "directory": "packages/npm" },
+  "keywords": ["color", "hash", "deterministic", "oklch", "contrast", "typescript", "palette"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test:types": "tsc -p tsconfig.examples.json",
+    "examples": "node examples/basic.mjs && node examples/tuning.mjs && node examples/identity.mjs && node examples/errors.mjs && node examples/commonjs.cjs",
+    "prepack": "npm run build"
+  }
+}

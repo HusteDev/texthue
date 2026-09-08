@@ -1,0 +1,3 @@
+include README.md LICENSE THIRD_PARTY_NOTICES.md SPECIFICATION.md
+recursive-include examples *.py
+recursive-include src/texthue py.typed

@@ -1,0 +1,10 @@
+# golangci-lint v2 configuration for the Go module.
+version: "2"
+
+linters:
+  # errcheck, govet, ineffassign, staticcheck, unused
+  default: standard
+
+formatters:
+  enable:
+    - gofmt

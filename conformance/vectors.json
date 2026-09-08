@@ -1,0 +1,7263 @@
+{
+  "version": "text-to-color-v1",
+  "numericTolerance": 0.000001,
+  "vectors": [
+    {
+      "id": "empty",
+      "text": "",
+      "options": {},
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "",
+        "payloadHex": "746578742d746f2d636f6c6f722d76310000000000",
+        "sha256": "1cb50d3ed961f5a4e1d0cd16be7a7113614a00c2f4c299c61945960853e4e2f7"
+      },
+      "fractions": [
+        0.11213763011619449,
+        0.849150993861258,
+        0.8820923021994531
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.8049150993861257,
+            "c": 0.1529255381319672,
+            "h": 40.369546841830015
+          },
+          "accent": {
+            "l": 0.5349150993861258,
+            "c": 0.1529255381319672,
+            "h": 40.369546841830015
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.4849150993861258,
+            "c": 0.1529255381319672,
+            "h": 40.369546841830015
+          },
+          "accent": {
+            "l": 0.8049150993861257,
+            "c": 0.1529255381319672,
+            "h": 40.369546841830015
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 40.369546841830015,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#ffa585",
+            "rgb": {
+              "r": 255,
+              "g": 165,
+              "b": 133
+            },
+            "hsl": {
+              "h": 15.737705,
+              "s": 100,
+              "l": 76.078431
+            },
+            "oklch": {
+              "l": 0.804225,
+              "c": 0.116017,
+              "h": 40.317504
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#b34617",
+            "rgb": {
+              "r": 179,
+              "g": 70,
+              "b": 23
+            },
+            "hsl": {
+              "h": 18.076923,
+              "s": 77.227723,
+              "l": 39.607843
+            },
+            "oklch": {
+              "l": 0.535507,
+              "c": 0.152641,
+              "h": 40.635203
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 10.972744447902418,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 5.518797035943434,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#a13700",
+            "rgb": {
+              "r": 161,
+              "g": 55,
+              "b": 0
+            },
+            "hsl": {
+              "h": 20.496894,
+              "s": 100,
+              "l": 31.568627
+            },
+            "oklch": {
+              "l": 0.484802,
+              "c": 0.150293,
+              "h": 40.611389
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#ffa585",
+            "rgb": {
+              "r": 255,
+              "g": 165,
+              "b": 133
+            },
+            "hsl": {
+              "h": 15.737705,
+              "s": 100,
+              "l": 76.078431
+            },
+            "oklch": {
+              "l": 0.804225,
+              "c": 0.116017,
+              "h": 40.317504
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 6.858511773075307,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 9.788557456162973,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ascii",
+      "text": "research",
+      "options": {},
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "7265736561726368",
+        "payloadHex": "746578742d746f2d636f6c6f722d763100000000007265736561726368",
+        "sha256": "d61d086651ce3cabc3e9e9c509673c6e2a777454bb6d9f0a0c7e46d59d0c5338"
+      },
+      "fractions": [
+        0.8363805054686964,
+        0.3195531766396016,
+        0.765287981601432
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7519553176639602,
+            "c": 0.1459172788960859,
+            "h": 301.0969819687307
+          },
+          "accent": {
+            "l": 0.48195531766396016,
+            "c": 0.1459172788960859,
+            "h": 301.0969819687307
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.43195531766396017,
+            "c": 0.1459172788960859,
+            "h": 301.0969819687307
+          },
+          "accent": {
+            "l": 0.7519553176639602,
+            "c": 0.1459172788960859,
+            "h": 301.0969819687307
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 301.0969819687307,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#bf97fc",
+            "rgb": {
+              "r": 191,
+              "g": 151,
+              "b": 252
+            },
+            "hsl": {
+              "h": 263.762376,
+              "s": 94.392523,
+              "l": 79.019608
+            },
+            "oklch": {
+              "l": 0.752216,
+              "c": 0.146392,
+              "h": 301.214339
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#6d45a2",
+            "rgb": {
+              "r": 109,
+              "g": 69,
+              "b": 162
+            },
+            "hsl": {
+              "h": 265.806452,
+              "s": 40.25974,
+              "l": 45.294118
+            },
+            "oklch": {
+              "l": 0.481543,
+              "c": 0.145914,
+              "h": 300.911366
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 9.047571648581863,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 6.946241327327276,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#5f3692",
+            "rgb": {
+              "r": 95,
+              "g": 54,
+              "b": 146
+            },
+            "hsl": {
+              "h": 266.73913,
+              "s": 46,
+              "l": 39.215686
+            },
+            "oklch": {
+              "l": 0.431236,
+              "c": 0.146138,
+              "h": 300.968133
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#bf97fc",
+            "rgb": {
+              "r": 191,
+              "g": 151,
+              "b": 252
+            },
+            "hsl": {
+              "h": 263.762376,
+              "s": 94.392523,
+              "l": 79.019608
+            },
+            "oklch": {
+              "l": 0.752216,
+              "c": 0.146392,
+              "h": 301.214339
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 8.6444281999089,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 8.071150781044993,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "case",
+      "text": "Research",
+      "options": {},
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "5265736561726368",
+        "payloadHex": "746578742d746f2d636f6c6f722d763100000000005265736561726368",
+        "sha256": "a8dab089ff39807db2f9717e68f47677662b2579ed9c1a858a1b062bce2f14d9"
+      },
+      "fractions": [
+        0.6595869383309036,
+        0.9969711594749242,
+        0.6991187031380832
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.8196971159474924,
+            "c": 0.14194712218828498,
+            "h": 237.4512977991253
+          },
+          "accent": {
+            "l": 0.5496971159474925,
+            "c": 0.14194712218828498,
+            "h": 237.4512977991253
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.49969711594749244,
+            "c": 0.14194712218828498,
+            "h": 237.4512977991253
+          },
+          "accent": {
+            "l": 0.8196971159474924,
+            "c": 0.14194712218828498,
+            "h": 237.4512977991253
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 237.4512977991253,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#80ceff",
+            "rgb": {
+              "r": 128,
+              "g": 206,
+              "b": 255
+            },
+            "hsl": {
+              "h": 203.149606,
+              "s": 100,
+              "l": 75.098039
+            },
+            "oklch": {
+              "l": 0.819253,
+              "c": 0.103653,
+              "h": 237.465157
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#007aaf",
+            "rgb": {
+              "r": 0,
+              "g": 122,
+              "b": 175
+            },
+            "hsl": {
+              "h": 198.171429,
+              "s": 100,
+              "l": 34.313725
+            },
+            "oklch": {
+              "l": 0.549688,
+              "c": 0.121061,
+              "h": 237.567569
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 12.19036151533499,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 4.769645947302512,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#006b9a",
+            "rgb": {
+              "r": 0,
+              "g": 107,
+              "b": 154
+            },
+            "hsl": {
+              "h": 198.311688,
+              "s": 100,
+              "l": 30.196078
+            },
+            "oklch": {
+              "l": 0.500547,
+              "c": 0.110089,
+              "h": 237.479379
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#80ceff",
+            "rgb": {
+              "r": 128,
+              "g": 206,
+              "b": 255
+            },
+            "hsl": {
+              "h": 203.149606,
+              "s": 100,
+              "l": 75.098039
+            },
+            "oklch": {
+              "l": 0.819253,
+              "c": 0.103653,
+              "h": 237.465157
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 5.882852548706356,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 10.874768356339986,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "leading-space",
+      "text": " research",
+      "options": {},
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "207265736561726368",
+        "payloadHex": "746578742d746f2d636f6c6f722d76310000000000207265736561726368",
+        "sha256": "480d13d803152cd2fdbfa274e0653088a2f4b378b055f01f947d1c412ed9eae6"
+      },
+      "fractions": [
+        0.28144954703748226,
+        0.012041856069117785,
+        0.9912053616717458
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7212041856069118,
+            "c": 0.15947232170030476,
+            "h": 101.32183693349361
+          },
+          "accent": {
+            "l": 0.4512041856069118,
+            "c": 0.15947232170030476,
+            "h": 101.32183693349361
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.4012041856069118,
+            "c": 0.15947232170030476,
+            "h": 101.32183693349361
+          },
+          "accent": {
+            "l": 0.7212041856069118,
+            "c": 0.15947232170030476,
+            "h": 101.32183693349361
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 101.32183693349361,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#b9a700",
+            "rgb": {
+              "r": 185,
+              "g": 167,
+              "b": 0
+            },
+            "hsl": {
+              "h": 54.162162,
+              "s": 100,
+              "l": 36.27451
+            },
+            "oklch": {
+              "l": 0.721426,
+              "c": 0.150865,
+              "h": 101.659226
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#615700",
+            "rgb": {
+              "r": 97,
+              "g": 87,
+              "b": 0
+            },
+            "hsl": {
+              "h": 53.814433,
+              "s": 100,
+              "l": 19.019608
+            },
+            "oklch": {
+              "l": 0.452374,
+              "c": 0.094614,
+              "h": 101.696727
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 8.590344166008359,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 7.313109825776178,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#524900",
+            "rgb": {
+              "r": 82,
+              "g": 73,
+              "b": 0
+            },
+            "hsl": {
+              "h": 53.414634,
+              "s": 100,
+              "l": 16.078431
+            },
+            "oklch": {
+              "l": 0.401909,
+              "c": 0.083943,
+              "h": 101.325736
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#b9a700",
+            "rgb": {
+              "r": 185,
+              "g": 167,
+              "b": 0
+            },
+            "hsl": {
+              "h": 54.162162,
+              "s": 100,
+              "l": 36.27451
+            },
+            "oklch": {
+              "l": 0.721426,
+              "c": 0.150865,
+              "h": 101.659226
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 9.083889415691031,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 7.6632676388687395,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "trailing-space",
+      "text": "research ",
+      "options": {},
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "726573656172636820",
+        "payloadHex": "746578742d746f2d636f6c6f722d76310000000000726573656172636820",
+        "sha256": "054aacb5a1ba1fb11a6dfc00f5c07aab077c126a5d6067618f70a5bf5b87d467"
+      },
+      "fractions": [
+        0.02067069453187287,
+        0.631746273720637,
+        0.1032407283782959
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7831746273720637,
+            "c": 0.10619444370269776,
+            "h": 7.441450031474233
+          },
+          "accent": {
+            "l": 0.5131746273720638,
+            "c": 0.10619444370269776,
+            "h": 7.441450031474233
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.4631746273720637,
+            "c": 0.10619444370269776,
+            "h": 7.441450031474233
+          },
+          "accent": {
+            "l": 0.7831746273720637,
+            "c": 0.10619444370269776,
+            "h": 7.441450031474233
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 7.441450031474233,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#f39bac",
+            "rgb": {
+              "r": 243,
+              "g": 155,
+              "b": 172
+            },
+            "hsl": {
+              "h": 348.409091,
+              "s": 78.571429,
+              "l": 78.039216
+            },
+            "oklch": {
+              "l": 0.782507,
+              "c": 0.10684,
+              "h": 7.2587
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#994a5c",
+            "rgb": {
+              "r": 153,
+              "g": 74,
+              "b": 92
+            },
+            "hsl": {
+              "h": 346.329114,
+              "s": 34.801762,
+              "l": 44.509804
+            },
+            "oklch": {
+              "l": 0.512861,
+              "c": 0.106908,
+              "h": 7.197158
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 10.095186739018917,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 6.019755111628894,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#893c4e",
+            "rgb": {
+              "r": 137,
+              "g": 60,
+              "b": 78
+            },
+            "hsl": {
+              "h": 345.974026,
+              "s": 39.086294,
+              "l": 38.627451
+            },
+            "oklch": {
+              "l": 0.463386,
+              "c": 0.106453,
+              "h": 7.548763
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#f39bac",
+            "rgb": {
+              "r": 243,
+              "g": 155,
+              "b": 172
+            },
+            "hsl": {
+              "h": 348.409091,
+              "s": 78.571429,
+              "l": 78.039216
+            },
+            "oklch": {
+              "l": 0.782507,
+              "c": 0.10684,
+              "h": 7.2587
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 7.446734082740145,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 9.005706447895212,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "nul",
+      "text": "a\u0000b",
+      "options": {},
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "610062",
+        "payloadHex": "746578742d746f2d636f6c6f722d76310000000000610062",
+        "sha256": "005f5235ac67afe6d7cde87b7b63b7485ee3326fcff2ec41a6fa2bb0d5f70ebf"
+      },
+      "fractions": [
+        0.0014544848818331957,
+        0.6734571396373212,
+        0.8429856586735696
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7873457139637321,
+            "c": 0.15057913952041418,
+            "h": 0.5236145574599504
+          },
+          "accent": {
+            "l": 0.5173457139637322,
+            "c": 0.15057913952041418,
+            "h": 0.5236145574599504
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.46734571396373215,
+            "c": 0.15057913952041418,
+            "h": 0.5236145574599504
+          },
+          "accent": {
+            "l": 0.7873457139637321,
+            "c": 0.15057913952041418,
+            "h": 0.5236145574599504
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 0.5236145574599504,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#ff94b5",
+            "rgb": {
+              "r": 255,
+              "g": 148,
+              "b": 181
+            },
+            "hsl": {
+              "h": 341.495327,
+              "s": 100,
+              "l": 79.019608
+            },
+            "oklch": {
+              "l": 0.787848,
+              "c": 0.1331,
+              "h": 0.80528
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#a93a64",
+            "rgb": {
+              "r": 169,
+              "g": 58,
+              "b": 100
+            },
+            "hsl": {
+              "h": 337.297297,
+              "s": 48.898678,
+              "l": 44.509804
+            },
+            "oklch": {
+              "l": 0.517986,
+              "c": 0.149996,
+              "h": 0.472761
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 10.15520101300015,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 6.040999974938277,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#982956",
+            "rgb": {
+              "r": 152,
+              "g": 41,
+              "b": 86
+            },
+            "hsl": {
+              "h": 335.675676,
+              "s": 57.512953,
+              "l": 37.843137
+            },
+            "oklch": {
+              "l": 0.466782,
+              "c": 0.150811,
+              "h": 0.257394
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#ff94b5",
+            "rgb": {
+              "r": 255,
+              "g": 148,
+              "b": 181
+            },
+            "hsl": {
+              "h": 341.495327,
+              "s": 100,
+              "l": 79.019608
+            },
+            "oklch": {
+              "l": 0.787848,
+              "c": 0.1331,
+              "h": 0.80528
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 7.53597783553892,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 9.059243935425735,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "line-break",
+      "text": "a\nb",
+      "options": {},
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "610a62",
+        "payloadHex": "746578742d746f2d636f6c6f722d76310000000000610a62",
+        "sha256": "cc3f0bd60acd08e489149c7cc03bc307a1ff86c305fbd21193aac63d955580a3"
+      },
+      "fractions": [
+        0.7978370091877878,
+        0.042191081680357456,
+        0.5354707529768348
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7242191081680357,
+            "c": 0.1321282451786101,
+            "h": 287.2213233076036
+          },
+          "accent": {
+            "l": 0.45421910816803573,
+            "c": 0.1321282451786101,
+            "h": 287.2213233076036
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.40421910816803575,
+            "c": 0.1321282451786101,
+            "h": 287.2213233076036
+          },
+          "accent": {
+            "l": 0.7242191081680357,
+            "c": 0.1321282451786101,
+            "h": 287.2213233076036
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 287.2213233076036,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#a198f4",
+            "rgb": {
+              "r": 161,
+              "g": 152,
+              "b": 244
+            },
+            "hsl": {
+              "h": 245.869565,
+              "s": 80.701754,
+              "l": 77.647059
+            },
+            "oklch": {
+              "l": 0.724417,
+              "c": 0.131762,
+              "h": 287.106426
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#54479b",
+            "rgb": {
+              "r": 84,
+              "g": 71,
+              "b": 155
+            },
+            "hsl": {
+              "h": 249.285714,
+              "s": 37.168142,
+              "l": 44.313725
+            },
+            "oklch": {
+              "l": 0.455316,
+              "c": 0.131749,
+              "h": 287.05469
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 8.313038704855634,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 7.632005292343427,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#47388b",
+            "rgb": {
+              "r": 71,
+              "g": 56,
+              "b": 139
+            },
+            "hsl": {
+              "h": 250.843373,
+              "s": 42.564103,
+              "l": 38.235294
+            },
+            "oklch": {
+              "l": 0.404233,
+              "c": 0.132325,
+              "h": 287.235834
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#a198f4",
+            "rgb": {
+              "r": 161,
+              "g": 152,
+              "b": 244
+            },
+            "hsl": {
+              "h": 245.869565,
+              "s": 80.701754,
+              "l": 77.647059
+            },
+            "oklch": {
+              "l": 0.724417,
+              "c": 0.131762,
+              "h": 287.106426
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 9.517749311339816,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 7.415889195646168,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "composed",
+      "text": "é",
+      "options": {},
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "c3a9",
+        "payloadHex": "746578742d746f2d636f6c6f722d76310000000000c3a9",
+        "sha256": "c006130d3fb747bc384c99006624727398636bee83a5ba238c153fb023edc6bc"
+      },
+      "fractions": [
+        0.7500926882494241,
+        0.24889038410037756,
+        0.21991878747940063
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7448890384100377,
+            "c": 0.11319512724876404,
+            "h": 270.0333677697927
+          },
+          "accent": {
+            "l": 0.47488903841003777,
+            "c": 0.11319512724876404,
+            "h": 270.0333677697927
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.4248890384100378,
+            "c": 0.11319512724876404,
+            "h": 270.0333677697927
+          },
+          "accent": {
+            "l": 0.7448890384100377,
+            "c": 0.11319512724876404,
+            "h": 270.0333677697927
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 270.0333677697927,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#90a9f4",
+            "rgb": {
+              "r": 144,
+              "g": 169,
+              "b": 244
+            },
+            "hsl": {
+              "h": 225,
+              "s": 81.967213,
+              "l": 76.078431
+            },
+            "oklch": {
+              "l": 0.745343,
+              "c": 0.11238,
+              "h": 269.46466
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#44579b",
+            "rgb": {
+              "r": 68,
+              "g": 87,
+              "b": 155
+            },
+            "hsl": {
+              "h": 226.896552,
+              "s": 39.013453,
+              "l": 43.72549
+            },
+            "oklch": {
+              "l": 0.475334,
+              "c": 0.112091,
+              "h": 269.970693
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 9.167375964423584,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 6.812921125012379,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#37488c",
+            "rgb": {
+              "r": 55,
+              "g": 72,
+              "b": 140
+            },
+            "hsl": {
+              "h": 228,
+              "s": 43.589744,
+              "l": 38.235294
+            },
+            "oklch": {
+              "l": 0.424341,
+              "c": 0.114142,
+              "h": 270.358867
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#90a9f4",
+            "rgb": {
+              "r": 144,
+              "g": 169,
+              "b": 244
+            },
+            "hsl": {
+              "h": 225,
+              "s": 81.967213,
+              "l": 76.078431
+            },
+            "oklch": {
+              "l": 0.745343,
+              "c": 0.11238,
+              "h": 269.46466
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 8.508635314182678,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 8.178025723287648,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "decomposed",
+      "text": "é",
+      "options": {},
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "65cc81",
+        "payloadHex": "746578742d746f2d636f6c6f722d7631000000000065cc81",
+        "sha256": "173cd8a350a38b0ca826c19dabca36e150f0d846bbf155dc8510c0cd1c2a3a68"
+      },
+      "fractions": [
+        0.0907721898984164,
+        0.314995470456779,
+        0.6568413742352277
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7514995470456779,
+            "c": 0.13941048245411367,
+            "h": 32.677988363429904
+          },
+          "accent": {
+            "l": 0.48149954704567793,
+            "c": 0.13941048245411367,
+            "h": 32.677988363429904
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.43149954704567794,
+            "c": 0.13941048245411367,
+            "h": 32.677988363429904
+          },
+          "accent": {
+            "l": 0.7514995470456779,
+            "c": 0.13941048245411367,
+            "h": 32.677988363429904
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 32.677988363429904,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#fa8b74",
+            "rgb": {
+              "r": 250,
+              "g": 139,
+              "b": 116
+            },
+            "hsl": {
+              "h": 10.298507,
+              "s": 93.055556,
+              "l": 71.764706
+            },
+            "oklch": {
+              "l": 0.752231,
+              "c": 0.139674,
+              "h": 32.776749
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#9d3825",
+            "rgb": {
+              "r": 157,
+              "g": 56,
+              "b": 37
+            },
+            "hsl": {
+              "h": 9.5,
+              "s": 61.85567,
+              "l": 38.039216
+            },
+            "oklch": {
+              "l": 0.481796,
+              "c": 0.138598,
+              "h": 32.720701
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 9.010037077085135,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 6.93984689123473,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#8d2815",
+            "rgb": {
+              "r": 141,
+              "g": 40,
+              "b": 21
+            },
+            "hsl": {
+              "h": 9.5,
+              "s": 74.074074,
+              "l": 31.764706
+            },
+            "oklch": {
+              "l": 0.432617,
+              "c": 0.139442,
+              "h": 32.764176
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#fa8b74",
+            "rgb": {
+              "r": 250,
+              "g": 139,
+              "b": 116
+            },
+            "hsl": {
+              "h": 10.298507,
+              "s": 93.055556,
+              "l": 71.764706
+            },
+            "oklch": {
+              "l": 0.752231,
+              "c": 0.139674,
+              "h": 32.776749
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 8.582325117674898,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 8.037666969275513,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "emoji",
+      "text": "🌈👩‍💻",
+      "options": {},
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "f09f8c88f09f91a9e2808df09f92bb",
+        "payloadHex": "746578742d746f2d636f6c6f722d76310000000000f09f8c88f09f91a9e2808df09f92bb",
+        "sha256": "95205ed632ad49fc41680cbdefbdf02298b7c02f6af35d68416b66c6f05354b0"
+      },
+      "fractions": [
+        0.5825251839123666,
+        0.1979566803202033,
+        0.25549392332322896
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7397956680320203,
+            "c": 0.11532963539939374,
+            "h": 209.709066208452
+          },
+          "accent": {
+            "l": 0.46979566803202033,
+            "c": 0.11532963539939374,
+            "h": 209.709066208452
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.41979566803202034,
+            "c": 0.11532963539939374,
+            "h": 209.709066208452
+          },
+          "accent": {
+            "l": 0.7397956680320203,
+            "c": 0.11532963539939374,
+            "h": 209.709066208452
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 209.709066208452,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#36bed2",
+            "rgb": {
+              "r": 54,
+              "g": 190,
+              "b": 210
+            },
+            "hsl": {
+              "h": 187.692308,
+              "s": 63.414634,
+              "l": 51.764706
+            },
+            "oklch": {
+              "l": 0.739144,
+              "c": 0.115114,
+              "h": 209.56805
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#006774",
+            "rgb": {
+              "r": 0,
+              "g": 103,
+              "b": 116
+            },
+            "hsl": {
+              "h": 186.724138,
+              "s": 100,
+              "l": 22.745098
+            },
+            "oklch": {
+              "l": 0.470674,
+              "c": 0.081353,
+              "h": 209.819654
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 9.452864889416759,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 6.578349714907506,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#005763",
+            "rgb": {
+              "r": 0,
+              "g": 87,
+              "b": 99
+            },
+            "hsl": {
+              "h": 187.272727,
+              "s": 100,
+              "l": 19.411765
+            },
+            "oklch": {
+              "l": 0.418807,
+              "c": 0.07264,
+              "h": 210.815045
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#36bed2",
+            "rgb": {
+              "r": 54,
+              "g": 190,
+              "b": 210
+            },
+            "hsl": {
+              "h": 187.692308,
+              "s": 63.414634,
+              "l": 51.764706
+            },
+            "oklch": {
+              "l": 0.739144,
+              "c": 0.115114,
+              "h": 209.56805
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 8.25650684107123,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 8.432704464660151,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "chinese",
+      "text": "研究",
+      "options": {},
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "e7a094e7a9b6",
+        "payloadHex": "746578742d746f2d636f6c6f722d76310000000000e7a094e7a9b6",
+        "sha256": "1482de38c0fae1fa3fdedb2c6f8a264d6a4e18126beddfdc26b411598315b5cf"
+      },
+      "fractions": [
+        0.08012188784778118,
+        0.7538281665183604,
+        0.24949426483362913
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.795382816651836,
+            "c": 0.11496965589001776,
+            "h": 28.843879625201225
+          },
+          "accent": {
+            "l": 0.5253828166518361,
+            "c": 0.11496965589001776,
+            "h": 28.843879625201225
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.475382816651836,
+            "c": 0.11496965589001776,
+            "h": 28.843879625201225
+          },
+          "accent": {
+            "l": 0.795382816651836,
+            "c": 0.11496965589001776,
+            "h": 28.843879625201225
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 28.843879625201225,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#fe9f92",
+            "rgb": {
+              "r": 254,
+              "g": 159,
+              "b": 146
+            },
+            "hsl": {
+              "h": 7.222222,
+              "s": 98.181818,
+              "l": 78.431373
+            },
+            "oklch": {
+              "l": 0.795539,
+              "c": 0.115727,
+              "h": 28.33523
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#a24d43",
+            "rgb": {
+              "r": 162,
+              "g": 77,
+              "b": 67
+            },
+            "hsl": {
+              "h": 6.315789,
+              "s": 41.484716,
+              "l": 44.901961
+            },
+            "oklch": {
+              "l": 0.524729,
+              "c": 0.114782,
+              "h": 28.446993
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 10.588485508708017,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 5.708263923956779,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#923f35",
+            "rgb": {
+              "r": 146,
+              "g": 63,
+              "b": 53
+            },
+            "hsl": {
+              "h": 6.451613,
+              "s": 46.733668,
+              "l": 39.019608
+            },
+            "oklch": {
+              "l": 0.476053,
+              "c": 0.114535,
+              "h": 28.9933
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#fe9f92",
+            "rgb": {
+              "r": 254,
+              "g": 159,
+              "b": 146
+            },
+            "hsl": {
+              "h": 7.222222,
+              "s": 98.181818,
+              "l": 78.431373
+            },
+            "oklch": {
+              "l": 0.795539,
+              "c": 0.115727,
+              "h": 28.33523
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 7.036096439988316,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 9.445768036231875,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "arabic",
+      "text": "بحث",
+      "options": {},
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "d8a8d8add8ab",
+        "payloadHex": "746578742d746f2d636f6c6f722d76310000000000d8a8d8add8ab",
+        "sha256": "eb5d8dd372007626ae1144414097fe63b8338238141d02e2dabdb800ed5970cb"
+      },
+      "fractions": [
+        0.9193962707649916,
+        0.44531954219564795,
+        0.6799509676638991
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7645319542195648,
+            "c": 0.14079705805983395,
+            "h": 330.982657475397
+          },
+          "accent": {
+            "l": 0.4945319542195648,
+            "c": 0.14079705805983395,
+            "h": 330.982657475397
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.4445319542195648,
+            "c": 0.14079705805983395,
+            "h": 330.982657475397
+          },
+          "accent": {
+            "l": 0.7645319542195648,
+            "c": 0.14079705805983395,
+            "h": 330.982657475397
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 330.982657475397,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#e590dc",
+            "rgb": {
+              "r": 229,
+              "g": 144,
+              "b": 220
+            },
+            "hsl": {
+              "h": 306.352941,
+              "s": 62.043796,
+              "l": 73.137255
+            },
+            "oklch": {
+              "l": 0.764925,
+              "c": 0.140499,
+              "h": 330.689773
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#8d3e86",
+            "rgb": {
+              "r": 141,
+              "g": 62,
+              "b": 134
+            },
+            "hsl": {
+              "h": 305.316456,
+              "s": 38.916256,
+              "l": 39.803922
+            },
+            "oklch": {
+              "l": 0.494714,
+              "c": 0.141123,
+              "h": 330.965392
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 9.354367649073028,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 6.633310795999993,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#7d2f77",
+            "rgb": {
+              "r": 125,
+              "g": 47,
+              "b": 119
+            },
+            "hsl": {
+              "h": 304.615385,
+              "s": 45.348837,
+              "l": 33.72549
+            },
+            "oklch": {
+              "l": 0.44414,
+              "c": 0.141139,
+              "h": 330.773791
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#e590dc",
+            "rgb": {
+              "r": 229,
+              "g": 144,
+              "b": 220
+            },
+            "hsl": {
+              "h": 306.352941,
+              "s": 62.043796,
+              "l": 73.137255
+            },
+            "oklch": {
+              "l": 0.764925,
+              "c": 0.140499,
+              "h": 330.689773
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 8.251529411877266,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 8.344837121995262,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "scalar-boundary",
+      "text": "\u0000퟿􏿿",
+      "options": {},
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "00ed9fbfee8080f48fbfbf",
+        "payloadHex": "746578742d746f2d636f6c6f722d7631000000000000ed9fbfee8080f48fbfbf",
+        "sha256": "6edb1ce1a7034282fe5c15226be3aeaf8551aadd84da9f24510b6c913afebbd7"
+      },
+      "fractions": [
+        0.43303089612163603,
+        0.6523934905417264,
+        0.9935925682075322
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7852393490541726,
+            "c": 0.15961555409245193,
+            "h": 155.89112260378897
+          },
+          "accent": {
+            "l": 0.5152393490541727,
+            "c": 0.15961555409245193,
+            "h": 155.89112260378897
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.46523934905417264,
+            "c": 0.15961555409245193,
+            "h": 155.89112260378897
+          },
+          "accent": {
+            "l": 0.7852393490541726,
+            "c": 0.15961555409245193,
+            "h": 155.89112260378897
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 155.89112260378897,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#4ed78d",
+            "rgb": {
+              "r": 78,
+              "g": 215,
+              "b": 141
+            },
+            "hsl": {
+              "h": 147.591241,
+              "s": 63.133641,
+              "l": 57.45098
+            },
+            "oklch": {
+              "l": 0.786329,
+              "c": 0.159577,
+              "h": 155.922355
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#007c47",
+            "rgb": {
+              "r": 0,
+              "g": 124,
+              "b": 71
+            },
+            "hsl": {
+              "h": 154.354839,
+              "s": 100,
+              "l": 24.313725
+            },
+            "oklch": {
+              "l": 0.515319,
+              "c": 0.125772,
+              "h": 155.666075
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 11.428733221025627,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 5.284285607875558,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#006b3d",
+            "rgb": {
+              "r": 0,
+              "g": 107,
+              "b": 61
+            },
+            "hsl": {
+              "h": 154.205607,
+              "s": 100,
+              "l": 20.980392
+            },
+            "oklch": {
+              "l": 0.463985,
+              "c": 0.112749,
+              "h": 155.896861
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#4ed78d",
+            "rgb": {
+              "r": 78,
+              "g": 215,
+              "b": 141
+            },
+            "hsl": {
+              "h": 147.591241,
+              "s": 63.133641,
+              "l": 57.45098
+            },
+            "oklch": {
+              "l": 0.786329,
+              "c": 0.159577,
+              "h": 155.922355
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 6.6236394947268495,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 10.195335571362317,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "namespace",
+      "text": "research",
+      "options": {
+        "namespace": "labels"
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "6c6162656c73",
+        "textUtf8Hex": "7265736561726368",
+        "payloadHex": "746578742d746f2d636f6c6f722d763100000000066c6162656c737265736561726368",
+        "sha256": "0ce8db28b24310a8360adc1d4500d02798182952dd39ba7df1a2e12825ae64d0"
+      },
+      "fractions": [
+        0.05042810179293156,
+        0.696335831657052,
+        0.21110320766456425
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7896335831657052,
+            "c": 0.11266619245987386,
+            "h": 18.15411664545536
+          },
+          "accent": {
+            "l": 0.5196335831657053,
+            "c": 0.11266619245987386,
+            "h": 18.15411664545536
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.4696335831657052,
+            "c": 0.11266619245987386,
+            "h": 18.15411664545536
+          },
+          "accent": {
+            "l": 0.7896335831657052,
+            "c": 0.11266619245987386,
+            "h": 18.15411664545536
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 18.15411664545536,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#fa9c9f",
+            "rgb": {
+              "r": 250,
+              "g": 156,
+              "b": 159
+            },
+            "hsl": {
+              "h": 358.085106,
+              "s": 90.384615,
+              "l": 79.607843
+            },
+            "oklch": {
+              "l": 0.788871,
+              "c": 0.112647,
+              "h": 17.866027
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#9f4b50",
+            "rgb": {
+              "r": 159,
+              "g": 75,
+              "b": 80
+            },
+            "hsl": {
+              "h": 356.428571,
+              "s": 35.897436,
+              "l": 45.882353
+            },
+            "oklch": {
+              "l": 0.519981,
+              "c": 0.111768,
+              "h": 18.087053
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 10.320826131288378,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 5.839085031591871,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#8f3c42",
+            "rgb": {
+              "r": 143,
+              "g": 60,
+              "b": 66
+            },
+            "hsl": {
+              "h": 355.662651,
+              "s": 40.8867,
+              "l": 39.803922
+            },
+            "oklch": {
+              "l": 0.469543,
+              "c": 0.112743,
+              "h": 18.11753
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#fa9c9f",
+            "rgb": {
+              "r": 250,
+              "g": 156,
+              "b": 159
+            },
+            "hsl": {
+              "h": 358.085106,
+              "s": 90.384615,
+              "l": 79.607843
+            },
+            "oklch": {
+              "l": 0.788871,
+              "c": 0.112647,
+              "h": 17.866027
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 7.259049043230461,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 9.20699466399192,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "unicode-namespace",
+      "text": "research",
+      "options": {
+        "namespace": "é🌈"
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "c3a9f09f8c88",
+        "textUtf8Hex": "7265736561726368",
+        "payloadHex": "746578742d746f2d636f6c6f722d76310000000006c3a9f09f8c887265736561726368",
+        "sha256": "1b92cab8d539505060cfe5f2d6d10db82304c083ca9000d98ff16b61fd447ae2"
+      },
+      "fractions": [
+        0.10770861618220806,
+        0.832905787974596,
+        0.37817227514460683
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.8032905787974596,
+            "c": 0.12269033650867642,
+            "h": 38.7751018255949
+          },
+          "accent": {
+            "l": 0.5332905787974597,
+            "c": 0.12269033650867642,
+            "h": 38.7751018255949
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.4832905787974596,
+            "c": 0.12269033650867642,
+            "h": 38.7751018255949
+          },
+          "accent": {
+            "l": 0.8032905787974596,
+            "c": 0.12269033650867642,
+            "h": 38.7751018255949
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 38.7751018255949,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#ffa487",
+            "rgb": {
+              "r": 255,
+              "g": 164,
+              "b": 135
+            },
+            "hsl": {
+              "h": 14.5,
+              "s": 100,
+              "l": 76.470588
+            },
+            "oklch": {
+              "l": 0.802896,
+              "c": 0.115925,
+              "h": 38.431733
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#a75033",
+            "rgb": {
+              "r": 167,
+              "g": 80,
+              "b": 51
+            },
+            "hsl": {
+              "h": 15,
+              "s": 53.211009,
+              "l": 42.745098
+            },
+            "oklch": {
+              "l": 0.534289,
+              "c": 0.122532,
+              "h": 38.84518
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 10.912037722342491,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 5.471078705995194,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#964124",
+            "rgb": {
+              "r": 150,
+              "g": 65,
+              "b": 36
+            },
+            "hsl": {
+              "h": 15.263158,
+              "s": 61.290323,
+              "l": 36.470588
+            },
+            "oklch": {
+              "l": 0.482931,
+              "c": 0.122102,
+              "h": 38.861567
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#ffa487",
+            "rgb": {
+              "r": 255,
+              "g": 164,
+              "b": 135
+            },
+            "hsl": {
+              "h": 14.5,
+              "s": 100,
+              "l": 76.470588
+            },
+            "oklch": {
+              "l": 0.802896,
+              "c": 0.115925,
+              "h": 38.431733
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 6.821726155140155,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 9.734402246958911,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "framing-a",
+      "text": "c",
+      "options": {
+        "namespace": "ab"
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "6162",
+        "textUtf8Hex": "63",
+        "payloadHex": "746578742d746f2d636f6c6f722d76310000000002616263",
+        "sha256": "4f6cdd8951e29cd31f95679e8b91eb5aab1d72eb6f3a5760d80958eb1c161756"
+      },
+      "fractions": [
+        0.31025490374304354,
+        0.31986408377997577,
+        0.12337348563596606
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7519864083779976,
+            "c": 0.10740240913815798,
+            "h": 111.69176534749568
+          },
+          "accent": {
+            "l": 0.4819864083779976,
+            "c": 0.10740240913815798,
+            "h": 111.69176534749568
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.4319864083779976,
+            "c": 0.10740240913815798,
+            "h": 111.69176534749568
+          },
+          "accent": {
+            "l": 0.7519864083779976,
+            "c": 0.10740240913815798,
+            "h": 111.69176534749568
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 111.69176534749568,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#b0b562",
+            "rgb": {
+              "r": 176,
+              "g": 181,
+              "b": 98
+            },
+            "hsl": {
+              "h": 63.614458,
+              "s": 35.930736,
+              "l": 54.705882
+            },
+            "oklch": {
+              "l": 0.750842,
+              "c": 0.106917,
+              "h": 111.736984
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#606300",
+            "rgb": {
+              "r": 96,
+              "g": 99,
+              "b": 0
+            },
+            "hsl": {
+              "h": 61.818182,
+              "s": 100,
+              "l": 19.411765
+            },
+            "oklch": {
+              "l": 0.480861,
+              "c": 0.106311,
+              "h": 111.833065
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 9.631939051171216,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 6.398351574620202,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#525500",
+            "rgb": {
+              "r": 82,
+              "g": 85,
+              "b": 0
+            },
+            "hsl": {
+              "h": 62.117647,
+              "s": 100,
+              "l": 16.666667
+            },
+            "oklch": {
+              "l": 0.432234,
+              "c": 0.09576,
+              "h": 112.120435
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#b0b562",
+            "rgb": {
+              "r": 176,
+              "g": 181,
+              "b": 98
+            },
+            "hsl": {
+              "h": 63.614458,
+              "s": 35.930736,
+              "l": 54.705882
+            },
+            "oklch": {
+              "l": 0.750842,
+              "c": 0.106917,
+              "h": 111.736984
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 7.900179387793265,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 8.59245280561261,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "framing-b",
+      "text": "bc",
+      "options": {
+        "namespace": "a"
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "61",
+        "textUtf8Hex": "6263",
+        "payloadHex": "746578742d746f2d636f6c6f722d76310000000001616263",
+        "sha256": "9ed1140bdbc67fa996be82e3c7ea3d786092ab816d3bcfc193fb7261a00b349d"
+      },
+      "fractions": [
+        0.6203777815680951,
+        0.8584975993726403,
+        0.5888444713782519
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.8058497599372639,
+            "c": 0.13533066828269513,
+            "h": 223.33600136451423
+          },
+          "accent": {
+            "l": 0.535849759937264,
+            "c": 0.13533066828269513,
+            "h": 223.33600136451423
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.48584975993726404,
+            "c": 0.13533066828269513,
+            "h": 223.33600136451423
+          },
+          "accent": {
+            "l": 0.8058497599372639,
+            "c": 0.13533066828269513,
+            "h": 223.33600136451423
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 223.33600136451423,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#3fd2ff",
+            "rgb": {
+              "r": 63,
+              "g": 210,
+              "b": 255
+            },
+            "hsl": {
+              "h": 194.0625,
+              "s": 100,
+              "l": 62.352941
+            },
+            "oklch": {
+              "l": 0.806329,
+              "c": 0.134861,
+              "h": 223.240862
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#007998",
+            "rgb": {
+              "r": 0,
+              "g": 121,
+              "b": 152
+            },
+            "hsl": {
+              "h": 192.236842,
+              "s": 100,
+              "l": 29.803922
+            },
+            "oklch": {
+              "l": 0.535148,
+              "c": 0.100351,
+              "h": 223.818608
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 11.873989689471717,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 5.0139093341454055,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#006a85",
+            "rgb": {
+              "r": 0,
+              "g": 106,
+              "b": 133
+            },
+            "hsl": {
+              "h": 192.180451,
+              "s": 100,
+              "l": 26.078431
+            },
+            "oklch": {
+              "l": 0.486757,
+              "c": 0.090904,
+              "h": 223.330997
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#3fd2ff",
+            "rgb": {
+              "r": 63,
+              "g": 210,
+              "b": 255
+            },
+            "hsl": {
+              "h": 194.0625,
+              "s": 100,
+              "l": 62.352941
+            },
+            "oklch": {
+              "l": 0.806329,
+              "c": 0.134861,
+              "h": 223.240862
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 6.175917139244115,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 10.592539620431912,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "framing-nul-a",
+      "text": "c",
+      "options": {
+        "namespace": "a\u0000b"
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "610062",
+        "textUtf8Hex": "63",
+        "payloadHex": "746578742d746f2d636f6c6f722d7631000000000361006263",
+        "sha256": "44c61a98c99bd9aa7f4f29b1279ed6def3180045568a091c97dc4761a623ffee"
+      },
+      "fractions": [
+        0.268647825345397,
+        0.7875343360938132,
+        0.4973016793373972
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7987534336093813,
+            "c": 0.12983810076024382,
+            "h": 96.71321712434292
+          },
+          "accent": {
+            "l": 0.5287534336093813,
+            "c": 0.12983810076024382,
+            "h": 96.71321712434292
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.47875343360938133,
+            "c": 0.12983810076024382,
+            "h": 96.71321712434292
+          },
+          "accent": {
+            "l": 0.7987534336093813,
+            "c": 0.12983810076024382,
+            "h": 96.71321712434292
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 96.71321712434292,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#d5bd51",
+            "rgb": {
+              "r": 213,
+              "g": 189,
+              "b": 81
+            },
+            "hsl": {
+              "h": 49.090909,
+              "s": 61.111111,
+              "l": 57.647059
+            },
+            "oklch": {
+              "l": 0.79831,
+              "c": 0.129768,
+              "h": 96.786543
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#7e6b00",
+            "rgb": {
+              "r": 126,
+              "g": 107,
+              "b": 0
+            },
+            "hsl": {
+              "h": 50.952381,
+              "s": 100,
+              "l": 24.705882
+            },
+            "oklch": {
+              "l": 0.530059,
+              "c": 0.109232,
+              "h": 96.818176
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 11.227081434900647,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 5.262891463376858,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#6d5c00",
+            "rgb": {
+              "r": 109,
+              "g": 92,
+              "b": 0
+            },
+            "hsl": {
+              "h": 50.642202,
+              "s": 100,
+              "l": 21.372549
+            },
+            "oklch": {
+              "l": 0.477207,
+              "c": 0.098278,
+              "h": 96.53606
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#d5bd51",
+            "rgb": {
+              "r": 213,
+              "g": 189,
+              "b": 81
+            },
+            "hsl": {
+              "h": 49.090909,
+              "s": 61.111111,
+              "l": 57.647059
+            },
+            "oklch": {
+              "l": 0.79831,
+              "c": 0.129768,
+              "h": 96.786543
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 6.6014890891843185,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 10.015446200567794,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "framing-nul-b",
+      "text": "b\u0000c",
+      "options": {
+        "namespace": "a"
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "61",
+        "textUtf8Hex": "620063",
+        "payloadHex": "746578742d746f2d636f6c6f722d7631000000000161620063",
+        "sha256": "38b840f1aa3aceb0068a69e24a5e43e499f05e7840d910a43342eac002d65ae6"
+      },
+      "fractions": [
+        0.22156148799695075,
+        0.664959829300642,
+        0.025549523998051882
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7864959829300642,
+            "c": 0.10153297143988312,
+            "h": 79.76213567890227
+          },
+          "accent": {
+            "l": 0.5164959829300643,
+            "c": 0.10153297143988312,
+            "h": 79.76213567890227
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.4664959829300642,
+            "c": 0.10153297143988312,
+            "h": 79.76213567890227
+          },
+          "accent": {
+            "l": 0.7864959829300642,
+            "c": 0.10153297143988312,
+            "h": 79.76213567890227
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 79.76213567890227,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#dcb26b",
+            "rgb": {
+              "r": 220,
+              "g": 178,
+              "b": 107
+            },
+            "hsl": {
+              "h": 37.699115,
+              "s": 61.748634,
+              "l": 64.117647
+            },
+            "oklch": {
+              "l": 0.786108,
+              "c": 0.101782,
+              "h": 79.573987
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#866010",
+            "rgb": {
+              "r": 134,
+              "g": 96,
+              "b": 16
+            },
+            "hsl": {
+              "h": 40.677966,
+              "s": 78.666667,
+              "l": 29.411765
+            },
+            "oklch": {
+              "l": 0.515732,
+              "c": 0.101228,
+              "h": 79.824909
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 10.623594023336207,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 5.684437351560997,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#765200",
+            "rgb": {
+              "r": 118,
+              "g": 82,
+              "b": 0
+            },
+            "hsl": {
+              "h": 41.694915,
+              "s": 100,
+              "l": 23.137255
+            },
+            "oklch": {
+              "l": 0.46556,
+              "c": 0.096625,
+              "h": 79.31445
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#dcb26b",
+            "rgb": {
+              "r": 220,
+              "g": 178,
+              "b": 107
+            },
+            "hsl": {
+              "h": 37.699115,
+              "s": 61.748634,
+              "l": 64.117647
+            },
+            "oklch": {
+              "l": 0.786108,
+              "c": 0.101782,
+              "h": 79.573987
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 7.053541798245128,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 9.477087613049713,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "custom-backgrounds",
+      "text": "project:atlas",
+      "options": {
+        "backgrounds": {
+          "light": "#e8dfd0",
+          "dark": "#253047"
+        }
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "70726f6a6563743a61746c6173",
+        "payloadHex": "746578742d746f2d636f6c6f722d7631000000000070726f6a6563743a61746c6173",
+        "sha256": "4c6bf52aa5d0e0b527fbd252ccecbe75f5d79f96ab052c78385139d36d2fde67"
+      },
+      "fractions": [
+        0.2985223033465445,
+        0.6477184717077762,
+        0.1561862421222031
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7847718471707776,
+            "c": 0.1093711745273322,
+            "h": 107.46802920475602
+          },
+          "accent": {
+            "l": 0.5147718471707776,
+            "c": 0.1093711745273322,
+            "h": 107.46802920475602
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.46477184717077763,
+            "c": 0.1093711745273322,
+            "h": 107.46802920475602
+          },
+          "accent": {
+            "l": 0.7847718471707776,
+            "c": 0.1093711745273322,
+            "h": 107.46802920475602
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 107.46802920475602,
+        "light": {
+          "background": {
+            "hex": "#e8dfd0",
+            "rgb": {
+              "r": 232,
+              "g": 223,
+              "b": 208
+            },
+            "hsl": {
+              "h": 37.5,
+              "s": 34.285714,
+              "l": 86.27451
+            },
+            "oklch": {
+              "l": 0.906718,
+              "c": 0.022393,
+              "h": 80.682809
+            }
+          },
+          "fill": {
+            "hex": "#c0be68",
+            "rgb": {
+              "r": 192,
+              "g": 190,
+              "b": 104
+            },
+            "hsl": {
+              "h": 58.636364,
+              "s": 41.121495,
+              "l": 58.039216
+            },
+            "oklch": {
+              "l": 0.784556,
+              "c": 0.108942,
+              "h": 107.486191
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#6a6600",
+            "rgb": {
+              "r": 106,
+              "g": 102,
+              "b": 0
+            },
+            "hsl": {
+              "h": 57.735849,
+              "s": 100,
+              "l": 20.784314
+            },
+            "oklch": {
+              "l": 0.497808,
+              "c": 0.106734,
+              "h": 107.015425
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 10.806571052153739,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 4.524711941478243,
+              "meetsTarget": true,
+              "lightnessAdjusted": true,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#253047",
+            "rgb": {
+              "r": 37,
+              "g": 48,
+              "b": 71
+            },
+            "hsl": {
+              "h": 220.588235,
+              "s": 31.481481,
+              "l": 21.176471
+            },
+            "oklch": {
+              "l": 0.310207,
+              "c": 0.044318,
+              "h": 264.348407
+            }
+          },
+          "fill": {
+            "hex": "#605d00",
+            "rgb": {
+              "r": 96,
+              "g": 93,
+              "b": 0
+            },
+            "hsl": {
+              "h": 58.125,
+              "s": 100,
+              "l": 18.823529
+            },
+            "oklch": {
+              "l": 0.465983,
+              "c": 0.100203,
+              "h": 107.535831
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#c0be68",
+            "rgb": {
+              "r": 192,
+              "g": 190,
+              "b": 104
+            },
+            "hsl": {
+              "h": 58.636364,
+              "s": 41.121495,
+              "l": 58.039216
+            },
+            "oklch": {
+              "l": 0.784556,
+              "c": 0.108942,
+              "h": 107.486191
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 6.855800597089562,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 6.786212643859782,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "uppercase-background",
+      "text": "project:atlas",
+      "options": {
+        "backgrounds": {
+          "light": "#FFFFFF"
+        }
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "70726f6a6563743a61746c6173",
+        "payloadHex": "746578742d746f2d636f6c6f722d7631000000000070726f6a6563743a61746c6173",
+        "sha256": "4c6bf52aa5d0e0b527fbd252ccecbe75f5d79f96ab052c78385139d36d2fde67"
+      },
+      "fractions": [
+        0.2985223033465445,
+        0.6477184717077762,
+        0.1561862421222031
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7847718471707776,
+            "c": 0.1093711745273322,
+            "h": 107.46802920475602
+          },
+          "accent": {
+            "l": 0.5147718471707776,
+            "c": 0.1093711745273322,
+            "h": 107.46802920475602
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.46477184717077763,
+            "c": 0.1093711745273322,
+            "h": 107.46802920475602
+          },
+          "accent": {
+            "l": 0.7847718471707776,
+            "c": 0.1093711745273322,
+            "h": 107.46802920475602
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 107.46802920475602,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#c0be68",
+            "rgb": {
+              "r": 192,
+              "g": 190,
+              "b": 104
+            },
+            "hsl": {
+              "h": 58.636364,
+              "s": 41.121495,
+              "l": 58.039216
+            },
+            "oklch": {
+              "l": 0.784556,
+              "c": 0.108942,
+              "h": 107.486191
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#6f6b04",
+            "rgb": {
+              "r": 111,
+              "g": 107,
+              "b": 4
+            },
+            "hsl": {
+              "h": 57.757009,
+              "s": 93.043478,
+              "l": 22.54902
+            },
+            "oklch": {
+              "l": 0.51487,
+              "c": 0.109053,
+              "h": 107.061244
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 10.806571052153739,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 5.554478952769153,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#605d00",
+            "rgb": {
+              "r": 96,
+              "g": 93,
+              "b": 0
+            },
+            "hsl": {
+              "h": 58.125,
+              "s": 100,
+              "l": 18.823529
+            },
+            "oklch": {
+              "l": 0.465983,
+              "c": 0.100203,
+              "h": 107.535831
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#c0be68",
+            "rgb": {
+              "r": 192,
+              "g": 190,
+              "b": 104
+            },
+            "hsl": {
+              "h": 58.636364,
+              "s": 41.121495,
+              "l": 58.039216
+            },
+            "oklch": {
+              "l": 0.784556,
+              "c": 0.108942,
+              "h": 107.486191
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 6.855800597089562,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 9.640317620660143,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "adjusted-accent",
+      "text": "category:books",
+      "options": {
+        "profiles": {
+          "light": {
+            "accent": {
+              "lightness": [
+                0.9,
+                0.9
+              ]
+            }
+          }
+        }
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "63617465676f72793a626f6f6b73",
+        "payloadHex": "746578742d746f2d636f6c6f722d7631000000000063617465676f72793a626f6f6b73",
+        "sha256": "059b516e78725b2ad8aad2cd7cc8454efdfa0143eadc6957d85a94e857cdfbc9"
+      },
+      "fractions": [
+        0.02190121589228511,
+        0.4704949357546866,
+        0.8463565588463098
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7670494935754686,
+            "c": 0.15078139353077857,
+            "h": 7.884437721222639
+          },
+          "accent": {
+            "l": 0.9,
+            "c": 0.15078139353077857,
+            "h": 7.884437721222639
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.4470494935754687,
+            "c": 0.15078139353077857,
+            "h": 7.884437721222639
+          },
+          "accent": {
+            "l": 0.7670494935754686,
+            "c": 0.15078139353077857,
+            "h": 7.884437721222639
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 7.884437721222639,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#ff8aa2",
+            "rgb": {
+              "r": 255,
+              "g": 138,
+              "b": 162
+            },
+            "hsl": {
+              "h": 347.692308,
+              "s": 100,
+              "l": 77.058824
+            },
+            "oklch": {
+              "l": 0.767306,
+              "c": 0.143067,
+              "h": 7.953319
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#c34f6b",
+            "rgb": {
+              "r": 195,
+              "g": 79,
+              "b": 107
+            },
+            "hsl": {
+              "h": 345.517241,
+              "s": 49.152542,
+              "l": 53.72549
+            },
+            "oklch": {
+              "l": 0.586466,
+              "c": 0.150019,
+              "h": 8.039652
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 9.409118547315533,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 4.515040893741086,
+              "meetsTarget": true,
+              "lightnessAdjusted": true,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#942144",
+            "rgb": {
+              "r": 148,
+              "g": 33,
+              "b": 68
+            },
+            "hsl": {
+              "h": 341.73913,
+              "s": 63.535912,
+              "l": 35.490196
+            },
+            "oklch": {
+              "l": 0.446807,
+              "c": 0.151126,
+              "h": 8.119486
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#ff8aa2",
+            "rgb": {
+              "r": 255,
+              "g": 138,
+              "b": 162
+            },
+            "hsl": {
+              "h": 347.692308,
+              "s": 100,
+              "l": 77.058824
+            },
+            "oklch": {
+              "l": 0.767306,
+              "c": 0.143067,
+              "h": 7.953319
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 8.20250481714745,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 8.393679261331307,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "adjusted-fill",
+      "text": "category:books",
+      "options": {
+        "contrastTarget": 7,
+        "profiles": {
+          "light": {
+            "fill": {
+              "lightness": [
+                0.6,
+                0.6
+              ],
+              "chroma": [
+                0,
+                0
+              ]
+            }
+          }
+        }
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "63617465676f72793a626f6f6b73",
+        "payloadHex": "746578742d746f2d636f6c6f722d7631000000000063617465676f72793a626f6f6b73",
+        "sha256": "059b516e78725b2ad8aad2cd7cc8454efdfa0143eadc6957d85a94e857cdfbc9"
+      },
+      "fractions": [
+        0.02190121589228511,
+        0.4704949357546866,
+        0.8463565588463098
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.6,
+            "c": 0,
+            "h": 7.884437721222639
+          },
+          "accent": {
+            "l": 0.4970494935754687,
+            "c": 0.15078139353077857,
+            "h": 7.884437721222639
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.4470494935754687,
+            "c": 0.15078139353077857,
+            "h": 7.884437721222639
+          },
+          "accent": {
+            "l": 0.7670494935754686,
+            "c": 0.15078139353077857,
+            "h": 7.884437721222639
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 7.884437721222639,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#959595",
+            "rgb": {
+              "r": 149,
+              "g": 149,
+              "b": 149
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 58.431373
+            },
+            "oklch": {
+              "l": 0.669837,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#a02e4e",
+            "rgb": {
+              "r": 160,
+              "g": 46,
+              "b": 78
+            },
+            "hsl": {
+              "h": 343.157895,
+              "s": 55.339806,
+              "l": 40.392157
+            },
+            "oklch": {
+              "l": 0.483191,
+              "c": 0.150488,
+              "h": 8.046709
+            }
+          },
+          "contrast": {
+            "target": 7,
+            "fill": {
+              "ratio": 7.010875888315529,
+              "meetsTarget": true,
+              "lightnessAdjusted": true,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 7.010454134227411,
+              "meetsTarget": true,
+              "lightnessAdjusted": true,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#942144",
+            "rgb": {
+              "r": 148,
+              "g": 33,
+              "b": 68
+            },
+            "hsl": {
+              "h": 341.73913,
+              "s": 63.535912,
+              "l": 35.490196
+            },
+            "oklch": {
+              "l": 0.446807,
+              "c": 0.151126,
+              "h": 8.119486
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#ff8aa2",
+            "rgb": {
+              "r": 255,
+              "g": 138,
+              "b": 162
+            },
+            "hsl": {
+              "h": 347.692308,
+              "s": 100,
+              "l": 77.058824
+            },
+            "oklch": {
+              "l": 0.767306,
+              "c": 0.143067,
+              "h": 7.953319
+            }
+          },
+          "contrast": {
+            "target": 7,
+            "fill": {
+              "ratio": 8.20250481714745,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 8.393679261331307,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "unattainable",
+      "text": "status:pending",
+      "options": {
+        "contrastTarget": 7,
+        "backgrounds": {
+          "light": "#777777",
+          "dark": "#777777"
+        }
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "7374617475733a70656e64696e67",
+        "payloadHex": "746578742d746f2d636f6c6f722d763100000000007374617475733a70656e64696e67",
+        "sha256": "ee6d4d0cf8ff5e1abc78a9d3f5b5f7fa907e8bf072a9693ada1af7e30323612e"
+      },
+      "fractions": [
+        0.9313553003594279,
+        0.9726466001011431,
+        0.7362161769997329
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.8172646600101142,
+            "c": 0.14417297061998396,
+            "h": 335.28790812939405
+          },
+          "accent": {
+            "l": 0.5472646600101143,
+            "c": 0.14417297061998396,
+            "h": 335.28790812939405
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.4972646600101143,
+            "c": 0.14417297061998396,
+            "h": 335.28790812939405
+          },
+          "accent": {
+            "l": 0.8172646600101142,
+            "c": 0.14417297061998396,
+            "h": 335.28790812939405
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 335.28790812939405,
+        "light": {
+          "background": {
+            "hex": "#777777",
+            "rgb": {
+              "r": 119,
+              "g": 119,
+              "b": 119
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 46.666667
+            },
+            "oklch": {
+              "l": 0.569262,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#fc9ee8",
+            "rgb": {
+              "r": 252,
+              "g": 158,
+              "b": 232
+            },
+            "hsl": {
+              "h": 312.765957,
+              "s": 94,
+              "l": 80.392157
+            },
+            "oklch": {
+              "l": 0.816948,
+              "c": 0.143999,
+              "h": 334.978618
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "contrast": {
+            "target": 7,
+            "fill": {
+              "ratio": 11.195072368741936,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 4.68949989000882,
+              "meetsTarget": false,
+              "lightnessAdjusted": true,
+              "chromaReduced": true,
+              "fallback": "unattainable-contrast"
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#777777",
+            "rgb": {
+              "r": 119,
+              "g": 119,
+              "b": 119
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 46.666667
+            },
+            "oklch": {
+              "l": 0.569262,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#8d387e",
+            "rgb": {
+              "r": 141,
+              "g": 56,
+              "b": 126
+            },
+            "hsl": {
+              "h": 310.588235,
+              "s": 43.147208,
+              "l": 38.627451
+            },
+            "oklch": {
+              "l": 0.482806,
+              "c": 0.143966,
+              "h": 335.004406
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "contrast": {
+            "target": 7,
+            "fill": {
+              "ratio": 7.001201822781178,
+              "meetsTarget": true,
+              "lightnessAdjusted": true,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 4.68949989000882,
+              "meetsTarget": false,
+              "lightnessAdjusted": true,
+              "chromaReduced": true,
+              "fallback": "unattainable-contrast"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "maximum-contrast",
+      "text": "build:42",
+      "options": {
+        "contrastTarget": 21
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "6275696c643a3432",
+        "payloadHex": "746578742d746f2d636f6c6f722d763100000000006275696c643a3432",
+        "sha256": "bfbdf60c046664bfec59aa0f74ff795fd7369c27dabe529b9596b19fe8cd2a19"
+      },
+      "fractions": [
+        0.748992326669395,
+        0.017187401419505477,
+        0.923243168508634
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7217187401419505,
+            "c": 0.15539459011051804,
+            "h": 269.6372376009822
+          },
+          "accent": {
+            "l": 0.45171874014195057,
+            "c": 0.15539459011051804,
+            "h": 269.6372376009822
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.4017187401419506,
+            "c": 0.15539459011051804,
+            "h": 269.6372376009822
+          },
+          "accent": {
+            "l": 0.7217187401419505,
+            "c": 0.15539459011051804,
+            "h": 269.6372376009822
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 269.6372376009822,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "contrast": {
+            "target": 21,
+            "fill": {
+              "ratio": 21,
+              "meetsTarget": true,
+              "lightnessAdjusted": true,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 21,
+              "meetsTarget": true,
+              "lightnessAdjusted": true,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "contrast": {
+            "target": 21,
+            "fill": {
+              "ratio": 21,
+              "meetsTarget": true,
+              "lightnessAdjusted": true,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 18.733663902900595,
+              "meetsTarget": false,
+              "lightnessAdjusted": true,
+              "chromaReduced": true,
+              "fallback": "unattainable-contrast"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "minimum-contrast",
+      "text": "build:42",
+      "options": {
+        "contrastTarget": 1
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "6275696c643a3432",
+        "payloadHex": "746578742d746f2d636f6c6f722d763100000000006275696c643a3432",
+        "sha256": "bfbdf60c046664bfec59aa0f74ff795fd7369c27dabe529b9596b19fe8cd2a19"
+      },
+      "fractions": [
+        0.748992326669395,
+        0.017187401419505477,
+        0.923243168508634
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7217187401419505,
+            "c": 0.15539459011051804,
+            "h": 269.6372376009822
+          },
+          "accent": {
+            "l": 0.45171874014195057,
+            "c": 0.15539459011051804,
+            "h": 269.6372376009822
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.4017187401419506,
+            "c": 0.15539459011051804,
+            "h": 269.6372376009822
+          },
+          "accent": {
+            "l": 0.7217187401419505,
+            "c": 0.15539459011051804,
+            "h": 269.6372376009822
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 269.6372376009822,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#829fff",
+            "rgb": {
+              "r": 130,
+              "g": 159,
+              "b": 255
+            },
+            "hsl": {
+              "h": 226.08,
+              "s": 100,
+              "l": 75.490196
+            },
+            "oklch": {
+              "l": 0.721827,
+              "c": 0.143732,
+              "h": 269.822822
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#354bab",
+            "rgb": {
+              "r": 53,
+              "g": 75,
+              "b": 171
+            },
+            "hsl": {
+              "h": 228.813559,
+              "s": 52.678571,
+              "l": 43.921569
+            },
+            "oklch": {
+              "l": 0.452787,
+              "c": 0.155578,
+              "h": 269.452466
+            }
+          },
+          "contrast": {
+            "target": 1,
+            "fill": {
+              "ratio": 8.352420096613411,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 7.647870300309675,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#293b9a",
+            "rgb": {
+              "r": 41,
+              "g": 59,
+              "b": 154
+            },
+            "hsl": {
+              "h": 230.442478,
+              "s": 57.948718,
+              "l": 38.235294
+            },
+            "oklch": {
+              "l": 0.400458,
+              "c": 0.15577,
+              "h": 269.664361
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#829fff",
+            "rgb": {
+              "r": 130,
+              "g": 159,
+              "b": 255
+            },
+            "hsl": {
+              "h": 226.08,
+              "s": 100,
+              "l": 75.490196
+            },
+            "oklch": {
+              "l": 0.721827,
+              "c": 0.143732,
+              "h": 269.822822
+            }
+          },
+          "contrast": {
+            "target": 1,
+            "fill": {
+              "ratio": 9.604443243350316,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 7.451020517418484,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "gamut-reduction",
+      "text": "tag:design",
+      "options": {
+        "profiles": {
+          "light": {
+            "fill": {
+              "chroma": [
+                0.4,
+                0.4
+              ]
+            }
+          }
+        }
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "7461673a64657369676e",
+        "payloadHex": "746578742d746f2d636f6c6f722d763100000000007461673a64657369676e",
+        "sha256": "c9b2a163d96d21396a816ae58c695b97fc6686c1c291378fca8c09d1a0eb7c89"
+      },
+      "fractions": [
+        0.7878819338511676,
+        0.8493214382324368,
+        0.4160372551996261
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.8049321438232436,
+            "c": 0.4,
+            "h": 283.6374961864203
+          },
+          "accent": {
+            "l": 0.5349321438232437,
+            "c": 0.12496223531197757,
+            "h": 283.6374961864203
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.4849321438232437,
+            "c": 0.12496223531197757,
+            "h": 283.6374961864203
+          },
+          "accent": {
+            "l": 0.8049321438232436,
+            "c": 0.12496223531197757,
+            "h": 283.6374961864203
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 283.6374961864203,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#b6b7ff",
+            "rgb": {
+              "r": 182,
+              "g": 183,
+              "b": 255
+            },
+            "hsl": {
+              "h": 239.178082,
+              "s": 100,
+              "l": 85.686275
+            },
+            "oklch": {
+              "l": 0.804841,
+              "c": 0.101324,
+              "h": 283.264095
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#6561b2",
+            "rgb": {
+              "r": 101,
+              "g": 97,
+              "b": 178
+            },
+            "hsl": {
+              "h": 242.962963,
+              "s": 34.468085,
+              "l": 53.921569
+            },
+            "oklch": {
+              "l": 0.534562,
+              "c": 0.124298,
+              "h": 283.590941
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 11.20641122197003,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 5.376222277679883,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#5852a2",
+            "rgb": {
+              "r": 88,
+              "g": 82,
+              "b": 162
+            },
+            "hsl": {
+              "h": 244.5,
+              "s": 32.786885,
+              "l": 47.843137
+            },
+            "oklch": {
+              "l": 0.484457,
+              "c": 0.12496,
+              "h": 284.102904
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#b6b7ff",
+            "rgb": {
+              "r": 182,
+              "g": 183,
+              "b": 255
+            },
+            "hsl": {
+              "h": 239.178082,
+              "s": 100,
+              "l": 85.686275
+            },
+            "oklch": {
+              "l": 0.804841,
+              "c": 0.101324,
+              "h": 283.264095
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 6.680269561766439,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 9.997006732860957,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "zero-width-ranges",
+      "text": "tag:design",
+      "options": {
+        "profiles": {
+          "dark": {
+            "fill": {
+              "lightness": [
+                0.375,
+                0.375
+              ],
+              "chroma": [
+                0.125,
+                0.125
+              ]
+            }
+          }
+        }
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "7461673a64657369676e",
+        "payloadHex": "746578742d746f2d636f6c6f722d763100000000007461673a64657369676e",
+        "sha256": "c9b2a163d96d21396a816ae58c695b97fc6686c1c291378fca8c09d1a0eb7c89"
+      },
+      "fractions": [
+        0.7878819338511676,
+        0.8493214382324368,
+        0.4160372551996261
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.8049321438232436,
+            "c": 0.12496223531197757,
+            "h": 283.6374961864203
+          },
+          "accent": {
+            "l": 0.5349321438232437,
+            "c": 0.12496223531197757,
+            "h": 283.6374961864203
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.375,
+            "c": 0.125,
+            "h": 283.6374961864203
+          },
+          "accent": {
+            "l": 0.8049321438232436,
+            "c": 0.12496223531197757,
+            "h": 283.6374961864203
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 283.6374961864203,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#b6b7ff",
+            "rgb": {
+              "r": 182,
+              "g": 183,
+              "b": 255
+            },
+            "hsl": {
+              "h": 239.178082,
+              "s": 100,
+              "l": 85.686275
+            },
+            "oklch": {
+              "l": 0.804841,
+              "c": 0.101324,
+              "h": 283.264095
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#6561b2",
+            "rgb": {
+              "r": 101,
+              "g": 97,
+              "b": 178
+            },
+            "hsl": {
+              "h": 242.962963,
+              "s": 34.468085,
+              "l": 53.921569
+            },
+            "oklch": {
+              "l": 0.534562,
+              "c": 0.124298,
+              "h": 283.590941
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 11.20641122197003,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 5.376222277679883,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#3b3380",
+            "rgb": {
+              "r": 59,
+              "g": 51,
+              "b": 128
+            },
+            "hsl": {
+              "h": 246.233766,
+              "s": 43.01676,
+              "l": 35.098039
+            },
+            "oklch": {
+              "l": 0.375511,
+              "c": 0.125229,
+              "h": 283.267368
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#b6b7ff",
+            "rgb": {
+              "r": 182,
+              "g": 183,
+              "b": 255
+            },
+            "hsl": {
+              "h": 239.178082,
+              "s": 100,
+              "l": 85.686275
+            },
+            "oklch": {
+              "l": 0.804841,
+              "c": 0.101324,
+              "h": 283.264095
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 10.653438882949022,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 9.997006732860957,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "grayscale",
+      "text": "tag:plain",
+      "options": {
+        "profiles": {
+          "light": {
+            "fill": {
+              "chroma": [
+                0,
+                0
+              ]
+            },
+            "accent": {
+              "chroma": [
+                0,
+                0
+              ]
+            }
+          },
+          "dark": {
+            "fill": {
+              "chroma": [
+                0,
+                0
+              ]
+            },
+            "accent": {
+              "chroma": [
+                0,
+                0
+              ]
+            }
+          }
+        }
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "7461673a706c61696e",
+        "payloadHex": "746578742d746f2d636f6c6f722d763100000000007461673a706c61696e",
+        "sha256": "46bfad46064e8b0acc5f3624c69c5e7a047555729fc67ce2fdb39e7a90077878"
+      },
+      "fractions": [
+        0.2763622566126287,
+        0.024635972920805216,
+        0.7983278119936585
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0.7224635972920805,
+            "c": 0,
+            "h": 99.49041238054633
+          },
+          "accent": {
+            "l": 0.4524635972920805,
+            "c": 0,
+            "h": 99.49041238054633
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 0.40246359729208053,
+            "c": 0,
+            "h": 99.49041238054633
+          },
+          "accent": {
+            "l": 0.7224635972920805,
+            "c": 0,
+            "h": 99.49041238054633
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 99.49041238054633,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#a5a5a5",
+            "rgb": {
+              "r": 165,
+              "g": 165,
+              "b": 165
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 64.705882
+            },
+            "oklch": {
+              "l": 0.721933,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#565656",
+            "rgb": {
+              "r": 86,
+              "g": 86,
+              "b": 86
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 33.72549
+            },
+            "oklch": {
+              "l": 0.453161,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 8.525242459818129,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 7.339631010223789,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#484848",
+            "rgb": {
+              "r": 72,
+              "g": 72,
+              "b": 72
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 28.235294
+            },
+            "oklch": {
+              "l": 0.401667,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#a5a5a5",
+            "rgb": {
+              "r": 165,
+              "g": 165,
+              "b": 165
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 64.705882
+            },
+            "oklch": {
+              "l": 0.721933,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 9.146081206980885,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 7.605191758712874,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "black-white-endpoints",
+      "text": "endpoints",
+      "options": {
+        "profiles": {
+          "light": {
+            "fill": {
+              "lightness": [
+                0,
+                0
+              ]
+            }
+          },
+          "dark": {
+            "fill": {
+              "lightness": [
+                1,
+                1
+              ]
+            }
+          }
+        }
+      },
+      "encoding": {
+        "namespaceUtf8Hex": "",
+        "textUtf8Hex": "656e64706f696e7473",
+        "payloadHex": "746578742d746f2d636f6c6f722d76310000000000656e64706f696e7473",
+        "sha256": "3c73bb8cc591ffa7e500b4d1021a2277e3931a16717722fe90e2b3b768cfea23"
+      },
+      "fractions": [
+        0.2361409394070506,
+        0.7717590124811977,
+        0.8945420274976641
+      ],
+      "requested": {
+        "light": {
+          "fill": {
+            "l": 0,
+            "c": 0.15367252164985984,
+            "h": 85.01073818653822
+          },
+          "accent": {
+            "l": 0.5271759012481199,
+            "c": 0.15367252164985984,
+            "h": 85.01073818653822
+          }
+        },
+        "dark": {
+          "fill": {
+            "l": 1,
+            "c": 0.15367252164985984,
+            "h": 85.01073818653822
+          },
+          "accent": {
+            "l": 0.7971759012481198,
+            "c": 0.15367252164985984,
+            "h": 85.01073818653822
+          }
+        }
+      },
+      "expected": {
+        "version": "text-to-color-v1",
+        "hue": 85.01073818653822,
+        "light": {
+          "background": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "onFill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#876500",
+            "rgb": {
+              "r": 135,
+              "g": 101,
+              "b": 0
+            },
+            "hsl": {
+              "h": 44.888889,
+              "s": 100,
+              "l": 26.470588
+            },
+            "oklch": {
+              "l": 0.526943,
+              "c": 0.107942,
+              "h": 85.381193
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 21,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 5.3961666468203635,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            }
+          }
+        },
+        "dark": {
+          "background": {
+            "hex": "#121212",
+            "rgb": {
+              "r": 18,
+              "g": 18,
+              "b": 18
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 7.058824
+            },
+            "oklch": {
+              "l": 0.182204,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "fill": {
+            "hex": "#ffffff",
+            "rgb": {
+              "r": 255,
+              "g": 255,
+              "b": 255
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 100
+            },
+            "oklch": {
+              "l": 1,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "onFill": {
+            "hex": "#000000",
+            "rgb": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "oklch": {
+              "l": 0,
+              "c": 0,
+              "h": 0
+            }
+          },
+          "accent": {
+            "hex": "#eab428",
+            "rgb": {
+              "r": 234,
+              "g": 180,
+              "b": 40
+            },
+            "hsl": {
+              "h": 43.298969,
+              "s": 82.20339,
+              "l": 53.72549
+            },
+            "oklch": {
+              "l": 0.798099,
+              "c": 0.154042,
+              "h": 85.166192
+            }
+          },
+          "contrast": {
+            "target": 4.5,
+            "fill": {
+              "ratio": 21,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": true,
+              "fallback": null
+            },
+            "accent": {
+              "ratio": 9.864280804686057,
+              "meetsTarget": true,
+              "lightnessAdjusted": false,
+              "chromaReduced": false,
+              "fallback": null
+            }
+          }
+        }
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "id": "null-text",
+      "text": null,
+      "code": "INVALID_TEXT"
+    },
+    {
+      "id": "numeric-text",
+      "text": 123,
+      "code": "INVALID_TEXT"
+    },
+    {
+      "id": "object-text",
+      "text": {},
+      "code": "INVALID_TEXT"
+    },
+    {
+      "id": "high-surrogate",
+      "text": "\ud800",
+      "code": "INVALID_TEXT"
+    },
+    {
+      "id": "low-surrogate",
+      "text": "\udfff",
+      "code": "INVALID_TEXT"
+    },
+    {
+      "id": "null-options",
+      "text": "x",
+      "options": null,
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "array-options",
+      "text": "x",
+      "options": [],
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "unknown-option",
+      "text": "x",
+      "options": {
+        "seed": 42
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "null-namespace",
+      "text": "x",
+      "options": {
+        "namespace": null
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "invalid-namespace",
+      "text": "x",
+      "options": {
+        "namespace": "\ud800"
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "null-backgrounds",
+      "text": "x",
+      "options": {
+        "backgrounds": null
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "short-background",
+      "text": "x",
+      "options": {
+        "backgrounds": {
+          "light": "#fff"
+        }
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "alpha-background",
+      "text": "x",
+      "options": {
+        "backgrounds": {
+          "light": "#ffffffff"
+        }
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "named-background",
+      "text": "x",
+      "options": {
+        "backgrounds": {
+          "light": "white"
+        }
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "bad-hex",
+      "text": "x",
+      "options": {
+        "backgrounds": {
+          "dark": "#zzzzzz"
+        }
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "boolean-target",
+      "text": "x",
+      "options": {
+        "contrastTarget": true
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "low-target",
+      "text": "x",
+      "options": {
+        "contrastTarget": 0.99
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "high-target",
+      "text": "x",
+      "options": {
+        "contrastTarget": 21.01
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "null-profiles",
+      "text": "x",
+      "options": {
+        "profiles": null
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "unknown-theme",
+      "text": "x",
+      "options": {
+        "profiles": {
+          "dim": {}
+        }
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "unknown-role",
+      "text": "x",
+      "options": {
+        "profiles": {
+          "light": {
+            "border": {}
+          }
+        }
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "unknown-range",
+      "text": "x",
+      "options": {
+        "profiles": {
+          "light": {
+            "fill": {
+              "saturation": [
+                0,
+                1
+              ]
+            }
+          }
+        }
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "reversed-range",
+      "text": "x",
+      "options": {
+        "profiles": {
+          "light": {
+            "fill": {
+              "lightness": [
+                0.8,
+                0.2
+              ]
+            }
+          }
+        }
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "negative-range",
+      "text": "x",
+      "options": {
+        "profiles": {
+          "light": {
+            "fill": {
+              "chroma": [
+                -0.1,
+                0.2
+              ]
+            }
+          }
+        }
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "excessive-chroma",
+      "text": "x",
+      "options": {
+        "profiles": {
+          "dark": {
+            "accent": {
+              "chroma": [
+                0,
+                0.401
+              ]
+            }
+          }
+        }
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "excessive-lightness",
+      "text": "x",
+      "options": {
+        "profiles": {
+          "dark": {
+            "accent": {
+              "lightness": [
+                0,
+                1.1
+              ]
+            }
+          }
+        }
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "short-range",
+      "text": "x",
+      "options": {
+        "profiles": {
+          "light": {
+            "fill": {
+              "lightness": [
+                0.5
+              ]
+            }
+          }
+        }
+      },
+      "code": "INVALID_OPTIONS"
+    },
+    {
+      "id": "boolean-range",
+      "text": "x",
+      "options": {
+        "profiles": {
+          "light": {
+            "fill": {
+              "lightness": [
+                false,
+                true
+              ]
+            }
+          }
+        }
+      },
+      "code": "INVALID_OPTIONS"
+    }
+  ]
+}

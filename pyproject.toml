@@ -1,0 +1,39 @@
+# Repository-wide Python tool configuration. The installable package lives in
+# packages/python and has its own pyproject.toml; this file only configures
+# linting, formatting, and coverage for the whole tree.
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+extend-exclude = '''
+/(
+    \.venv
+  | \.cache
+  | artifacts
+  | node_modules
+)/
+'''
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [".venv", ".cache", "artifacts", "node_modules"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+# Black owns line wrapping; long string literals in fixtures are deliberate.
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["texthue"]
+
+[tool.coverage.run]
+source = ["packages/python/src/texthue"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
+[tool.coverage.xml]
+output = "coverage/python.xml"

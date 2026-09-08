@@ -1,0 +1,81 @@
+# Lint and format checks for all three libraries.
+#
+#   python -m pip install -r requirements-dev.txt
+#   pre-commit install
+#
+# The JavaScript and TypeScript hooks use the repository's node_modules, so
+# run `npm ci` first. The Go hook builds golangci-lint into an isolated Go
+# environment on first use.
+minimum_pre_commit_version: "4.0.0"
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=512"]
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: end-of-file-fixer
+        exclude: ^(conformance/vectors\.json|packages/go/testdata/vectors\.json)$
+      - id: trailing-whitespace
+        exclude: ^(conformance/vectors\.json|packages/go/testdata/vectors\.json)$
+        args: ["--markdown-linebreak-ext=md"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.6
+    hooks:
+      - id: ruff-check
+        args: ["--fix"]
+
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 26.5.1
+    hooks:
+      - id: black
+
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.30.0
+    hooks:
+      - id: zizmor
+        args: ["--min-severity=low", "--offline"]
+
+  - repo: local
+    hooks:
+      - id: biome
+        name: biome (JavaScript and TypeScript)
+        entry: npx --no-install biome check --error-on-warnings --no-errors-on-unmatched
+        language: system
+        files: \.(js|mjs|cjs|ts|json)$
+        exclude: ^(package-lock\.json|conformance/vectors\.json|packages/go/testdata/vectors\.json)$
+
+      - id: tsc
+        name: tsc (npm package)
+        entry: npx --no-install tsc --noEmit -p packages/npm/tsconfig.json
+        language: system
+        files: ^packages/npm/(src/.*\.ts|tsconfig\.json)$
+        pass_filenames: false
+
+      - id: go-lint
+        name: gofmt, go vet, golangci-lint
+        entry: python tools/lint-go.py
+        language: golang
+        additional_dependencies:
+          - github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+        files: ^packages/go/
+        pass_filenames: false
+
+      - id: shared-files
+        name: shared specification, notice, and fixture copies
+        entry: python tools/sync-shared.py --check
+        language: system
+        files: ^(SPECIFICATION\.md|LICENSE|THIRD_PARTY_NOTICES\.md|conformance/vectors\.json|packages/python/README\.md|packages/(npm|python|go)/(SPECIFICATION\.md|LICENSE|THIRD_PARTY_NOTICES\.md)|packages/go/testdata/vectors\.json|packages/python/src/texthue/_docs/.*)$
+        pass_filenames: false
+
+      - id: package-versions
+        name: package versions agree
+        entry: python tools/check-version.py
+        language: system
+        files: ^(package\.json|packages/npm/package\.json|packages/python/pyproject\.toml|packages/python/src/texthue/__init__\.py)$
+        pass_filenames: false
