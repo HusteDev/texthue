@@ -28,9 +28,6 @@ extension Gamut {
     ]
 
     private func linear(_ l: Double, _ c: Double, _ hue: Double) -> [Double] {
-        func multiply(_ matrix: [[Double]], _ v: [Double]) -> [Double] {
-            matrix.map { row in (row[0] * v[0] + row[1] * v[1]) + row[2] * v[2] }
-        }
         let angle = hue * .pi / 180
         let lms = multiply(Self.labToLMS, [l, c * cos(angle), c * sin(angle)])
         let xyz = multiply(Self.lmsToXYZ, lms.map { $0 * $0 * $0 })
