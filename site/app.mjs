@@ -11,10 +11,13 @@ function append(parent, tag, value) {
 function details(parent, title, data) {
   const group = append(parent, 'details');
   append(group, 'summary', title);
-  append(group, 'pre', JSON.stringify(data, null, 2));
+  group.addEventListener('toggle', () => {
+    if (group.open && !group.querySelector('pre')) append(group, 'pre', JSON.stringify(data, null, 2));
+  });
 }
 function run() {
   worker?.terminate();
+  worker = undefined;
   results.replaceChildren();
   const field = id => document.getElementById(id).value;
   try {

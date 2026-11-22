@@ -5,7 +5,7 @@ export function inspect({labels, options, theme, vision, registry}) {
   const resolver = createResolver(options);
   const pinned = registry ? resolver.importRegistry(registry) : {};
   const fresh = resolver.assign(labels);
-  const persistent = resolver.assign(labels, {pinned});
+  const persistent = registry ? resolver.assign(labels, {pinned}) : fresh;
   const rows = Object.keys(fresh.colors).map(label => {
     const hash = resolver.resolve(label);
     const assigned = fresh.colors[label];
