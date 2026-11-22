@@ -177,6 +177,9 @@ jobs:
       - name: Compile CSS with the packed Tailwind adapter
         if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
         run: python tools/check-tailwind-consumer.py
+      - name: Exercise the packed React adapter on React 18 and 19
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        run: python tools/check-react-consumers.py
       - name: Verify CSS fallback and rendered pixels in Chrome
         if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
         run: python tools/check-browser.py google-chrome

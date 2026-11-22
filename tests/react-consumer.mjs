@@ -14,14 +14,18 @@ const root = createRoot(container);
 function Sample({labels}) {
   const color = useTextColors(labels[0]);
   const {colors} = useAssignedColors(labels);
-  return createElement('span',null,JSON.stringify([color.light.fill.hex, Object.keys(colors)]));
+  return createElement('span',null,JSON.stringify([color.light.fill.hex, assignedFills(colors)]));
+}
+
+function assignedFills(colors) {
+  return Object.entries(colors).map(([label, tones]) => [label, tones.light.fill.hex, tones.dark.fill.hex]);
 }
 
 function check(options,labels) {
   flushSync(() => root.render(createElement(TextHueProvider,{options},createElement(Sample,{labels}))));
   const resolver = createResolver(options);
   assert.deepEqual(JSON.parse(container.textContent), [
-    resolver.resolve(labels[0]).light.fill.hex, Object.keys(resolver.assign(labels).colors),
+    resolver.resolve(labels[0]).light.fill.hex, assignedFills(resolver.assign(labels).colors),
   ]);
 }
 
