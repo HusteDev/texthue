@@ -30,8 +30,9 @@ class _Record:
             if member.metadata.get("optional") and _wire_name(member.name) not in values:
                 continue
             value = values[_wire_name(member.name)]
-            nested = isinstance(member.type, type) and issubclass(member.type, _Record)
-            result[member.name] = member.type.from_dict(value) if nested else value
+            kind = member.metadata.get("record", member.type)
+            nested = isinstance(kind, type) and issubclass(kind, _Record)
+            result[member.name] = kind.from_dict(value) if nested else value
         return cls(**result)
 
 
@@ -63,6 +64,15 @@ class OKLCH(_Record):
 
 
 @dataclass(frozen=True, slots=True)
+class DisplayP3(_Record):
+    """Encoded Display-P3 channels in the range zero through one."""
+
+    r: float
+    g: float
+    b: float
+
+
+@dataclass(frozen=True, slots=True)
 class Color(_Record):
     """One opaque sRGB color in four equivalent representations.
 
@@ -74,6 +84,9 @@ class Color(_Record):
     rgb: RGB
     hsl: HSL
     oklch: OKLCH
+    p3: DisplayP3 | None = field(default=None, metadata={"optional": True, "record": DisplayP3})
+    css: str | None = field(default=None, metadata={"optional": True})
+    srgb_clipped: bool | None = field(default=None, metadata={"optional": True})
 
 
 @dataclass(frozen=True, slots=True)

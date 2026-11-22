@@ -18,6 +18,8 @@ def to_css(color: Color, format: str = "hex") -> str:
     if format == "rgb":
         return f"rgb({color.rgb.r} {color.rgb.g} {color.rgb.b})"
     if format == "p3":
+        if color.css is not None:
+            return color.css
         channels = _srgb_to_p3((color.rgb.r, color.rgb.g, color.rgb.b))
         return "color(display-p3 " + " ".join(map(_decimal, channels)) + ")"
     if format == "hsl":

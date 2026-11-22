@@ -72,6 +72,7 @@ class TextColorOptions(TypedDict, total=False):
     backgrounds: Backgrounds
     #: WCAG contrast ratio required for both pairs in both themes; ``1..21`` inclusive. Default ``4.5``.
     contrastTargets: dict[str, float]
+    gamut: str
     contrastModel: str
     contrastTarget: float
     #: Per-theme, per-role lightness and chroma preferences.

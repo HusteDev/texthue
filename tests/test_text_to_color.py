@@ -90,6 +90,52 @@ console.log(JSON.stringify([compareAssignments(side(old),side(next),texts)]));
         self.assertEqual(to_css(red, "p3"), "color(display-p3 0.917488 0.200287 0.138561)")
         self.assertGreater(_cusp(0.7, 145, _XYZ_TO_P3), _cusp(0.7, 145))
 
+    def test_display_p3_resolver_parity(self):
+        from texthue import ColorSet, Resolver, import_config, to_css
+
+        inputs = []
+        expected = []
+        for model in ("wcag2", "apca"):
+            for options in (
+                {},
+                {"preset": "chart"},
+                {"overrides": {"0": "#ff0000"}},
+                {"backgrounds": {"light": "#456789"}, "foregrounds": ["#777777", "#ffffff"]},
+                {
+                    "palette": [
+                        {"id": "red", "light": "#ff0000"},
+                        {"id": "green", "dark": "#00ff00"},
+                    ]
+                },
+                {"contrastTarget": 106 if model == "apca" else 21},
+            ):
+                resolver = Resolver({"gamut": "display-p3", "contrastModel": model, **options})
+                snapshot = resolver.export_config()
+                restored = import_config(snapshot)
+                for text in ("0", "sample"):
+                    colors = resolver.resolve(text)
+                    self.assertEqual(colors, restored.resolve(text))
+                    self.assertEqual(colors, ColorSet.from_dict(colors.to_dict()))
+                    self.assertEqual(to_css(colors.light.fill, "p3"), colors.light.fill.css)
+                    inputs.append({"config": snapshot, "text": text})
+                    expected.append(colors.to_dict())
+        script = """
+import {importConfig} from './packages/npm/dist/index.js';
+import {readFileSync} from 'node:fs';
+console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
+  ({config,text})=>importConfig(config).resolve(text))));
+"""
+        run = subprocess.run(
+            ["node", "--input-type=module", "-e", script],
+            cwd=ROOT,
+            input=json.dumps(inputs),
+            text=True,
+            capture_output=True,
+            check=True,
+            timeout=60,
+        )
+        self.compare(expected, json.loads(run.stdout))
+
     def test_display_p3_contrast(self):
         from texthue._core import _p3_apca_contrast, _p3_contrast
 

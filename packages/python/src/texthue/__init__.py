@@ -32,6 +32,7 @@ from ._models import (
     Color,
     ColorSet,
     ContrastResult,
+    DisplayP3,
     ThemeColors,
     ThemeContrast,
 )
@@ -288,6 +289,7 @@ __all__ = [
     "OKLCH",
     "Color",
     "ContrastResult",
+    "DisplayP3",
     "ThemeContrast",
     "ThemeColors",
     "ColorSet",

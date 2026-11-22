@@ -178,6 +178,15 @@ def _foreground(rgb):
     return black if _contrast(rgb, black) >= _contrast(rgb, white) else white
 
 
+def _oklch(rgb, matrix):
+    xyz = _multiply(matrix, [_decode(channel / 255) for channel in rgb])
+    lab = _multiply(_LMS_TO_LAB, [math.cbrt(value) for value in _multiply(_XYZ_TO_LMS, xyz)])
+    neutral = rgb[0] == rgb[1] == rgb[2]
+    chroma = 0 if neutral else math.sqrt(lab[1] * lab[1] + lab[2] * lab[2])
+    ok_hue = 0 if neutral else ((math.atan2(lab[2], lab[1]) * 180 / math.pi) % 360 + 360) % 360
+    return {"l": _round6(lab[0]), "c": _round6(chroma), "h": _round6(ok_hue) % 360}
+
+
 def _formats(rgb):
     """Derive every output representation from canonical RGB bytes.
 
@@ -201,17 +210,12 @@ def _formats(rgb):
         else:
             hue = (red - green) / delta + 4
         hue *= 60
-    xyz = _multiply(_RGB_TO_XYZ, [_decode(value) for value in values])
-    lab = _multiply(_LMS_TO_LAB, [math.cbrt(value) for value in _multiply(_XYZ_TO_LMS, xyz)])
-    neutral = r == g == b
-    chroma = 0 if neutral else math.sqrt(lab[1] * lab[1] + lab[2] * lab[2])
-    ok_hue = 0 if neutral else ((math.atan2(lab[2], lab[1]) * 180 / math.pi) % 360 + 360) % 360
     return {
         "hex": "#" + "".join(f"{value:02x}" for value in rgb),
         "rgb": {"r": r, "g": g, "b": b},
         # A rounded 360 wraps to 0 so hue stays within [0, 360).
         "hsl": {"h": _round6(hue) % 360, "s": _round6(saturation * 100), "l": _round6(light * 100)},
-        "oklch": {"l": _round6(lab[0]), "c": _round6(chroma), "h": _round6(ok_hue) % 360},
+        "oklch": _oklch(rgb, _RGB_TO_XYZ),
     }
 
 
@@ -226,47 +230,29 @@ def _choose(
     select=None,
     apca=False,
     surface=False,
+    wide=False,
 ):
-    """Select the final color for one role, enforcing the contrast target.
+    """Fit the sampled tone, then repair failing contrast on the 1/4096 lightness grid.
 
-    The sampled color is fitted first. If it fails the target, an text whose
-    background cannot reach the target with any sRGB color falls back to the
-    better of black and white and reports ``"unattainable-contrast"``.
-    Otherwise a search over lightness values ``k / 1000`` for ``k = 0..1000``
-    picks the passing candidate nearest to the sampled lightness; an exact
-    distance tie chooses the lower lightness.
-
-    Args:
-        lightness: Sampled OKLCH lightness.
-        chroma: Sampled OKLCH chroma; every candidate is fitted from this value.
-        hue: Identity hue in degrees.
-        background: Theme background RGB bytes for an text, or ``None`` for
-            a fill, which is measured against its own black/white foreground.
-        target: Required WCAG contrast ratio.
-
-    Returns:
-        A dict with ``rgb`` and ``metadata`` (a ``ContrastResult``).
-
-    Raises:
-        RuntimeError: If no lightness candidate passes for a fill. The
-            endpoints guarantee this cannot happen for valid targets.
+    Both endpoints are evaluated in the selected gamut. Search each passing side
+    and keep the closer candidate, with lower lightness winning a distance tie.
     """
-
+    matrix = _XYZ_TO_P3 if wide else _XYZ_TO_RGB
+    contrast = _p3_contrast if wide else _contrast
+    metric = (_p3_apca_contrast if wide else _apca_contrast) if apca else contrast
     primary_target = target
     if apca and target == 0 and second is not None:
         target = second_target
 
     def measure(rgb):
-        if apca:
+        if apca or wide:
             backdrop = background if background is not None else select(rgb, primary_target)
             primary = abs(
-                _apca_contrast(backdrop, rgb)
-                if surface or background is None
-                else _apca_contrast(rgb, backdrop)
+                metric(backdrop, rgb) if surface or background is None else metric(rgb, backdrop)
             )
             if second is None or not second_target:
                 return primary
-            secondary = abs(_apca_contrast(rgb, second))
+            secondary = abs(metric(rgb, second))
             return (
                 min(primary, secondary * (primary_target / second_target))
                 if primary_target
@@ -286,7 +272,7 @@ def _choose(
             else ratio
         )
 
-    chosen = _fit(lightness, chroma, hue)
+    chosen = _fit(lightness, chroma, hue, matrix)
     ratio = measure(chosen["rgb"])
     fallback = None
     if ratio < target:
@@ -302,13 +288,13 @@ def _choose(
                 failing = (
                     math.ceil(lightness * 4096) if endpoint == 0 else math.floor(lightness * 4096)
                 )
-                candidate = _fit(passing / 4096, chroma, hue)
+                candidate = _fit(passing / 4096, chroma, hue, matrix)
                 score = measure(candidate["rgb"])
                 if score < target:
                     continue
                 while abs(passing - failing) > 1:
                     mid = (passing + failing) // 2
-                    probe = _fit(mid / 4096, chroma, hue)
+                    probe = _fit(mid / 4096, chroma, hue, matrix)
                     measured = measure(probe["rgb"])
                     if measured >= target:
                         passing, candidate, score = mid, probe, measured
@@ -465,6 +451,7 @@ def _options(options):
             "foregrounds",
             "foregroundPolicy",
             "contrastModel",
+            "gamut",
             "preset",
             "hueRange",
             "excludeHues",
@@ -482,7 +469,16 @@ def _options(options):
     if model not in ("wcag2", "apca"):
         raise TextColorError("INVALID_OPTIONS", "Unknown contrast model")
     apca = model == "apca"
-    measure = _apca_contrast if apca else _contrast
+    gamut = source.get("gamut", "srgb")
+    if gamut not in ("srgb", "display-p3"):
+        raise TextColorError("INVALID_OPTIONS", "Unknown gamut")
+    wide = gamut == "display-p3"
+
+    def canonical(rgb):
+        return [v * 255 for v in _srgb_to_p3(rgb, full_precision=True)] if wide else rgb
+
+    contrast = _p3_contrast if wide else _contrast
+    measure = (_p3_apca_contrast if wide else _apca_contrast) if apca else contrast
     low, high = (0, 106) if apca else (1, 21)
     normalize = _normalizer(source.get("normalize", {}))
     namespace = _text(source.get("namespace", ""), "namespace", "INVALID_OPTIONS")
@@ -500,9 +496,11 @@ def _options(options):
             raise TextColorError("INVALID_OPTIONS", "Invalid foreground color")
         colors.append([int(hex_value[i : i + 2], 16) for i in (1, 3, 5)])
 
+    canonical_colors = [canonical(c) for c in colors]
+
     def select_foreground(rgb, target):
-        selected, best = colors[0], -1
-        for candidate in colors:
+        selected, best = canonical_colors[0], -1
+        for candidate in canonical_colors:
             ratio = abs(measure(candidate, rgb))
             if policy == "first-passing" and ratio >= target:
                 return candidate
@@ -597,7 +595,7 @@ def _options(options):
         }
         passing = all(
             abs(measure(select_foreground(rgb, targets["fill"]), rgb)) >= targets["fill"]
-            for rgb in pair.values()
+            for rgb in map(canonical, pair.values())
         )
         palette[ident] = (passing, pair)
 
@@ -635,6 +633,8 @@ def _options(options):
             for key in overrides
         },
     }
+    if wide:
+        expanded["gamut"] = gamut
     if apca:
         expanded["contrastModel"] = model
     if palette:
@@ -644,6 +644,11 @@ def _options(options):
         ]
 
     return {
+        "wide": wide,
+        "canonical": canonical,
+        "measure": measure,
+        "contrast": contrast,
+        "formats": _p3_formats if wide else _formats,
         "exportOptions": expanded,
         "apca": apca,
         "brand": brand,
@@ -653,7 +658,7 @@ def _options(options):
         "normalize": normalize,
         "seed": int(seed),
         "targets": targets,
-        "backgrounds": backgrounds,
+        "backgrounds": {theme: canonical(rgb) for theme, rgb in backgrounds.items()},
         "contrastTarget": float(target),
         "profiles": profiles,
     }
@@ -672,7 +677,7 @@ def compile_settings(options):
         + len(namespace_bytes).to_bytes(4, "big")
         + namespace_bytes
     )
-    bases = {theme: _formats(rgb) for theme, rgb in settings["backgrounds"].items()}
+    bases = {theme: settings["formats"](rgb) for theme, rgb in settings["backgrounds"].items()}
     return settings, prefix, bases
 
 
@@ -747,7 +752,9 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
             hue=hue,
         ):
             lightness = max(0, min(1, lightness))
-            chroma = _cusp(lightness, hue) * profile[1]
+            chroma = (
+                _cusp(lightness, hue, _XYZ_TO_P3 if settings["wide"] else _XYZ_TO_RGB) * profile[1]
+            )
             value = _choose(
                 lightness,
                 min(chroma, profile[2]),
@@ -759,6 +766,7 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
                 settings["selectForeground"],
                 settings["apca"],
                 surface,
+                settings["wide"],
             )
             value["metadata"]["chromaCapped"] = chroma > profile[2]
             return value
@@ -775,14 +783,10 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
         muted = tone(lb + direction * 0.10, fp, None, 0 if settings["apca"] else 1)
         fill = tone(fp[0], fp, None, targets["fill"])
         if brand:
-            fill["rgb"] = brand[theme]
+            fill["rgb"] = settings["canonical"](brand[theme])
         on_fill = settings["selectForeground"](fill["rgb"], targets["fill"])
         if brand:
-            ratio = (
-                abs(_apca_contrast(on_fill, fill["rgb"]))
-                if settings["apca"]
-                else _contrast(fill["rgb"], on_fill)
-            )
+            ratio = abs(settings["measure"](on_fill, fill["rgb"]))
             fill["metadata"] = {
                 "ratio": ratio,
                 "meetsTarget": ratio >= targets["fill"],
@@ -809,7 +813,7 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
         }
         meta = {k: v["metadata"] for k, v in colors.items() if k not in ("subtle", "muted")}
         for name, backdrop in (("text", background), ("textOnSubtle", subtle["rgb"])):
-            ratio = _contrast(colors["text"]["rgb"], backdrop)
+            ratio = settings["contrast"](colors["text"]["rgb"], backdrop)
             meta[name] = {
                 **colors["text"]["metadata"],
                 "ratio": ratio,
@@ -823,17 +827,17 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
                     front, back = colors["text"]["rgb"], subtle["rgb"]
                 else:
                     front, back = colors[name]["rgb"], background
-                value = _apca_contrast(front, back)
+                value = settings["measure"](front, back)
                 item.update(
                     model="apca",
                     value=value,
-                    ratio=_contrast(front, back),
+                    ratio=settings["contrast"](front, back),
                     meetsTarget=abs(value) >= targets[name],
                 )
         result[theme] = {
-            **{k: _formats(v["rgb"]) for k, v in colors.items()},
+            **{k: settings["formats"](v["rgb"]) for k, v in colors.items()},
             "background": base,
-            "onFill": _formats(on_fill),
+            "onFill": settings["formats"](on_fill),
             "contrast": {"target": target, **meta},
         }
     return result
@@ -863,9 +867,10 @@ def _p3_fallback(rgb):
     return [math.floor(255 * _encode(max(0, min(1, v))) + 0.5) for v in linear], not _inside(linear)
 
 
-def _srgb_to_p3(rgb):
+def _srgb_to_p3(rgb, full_precision=False):
     xyz = _multiply(_RGB_TO_XYZ, [_decode(v / 255) for v in rgb])
-    return [_round6(_encode(max(0, min(1, v)))) for v in _multiply(_XYZ_TO_P3, xyz)]
+    channels = [_encode(max(0, min(1, v))) for v in _multiply(_XYZ_TO_P3, xyz)]
+    return channels if full_precision else list(map(_round6, channels))
 
 
 def _p3_contrast(text, background):
@@ -876,3 +881,16 @@ def _p3_apca_contrast(text, background):
     return _apca_contrast(
         text, background, (0.2289829594805780, 0.6917492625852380, 0.0792677779341829)
     )
+
+
+def _p3_formats(rgb):
+    fallback, clipped = _p3_fallback(rgb)
+    channels = [_round6(v / 255) for v in rgb]
+    css = "color(display-p3 " + " ".join(f"{v:.6f}".rstrip("0").rstrip(".") for v in channels) + ")"
+    return {
+        **_formats(fallback),
+        "oklch": _oklch(rgb, _P3_TO_XYZ),
+        "p3": dict(zip("rgb", channels, strict=True)),
+        "css": css,
+        "srgbClipped": clipped,
+    }
