@@ -26,13 +26,14 @@ func (input migrationInput) side() (texthue.MigrationSide, error) {
 // run decodes the cases, resolves them in order, and encodes the results.
 func run() error {
 	var cases []struct {
-		Migration *struct{ Old, Next migrationInput } `json:"migration"`
-		Config    json.RawMessage                     `json:"config"`
-		Texts     []string                            `json:"texts"`
-		Pinned    map[string]texthue.Assignment       `json:"pinned"`
-		Text      string                              `json:"text"`
-		Trace     bool                                `json:"trace"`
-		Options   json.RawMessage                     `json:"options"`
+		ExportConfig bool                                `json:"exportConfig"`
+		Migration    *struct{ Old, Next migrationInput } `json:"migration"`
+		Config       json.RawMessage                     `json:"config"`
+		Texts        []string                            `json:"texts"`
+		Pinned       map[string]texthue.Assignment       `json:"pinned"`
+		Text         string                              `json:"text"`
+		Trace        bool                                `json:"trace"`
+		Options      json.RawMessage                     `json:"options"`
 	}
 	if err := json.NewDecoder(os.Stdin).Decode(&cases); err != nil {
 		return err
@@ -78,10 +79,18 @@ func run() error {
 		if err != nil {
 			return err
 		}
-		if item.Texts != nil {
+		if item.Texts != nil || item.ExportConfig {
 			resolver, err := texthue.NewResolver(options...)
 			if err != nil {
 				return err
+			}
+			if item.ExportConfig {
+				snapshot, err := resolver.ExportConfig()
+				if err != nil {
+					return err
+				}
+				results = append(results, json.RawMessage(snapshot))
+				continue
 			}
 			result, err := resolver.Assign(item.Texts, item.Pinned)
 			if err != nil {

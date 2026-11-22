@@ -287,6 +287,55 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
         with self.assertRaises(TextColorError):
             resolver.import_registry(saved)
 
+    def test_config_replay_from_each_primary_language(self):
+        manifest = json.loads((ROOT / "tools/packages.json").read_text(encoding="utf-8"))
+        commands = {
+            p["id"]: p["conformanceRunner"]
+            for p in manifest["packages"]
+            if p.get("conformanceReplay")
+        }
+        commands["python"] = [sys.executable, *commands["python"][1:]]
+        cases = [
+            {"text": " research ", "options": {}},
+            {
+                "text": "É",
+                "options": {
+                    "namespace": "試験",
+                    "seed": 17,
+                    "normalize": {"unicode": "NFC"},
+                    "overrides": {"É": "#335577"},
+                },
+            },
+            {
+                "text": "night",
+                "options": {"preset": "controls", "backgrounds": {"light": "#888888"}},
+            },
+        ]
+
+        def run(command, inputs):
+            proc = subprocess.run(
+                command,
+                cwd=ROOT,
+                input=json.dumps(inputs),
+                text=True,
+                capture_output=True,
+                encoding="utf-8",
+                timeout=60,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            return json.loads(proc.stdout)
+
+        expected = run(commands["npm"], cases)
+        replays = []
+        for producer, command in commands.items():
+            configs = run(command, [{**item, "exportConfig": True} for item in cases])
+            for case, config in zip(cases, configs, strict=True):
+                self.assertEqual(config["schema"], "texthue-config-v1", producer)
+                replays.append({"text": case["text"], "config": config})
+        for consumer, command in commands.items():
+            with self.subTest(consumer=consumer):
+                self.compare(run(command, replays), expected * len(commands))
+
     def test_portable_config_fingerprint(self):
         from texthue._fingerprint import fingerprint
 

@@ -15,7 +15,11 @@ def main():
         resolver = (
             import_config(case["config"]) if "config" in case else Resolver(case.get("options", {}))
         )
-        output.append(resolver.resolve(case["text"]).to_dict())
+        output.append(
+            resolver.export_config()
+            if case.get("exportConfig")
+            else resolver.resolve(case["text"]).to_dict()
+        )
     json.dump(output, sys.stdout, allow_nan=False)
 
 
