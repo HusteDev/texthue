@@ -1,10 +1,6 @@
-// Regenerate with the published reference package outside consumer dependencies:
-// npm install --prefix .cache/apca-oracle --no-save --ignore-scripts apca-w3@0.1.9
+// npm ci installs the locked development oracle.
 import {readFile,writeFile} from 'node:fs/promises';
-import {APCAcontrast,sRGBtoY} from '../.cache/apca-oracle/node_modules/apca-w3/src/apca-w3.js';
-
-const manifest = new URL('../.cache/apca-oracle/node_modules/apca-w3/package.json',import.meta.url);
-if (JSON.parse(await readFile(manifest,'utf8')).version !== '0.1.9') throw new Error('Expected apca-w3@0.1.9');
+import {APCAcontrast,sRGBtoY} from 'apca-w3';
 
 let state = 571;
 function byte() {

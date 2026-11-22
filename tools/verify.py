@@ -140,6 +140,11 @@ def main():
     run("swatch gallery", ["node", "tools/render-gallery.mjs", "--check"], env=env)
     run("assignment vectors", ["node", "tools/build-assign-vectors.mjs", "--check"], env=env)
     run(
+        "signed APCA reference vectors",
+        ["node", "tools/build-apca-vectors.mjs", "--check"],
+        env=env,
+    )
+    run(
         "300-collection rendered fill separation", ["node", "tools/measure-separation.mjs"], env=env
     )
     fixtures = ROOT / "conformance"
