@@ -45,11 +45,11 @@ func ExampleResolve() {
 
 // ExampleResolve_tuning sets every option with independent ranges per theme and role.
 func ExampleResolve_tuning() {
-	options := &texthue.Options{
-		Namespace:      "workspace:demo",
-		Backgrounds:    &texthue.Backgrounds{Light: texthue.Ptr("#f5f0e8"), Dark: texthue.Ptr("#20242b")},
-		ContrastTarget: texthue.Ptr(7.0),
-		Profiles: &texthue.Profiles{
+	colors, err := texthue.Resolve("project:atlas",
+		texthue.WithNamespace("workspace:demo"),
+		texthue.WithBackgrounds("#f5f0e8", "#20242b"),
+		texthue.WithContrastTarget(7),
+		texthue.WithProfile(texthue.Profiles{
 			Light: &texthue.ThemeProfiles{
 				Fill: &texthue.Profile{Lightness: &texthue.Range{.74, .84}, ChromaScale: &texthue.Range{.08, .14}},
 				Text: &texthue.Profile{Lightness: &texthue.Range{.40, .52}, ChromaScale: &texthue.Range{.10, .16}},
@@ -58,9 +58,8 @@ func ExampleResolve_tuning() {
 				Fill: &texthue.Profile{Lightness: &texthue.Range{.38, .48}, ChromaScale: &texthue.Range{.08, .14}},
 				Text: &texthue.Profile{Lightness: &texthue.Range{.74, .86}, ChromaScale: &texthue.Range{.10, .16}},
 			},
-		},
-	}
-	colors, err := texthue.Resolve("project:atlas", options)
+		}),
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -85,9 +84,7 @@ func ExampleResolve_grayscale() {
 // ExampleResolve_impossibleContrast shows the explicit fallback when no text
 // can reach the target against a mid-gray background.
 func ExampleResolve_impossibleContrast() {
-	colors, err := texthue.Resolve("project:atlas", &texthue.Options{
-		Backgrounds: &texthue.Backgrounds{Light: texthue.Ptr("#777777")}, ContrastTarget: texthue.Ptr(7.0),
-	})
+	colors, err := texthue.Resolve("project:atlas", texthue.WithBackgrounds("#777777", "#121212"), texthue.WithContrastTarget(7))
 	if err != nil {
 		panic(err)
 	}
@@ -100,7 +97,7 @@ func ExampleResolve_impossibleContrast() {
 
 // ExampleResolve_errors inspects the stable error code with errors.As.
 func ExampleResolve_errors() {
-	_, err := texthue.Resolve("research", &texthue.Options{ContrastTarget: texthue.Ptr(22.0)})
+	_, err := texthue.Resolve("research", texthue.WithContrastTarget(22))
 	var invalid *texthue.Error
 	if errors.As(err, &invalid) {
 		fmt.Println(invalid.Code)

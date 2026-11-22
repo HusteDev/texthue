@@ -280,7 +280,7 @@ func chooseForeground(l, c, h float64, background *encodedRGB, target float64, s
 			}
 			chosen = fitted{rgb, float64(rgb[0]) / 255, 0}
 			ratio = measure(rgb)
-			fallback = Ptr("unattainable-contrast")
+			fallback = ptr("unattainable-contrast")
 		} else {
 			bestDistance := math.Inf(1)
 			for _, endpoint := range []int{0, 4096} {

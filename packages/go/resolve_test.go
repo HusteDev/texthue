@@ -142,9 +142,9 @@ func TestRuntimeErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, options := range []*Options{
-		{Namespace: string([]byte{0xff})}, {ContrastTarget: Ptr(math.NaN())}, {ContrastTarget: Ptr(math.Inf(1))},
+		{Namespace: string([]byte{0xff})}, {ContrastTarget: ptr(math.NaN())}, {ContrastTarget: ptr(math.Inf(1))},
 		{Profiles: &Profiles{Light: &ThemeProfiles{Fill: &Profile{Lightness: &Range{0, math.NaN()}}}}},
-		{Backgrounds: &Backgrounds{Light: Ptr("")}},
+		{Backgrounds: &Backgrounds{Light: ptr("")}},
 	} {
 		_, err := Resolve("x", options)
 		if !errors.As(err, &typed) || typed.Code != "INVALID_OPTIONS" {

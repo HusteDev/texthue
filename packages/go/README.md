@@ -42,19 +42,16 @@ func NewResolver(options ...Option) (*Resolver, error)
 func ParseOptions(data []byte) ([]Option, error)
 func WithPalette(values []PaletteEntry) Option
 func WithOverrides(values map[string]Override) Option
-func Ptr[T any](value T) *T
 ```
 
-`Resolve` is synchronous. `nil` options and `&Options{}` use defaults. Optional pointer fields distinguish an omitted value from a meaningful zero. `Ptr` creates a pointer to a value; use `Ptr(7.0)` rather than `Ptr(7)` for a `*float64`. Ranges are `[2]float64` arrays named `Range`. Inputs are not mutated; callers must not mutate shared options concurrently with a call.
+`Resolve` is synchronous. `nil` options and `&Options{}` use defaults. Optional pointer fields distinguish an omitted value from a meaningful zero. Ranges are `[2]float64` arrays named `Range`. Inputs are not mutated; callers must not mutate shared options concurrently with a call.
 
 ```go
-options := &texthue.Options{
-    Namespace: "workspace:demo",
-    Backgrounds: &texthue.Backgrounds{
-        Light: texthue.Ptr("#f5f0e8"), Dark: texthue.Ptr("#20242b"),
-    },
-    ContrastTarget: texthue.Ptr(7.0),
-    Profiles: &texthue.Profiles{
+colors, err := texthue.Resolve("project:atlas",
+        texthue.WithNamespace("workspace:demo"),
+        texthue.WithBackgrounds("#f5f0e8", "#20242b"),
+        texthue.WithContrastTarget(7),
+        texthue.WithProfile(texthue.Profiles{
         Light: &texthue.ThemeProfiles{
             Fill: &texthue.Profile{
                 Lightness: &texthue.Range{0.74, 0.84}, ChromaScale: &texthue.Range{0.08, 0.14},
@@ -71,9 +68,8 @@ options := &texthue.Options{
                 Lightness: &texthue.Range{0.74, 0.86}, ChromaScale: &texthue.Range{0.60, 0.80},
             },
         },
-    },
-}
-colors, err := texthue.Resolve("project:atlas", options)
+    }),
+    )
 if err != nil { panic(err) }
 fmt.Println(colors.Light.Contrast, colors.Dark.Contrast)
 ```
@@ -85,12 +81,12 @@ fmt.Println(colors.Light.Contrast, colors.Dark.Contrast)
 | `Backgrounds.Dark` | `"#121212"` | Opaque six-digit `#RRGGBB` |
 | `ContrastTarget` | `4.5` | Finite float64 in 1–21 inclusive |
 | `Profiles.Light.Fill.Lightness` | `{0.72, 0.82}` | Ordered range in 0–1 |
-| `Profiles.Light.Text.Lightness` | `{0.45, 0.55}` | Ordered range in 0–1 |
+| `Profiles.Light.Text.Lightness` | `{0.43, 0.53}` | Ordered range in 0–1 |
 | `Profiles.Dark.Fill.Lightness` | `{0.40, 0.50}` | Ordered range in 0–1 |
 | `Profiles.Dark.Text.Lightness` | `{0.72, 0.82}` | Ordered range in 0–1 |
-| Each role's `Chroma` | `{0.60, 0.80}` | Ordered range in 0–0.4 |
+| Each role's `ChromaScale` | `{0.60, 0.80}` | Ordered range in 0–1 |
 
-Nil nested fields retain defaults. A provided range replaces both endpoints. Equal endpoints fix a requested value; `&texthue.Range{0, 0}` chroma requests grayscale. Contrast can move lightness outside the requested range, and gamut fitting can reduce chroma. There are no other v1 tuning parameters.
+Nil nested fields retain defaults. A provided range replaces both endpoints. Equal endpoints fix a requested value; `&texthue.Range{0, 0}` chroma requests grayscale. Contrast can move lightness outside the requested range, and gamut fitting can reduce chroma. The shared specification describes the remaining renderer options.
 
 ```go
 gray, err := texthue.Resolve("plain", &texthue.Options{
@@ -101,10 +97,7 @@ gray, err := texthue.Resolve("plain", &texthue.Options{
 if err != nil { panic(err) }
 fmt.Println(gray.Light.Fill.OKLCH.C) // 0
 
-impossible, err := texthue.Resolve("project:atlas", &texthue.Options{
-    Backgrounds: &texthue.Backgrounds{Light: texthue.Ptr("#777777")},
-    ContrastTarget: texthue.Ptr(7.0),
-})
+impossible, err := texthue.Resolve("project:atlas", texthue.WithBackgrounds("#777777", "#121212"), texthue.WithContrastTarget(7))
 if err != nil { panic(err) }
 status := impossible.Light.Contrast.Text
 fmt.Println(status.MeetsTarget) // false
@@ -128,7 +121,7 @@ fmt.Println(string(data))
 ```
 
 ```go
-_, err := texthue.Resolve("research", &texthue.Options{ContrastTarget: texthue.Ptr(22.0)})
+_, err := texthue.Resolve("research", texthue.WithContrastTarget(22))
 var invalid *texthue.Error
 if errors.As(err, &invalid) { // Import errors.
     fmt.Println(invalid.Code) // INVALID_OPTIONS

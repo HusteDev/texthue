@@ -95,9 +95,7 @@ type Options struct {
 	Profiles *Profiles `json:"profiles,omitempty"`
 }
 
-// Ptr returns a pointer to a copy of value. It is a convenience for filling
-// optional Options fields, for example Ptr(7.0) for ContrastTarget.
-func Ptr[T any](value T) *T { return &value }
+func ptr[T any](value T) *T { return &value }
 
 // RGB holds sRGB channels as integers in 0..255.
 type RGB struct {
@@ -245,19 +243,19 @@ func (c ColorSet) detached() ColorSet {
 	for _, theme := range []*ThemeColors{&c.Light, &c.Dark} {
 		for _, color := range []*Color{&theme.Background, &theme.Fill, &theme.OnFill, &theme.Subtle, &theme.Muted, &theme.FillHover, &theme.FillActive, &theme.Border, &theme.Text, &theme.Strong} {
 			if color.P3 != nil {
-				color.P3 = Ptr(*color.P3)
+				color.P3 = ptr(*color.P3)
 			}
 			if color.SRGBClipped != nil {
-				color.SRGBClipped = Ptr(*color.SRGBClipped)
+				color.SRGBClipped = ptr(*color.SRGBClipped)
 			}
 		}
 		meta := &theme.Contrast
 		for _, pair := range []*ContrastResult{&meta.Fill, &meta.FillHover, &meta.FillActive, &meta.Text, &meta.TextOnSubtle, &meta.Border, &meta.Strong} {
 			if pair.Value != nil {
-				pair.Value = Ptr(*pair.Value)
+				pair.Value = ptr(*pair.Value)
 			}
 			if pair.Fallback != nil {
-				pair.Fallback = Ptr(*pair.Fallback)
+				pair.Fallback = ptr(*pair.Fallback)
 			}
 		}
 	}

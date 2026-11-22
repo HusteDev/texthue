@@ -519,7 +519,7 @@ func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string
 			}
 			fillMeta = ContrastResult{Ratio: ratio, MeetsTarget: ratio >= required("fill")}
 			if !fillMeta.MeetsTarget {
-				fillMeta.Fallback = Ptr("palette-constraint")
+				fillMeta.Fallback = ptr("palette-constraint")
 			}
 		}
 		hover, hoverMeta := tone(&traces.FillHover, requestedFill+direction*.025, fillL+direction*.025, fillC, theme.fill.cap, &onFill, required("fillHover"), true)
