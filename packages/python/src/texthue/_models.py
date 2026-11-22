@@ -74,9 +74,11 @@ class DisplayP3(_Record):
 
 @dataclass(frozen=True, slots=True)
 class Color(_Record):
-    """One opaque sRGB color in four equivalent representations.
+    """One opaque color rendered in the configured gamut.
 
-    The RGB bytes are canonical; ``hex``, ``hsl``, and ``oklch`` are derived from them.
+    For Display-P3, ``p3``, ``css``, and ``oklch`` describe the native rendition.
+    The ``hex``, ``rgb``, and ``hsl`` fields describe its sRGB fallback.
+    ``srgb_clipped`` records whether conversion clipped a channel.
     """
 
     #: Lowercase six-digit ``#rrggbb``.
@@ -93,16 +95,16 @@ class Color(_Record):
 class ContrastResult(_Record):
     """Contrast measurement for one color pair and a record of any adjustments."""
 
-    #: WCAG contrast ratio of the final RGB pair, at full computational precision.
+    #: Luminance contrast ratio of the rendered pair in the selected gamut.
     ratio: float
-    #: Whether ``ratio`` is at least the configured target.
+    #: Whether this relationship meets its target under the configured contrast model.
     meets_target: bool
     #: Whether lightness was moved away from the sampled value to reach the target.
     lightness_adjusted: bool
-    #: Whether chroma was reduced below the requested value to fit the sRGB gamut.
+    #: Whether chroma was reduced below the requested value to fit the selected gamut.
     chroma_reduced: bool
     chroma_capped: bool
-    #: ``"unattainable-contrast"`` when no sRGB text can reach the target; otherwise ``None``.
+    #: Reason the renderer used a fallback or retained a constrained palette fill.
     fallback: Literal["unattainable-contrast", "palette-constraint"] | None
     model: Literal["apca", "wcag2"] | None = field(default=None, metadata={"optional": True})
     value: float | None = field(default=None, metadata={"optional": True})
@@ -110,17 +112,18 @@ class ContrastResult(_Record):
 
 @dataclass(frozen=True, slots=True)
 class ThemeContrast(_Record):
-    """The configured target plus measurements for both contrast pairs."""
+    """The configured target and the seven measured role relationships."""
 
     target: float
     #: ``fill`` measured against ``onFill``.
     fill: ContrastResult
-    #: ``text`` measured against ``background``.
+    #: Hover and active fills are measured against the selected on-fill foreground.
     fill_hover: ContrastResult
     fill_active: ContrastResult
     border: ContrastResult
     strong: ContrastResult
     text_on_subtle: ContrastResult
+    #: Text measured against the theme background.
     text: ContrastResult
 
 
@@ -132,9 +135,9 @@ class ThemeColors(_Record):
     background: Color
     #: Badge or surface color.
     fill: Color
-    #: Black or white, whichever contrasts more with ``fill``.
+    #: Foreground chosen from the configured candidates for use on the fill.
     on_fill: Color
-    #: Text or mark color for use on ``background``.
+    #: Low-emphasis surface used as the backdrop for the text-on-subtle measurement.
     subtle: Color
     muted: Color
     fill_hover: Color
@@ -151,7 +154,7 @@ class ColorSet(_Record):
 
     #: Algorithm identifier that produced this result.
     version: Literal["text-to-color-v1"]
-    #: Hash-derived identity hue in degrees, unrounded. Shared by all four roles before gamut fitting.
+    #: Origin of this color assignment.
     source: Literal["hash", "assigned", "palette", "override"]
     hue_fraction: float
     hue: float
