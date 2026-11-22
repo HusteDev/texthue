@@ -3,7 +3,7 @@ package com.hustedev.texthue
 import kotlin.math.abs
 import kotlin.math.pow
 
-internal enum class ContrastModel { WCAG2, APCA }
+enum class ContrastModel { WCAG2, APCA }
 
 internal object Contrast {
     private val srgbRatio = doubleArrayOf(0.2126, 0.7152, 0.0722)

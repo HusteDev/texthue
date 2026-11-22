@@ -1,5 +1,6 @@
 package com.hustedev.texthue
 
+import kotlin.math.abs
 import kotlin.math.floor
 
 data class ThemePalette(val colors: Map<String, String>)
@@ -19,11 +20,13 @@ class Resolver(
     contrastTarget: Double? = null,
     private val normalization: Normalization = Normalization(),
     private val preset: Preset = Preset.LABELS,
+    private val contrastModel: ContrastModel = ContrastModel.WCAG2,
 ) {
-    private val target = contrastTarget ?: preset.target
+    private val apca = contrastModel == ContrastModel.APCA
+    private val target = contrastTarget ?: if (apca) 60.0 else preset.target
     private val scope = normalization.apply(namespace)
 
-    init { require(target in 1.0..21.0) }
+    init { require(target in (if (apca) 0.0..106.0 else 1.0..21.0)) }
 
     fun resolve(text: String): Palette {
         val (uH, uL, uC) = Identity.fractions(Identity.digest(normalization.apply(text), scope, seed))
@@ -48,28 +51,31 @@ class Resolver(
         val textL = if (dark) sample(0.72, 0.82, 1) else sample(0.43, 0.53, 1)
         val black = IntArray(3)
         val white = IntArray(3) { 255 }
-        fun contrast(a: IntArray, b: IntArray) = Contrast.measure(a, b, ContrastModel.WCAG2, Gamut.SRGB)
+        fun contrast(a: IntArray, b: IntArray) = abs(Contrast.measure(a, b, contrastModel, Gamut.SRGB))
         fun foreground(rgb: IntArray) = if (contrast(black, rgb) >= contrast(white, rgb)) black else white
-        fun tone(l: Double, cap: Double, target: Double, backdrop: IntArray? = null, second: IntArray? = null): IntArray {
+        fun tone(l: Double, cap: Double, target: Double, backdrop: IntArray? = null, second: IntArray? = null, surface: Boolean = false): IntArray {
             val lightness = l.coerceIn(0.0, 1.0)
             val chroma = minOf(cap, ColorMath.cusp(lightness, hue, Gamut.SRGB) * scale)
             return repairTone(lightness, chroma, hue, Gamut.SRGB, target) { rgb ->
-                val primary = contrast(rgb, backdrop ?: foreground(rgb))
+                val primary = if (backdrop == null || surface) contrast(backdrop ?: foreground(rgb), rgb)
+                    else contrast(rgb, backdrop)
                 if (second == null) primary else minOf(primary, contrast(rgb, second))
             }.color.bytes
         }
-        val subtle = tone(lb + direction * 0.04, 0.16, 1.0)
+        val unconstrained = if (apca) 0.0 else 1.0
+        val borderTarget = if (apca) target else minOf(3.0, target)
+        val subtle = tone(lb + direction * 0.04, 0.16, unconstrained)
         val fill = tone(fillL, 0.16, target)
         val onFill = foreground(fill)
         val colors = mapOf(
             "background" to background,
             "subtle" to subtle,
-            "muted" to tone(lb + direction * 0.10, 0.16, 1.0),
+            "muted" to tone(lb + direction * 0.10, 0.16, unconstrained),
             "fill" to fill,
             "onFill" to onFill,
-            "fillHover" to tone(fillL + direction * 0.025, 0.16, target, onFill),
-            "fillActive" to tone(fillL + direction * 0.05, 0.16, target, onFill),
-            "border" to tone(lb + direction * 0.39, 0.16, minOf(3.0, target), background),
+            "fillHover" to tone(fillL + direction * 0.025, 0.16, target, onFill, surface = true),
+            "fillActive" to tone(fillL + direction * 0.05, 0.16, target, onFill, surface = true),
+            "border" to tone(lb + direction * 0.39, 0.16, borderTarget, background),
             "text" to tone(textL, 0.19, target, background, subtle),
             "strong" to tone(textL + direction * 0.10, 0.19, target, background),
         )

@@ -1,9 +1,9 @@
 import { createResolver } from '../packages/npm/dist/index.js';
 const roles = ['background','subtle','muted','fill','onFill','fillHover','fillActive','border','text','strong'];
 const encode = s => Buffer.from(s).toString('base64');
-function emit(text, namespace, seed, contrastTarget, normalize = {unicode:'none', case:'none', whitespace:'none'}, preset = 'labels') {
-  const color = createResolver({namespace,seed,preset,normalize,...(contrastTarget === undefined ? {} : {contrastTarget})}).resolve(text);
-  console.log([encode(text),encode(namespace),seed,contrastTarget,normalize.unicode,normalize.case,normalize.whitespace,preset,color.hue,
+function emit(text, namespace, seed, contrastTarget, normalize = {unicode:'none', case:'none', whitespace:'none'}, preset = 'labels', contrastModel = 'wcag2') {
+  const color = createResolver({namespace,seed,preset,normalize,contrastModel,...(contrastTarget === undefined ? {} : {contrastTarget})}).resolve(text);
+  console.log([encode(text),encode(namespace),seed,contrastTarget,normalize.unicode,normalize.case,normalize.whitespace,preset,contrastModel,color.hue,
     ...['light','dark'].flatMap(theme=>roles.map(role=>color[theme][role].hex))].join('\t'));
 }
 for (const contrastTarget of [1, 4.5, 7, 21]) {
@@ -27,5 +27,11 @@ for (const unicode of ['none','NFC','NFKC']) {
 for (const preset of ['labels','controls','chart','subdued','mono']) {
   for (const target of [undefined, 3, 9]) {
     for (const text of ['amber','violet','blue','green']) emit(text, '', 0, target, undefined, preset);
+  }
+}
+
+for (const target of [undefined, 0, 45, 60, 75, 90, 106]) {
+  for (const preset of ['labels','controls','mono']) {
+    for (const text of ['amber','violet','blue','green']) emit(text, '', 0, target, undefined, preset, 'apca');
   }
 }
