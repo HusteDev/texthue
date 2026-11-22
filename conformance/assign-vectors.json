@@ -530,6 +530,72 @@
   },
   {
     "texts": [
+      "item:33",
+      "item:633"
+    ],
+    "assignments": {
+      "item:33": {
+        "hueFraction": 0.274969061370939,
+        "ring": 0,
+        "moved": false
+      },
+      "item:633": {
+        "hueFraction": 0.37700352709119517,
+        "ring": 0,
+        "moved": true
+      }
+    },
+    "report": {
+      "minDistance": 0.0735585981099187,
+      "closestPairs": [
+        [
+          "item:33",
+          "item:633"
+        ]
+      ],
+      "withinRingCapacity": true,
+      "distinctFills": true
+    },
+    "lightFills": {
+      "item:33": "#b4c860",
+      "item:633": "#6fd274"
+    }
+  },
+  {
+    "texts": [
+      "item:79",
+      "item:81"
+    ],
+    "assignments": {
+      "item:79": {
+        "hueFraction": 0.2846399883273989,
+        "ring": 0,
+        "moved": false
+      },
+      "item:81": {
+        "hueFraction": 0.8782229707576334,
+        "ring": 0,
+        "moved": false
+      }
+    },
+    "report": {
+      "minDistance": 0.26789150049245153,
+      "closestPairs": [
+        [
+          "item:79",
+          "item:81"
+        ]
+      ],
+      "withinRingCapacity": true,
+      "distinctFills": true
+    },
+    "lightFills": {
+      "item:79": "#b4ce66",
+      "item:81": "#e58fd9"
+    }
+  },
+  {
+    "texts": [
       "four",
       "five",
       "two",

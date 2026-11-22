@@ -31,3 +31,14 @@ The JavaScript benchmark collects V8 function-entry counts separately from laten
 Python's benchmark measures the same operations in a separate counting pass. Across all five scenarios it produced the same fit, cusp, and hash counts as JavaScript. Python's conformance suite enforces the same ceilings.
 
 Go's count-mode coverage confirms the same operation counts in all five scenarios. Run `python tools/check-go-work.py` to measure them independently of benchmark timing. The primary verifier runs this check against the same ceilings as JavaScript and Python.
+
+## Historical near-collision pairs
+
+The shared assignment corpus includes two pairs from the original review. The table gives Euclidean OKLab distance between the two emitted sRGB fills for each pair in isolation, using default options. Larger values indicate more separation in this metric.
+
+| Labels | Light hash / assigned | Dark hash / assigned |
+| --- | ---: | ---: |
+| item:33 and item:633 | 0.0159 / 0.0736 | 0.0111 / 0.0479 |
+| item:79 and item:81 | 0.2679 / 0.2679 | 0.2067 / 0.2067 |
+
+Collection assignment moved one member of the first pair. The redesigned hash renderer already placed the second pair far enough apart to retain both placements. These measurements cover two pairs and normal vision. They do not establish a general perceptual threshold.
