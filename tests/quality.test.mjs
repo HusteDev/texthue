@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {cusp} from '../packages/npm/dist/color-math.js';
 import {createResolver} from '../packages/npm/dist/index.js';
 import {anchors} from '../packages/npm/dist/tables.js';
-import {cusp} from '../packages/npm/dist/color-math.js';
 
 test('uncapped rendered tones retain at least 55 percent of available sRGB chroma', () => {
   const resolver = createResolver();

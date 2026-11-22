@@ -1,5 +1,5 @@
-import {createResolver} from '../packages/npm/dist/index.js';
 import {analyzePalette} from '../packages/npm/dist/diagnostics.js';
+import {createResolver} from '../packages/npm/dist/index.js';
 
 const resolver = createResolver();
 let seed = 4217;

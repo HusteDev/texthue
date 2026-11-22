@@ -1,5 +1,5 @@
-import {analyzePalette, simulateVision} from '../packages/npm/dist/diagnostics.js';
 import {contrast, p3Contrast} from '../packages/npm/dist/color-math.js';
+import {analyzePalette, simulateVision} from '../packages/npm/dist/diagnostics.js';
 import {createResolver, cssVariables, importConfig} from '../packages/npm/dist/index.js';
 
 function surfaceContrast({fill, background}) {

@@ -64,7 +64,8 @@ def assign_collection(texts, pinned, compiled):
 
     def score(pair):
         return min(
-            (math.dist(a, b) for prior in occupied for a, b in zip(pair, prior)), default=math.inf
+            (math.dist(a, b) for prior in occupied for a, b in zip(pair, prior, strict=True)),
+            default=math.inf,
         )
 
     for digest, name in entries:
