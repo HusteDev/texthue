@@ -151,7 +151,7 @@ Display-P3 rendition using its luminance coefficients. A fallback used in an
 sRGB interface needs a separate contrast check. Supplied sRGB brand colors and
 backgrounds are converted to P3 before measuring their relationships.
 
-The CSS helper accepts `p3` in JavaScript, Python, and Go. For a native P3 rendition it returns that rendition’s CSS. For an sRGB rendition it converts the color to Display-P3 coordinates and emits a CSS string with up
+The CSS helper accepts `p3` in JavaScript, Python, and Go. For a native P3 rendition it returns its native CSS string. For an sRGB rendition it converts the color to Display-P3 coordinates and emits a CSS string with up
 to six fractional digits per channel. For example, sRGB red serializes as
 `color(display-p3 0.917488 0.200287 0.138561)`.
 
