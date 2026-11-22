@@ -1,0 +1,50 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>TextHue browser rendering tests</title>
+<output id="result">pending</output>
+<script type="module">
+import { compositeOver, createResolver } from './dist/index.js';
+
+const output = document.querySelector('output');
+function check(condition, description) {
+  if (!condition) throw new Error(description);
+}
+try {
+  const ctx = document.createElement('canvas').getContext('2d', {colorSpace: 'srgb'});
+  const cases = await (await fetch('./composite-v1.json')).json();
+  for (const {source, alpha, backdrop, expected} of cases) {
+    const colors = createResolver({backgrounds: {light: source, dark: backdrop}}).resolve('pixel');
+    const blend = compositeOver(colors.light.background, alpha, colors.dark.background);
+    const css = `color-mix(in srgb-linear, ${source} ${alpha * 100}%, ${backdrop})`;
+    check(CSS.supports('color', css), css);
+    ctx.fillStyle = css;
+    ctx.fillRect(0, 0, 1, 1);
+    const pixel = ctx.getImageData(0, 0, 1, 1).data;
+    const hex = '#' + Array.from(pixel.slice(0, 3), b => b.toString(16).padStart(2, '0')).join('');
+    check(pixel[3] === 255 && hex === expected && hex === blend.hex, `${css}: ${hex} vs ${blend.hex}`);
+  }
+
+  const fill = createResolver({gamut: 'display-p3', preset: 'chart'}).resolve('0').light.fill;
+  check(fill.srgbClipped, 'Expected out-of-sRGB fill');
+  const probe = document.createElement('div');
+  probe.id = 'probe';
+  document.body.append(probe);
+  const style = document.createElement('style');
+  document.head.append(style);
+  style.textContent = `#probe {background-color: ${fill.hex}}`;
+  const {r,g,b} = fill.rgb;
+  check(getComputedStyle(probe).backgroundColor === `rgb(${r}, ${g}, ${b})`, 'Fallback selection');
+  style.textContent += `@supports (color: ${fill.css}) { #probe {background-color: ${fill.css}} }`;
+  const selected = getComputedStyle(probe).backgroundColor;
+  check(selected.startsWith('color(display-p3 '), 'P3 selection: ' + selected);
+  // An sRGB canvas clips wide-gamut pixels. Compare native bytes on a P3 canvas instead.
+  const wide = document.createElement('canvas').getContext('2d',{colorSpace:'display-p3'});
+  wide.fillStyle = selected;
+  wide.fillRect(0,0,1,1);
+  const native = wide.getImageData(0,0,1,1,{colorSpace:'display-p3'}).data;
+  check(Object.values(fill.p3).every((v,i) => native[i] === Math.round(v*255)), 'P3 raster bytes');
+  output.textContent = 'PASS';
+} catch (error) {
+  output.textContent = String(error);
+}
+</script>
