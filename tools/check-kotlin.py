@@ -94,6 +94,14 @@ def run_suites(runner):
     subprocess.run(
         [*runner, "com.hustedev.texthue.CompositeTestKt"], input=rows.encode(), check=True
     )
+    vectors = json.loads((ROOT / "conformance/p3-fit-v1.json").read_text(encoding="utf-8"))
+    rows = "".join(
+        f"{','.join(map(str, v['rgb']))}\t{','.join(map(str, v['fallback']))}\t{str(v['clipped']).lower()}\n"
+        for v in vectors
+    )
+    subprocess.run(
+        [*runner, "com.hustedev.texthue.P3FormatsTestKt"], input=rows.encode(), check=True
+    )
     for corpus, entry in (
         ("identity", "IdentityTestKt"),
         ("gamut", "ColorMathTestKt"),

@@ -39,6 +39,12 @@ internal object ColorMath {
         doubleArrayOf(7918.0 / 409605, 87881.0 / 737289, 1001167.0 / 1053270),
     )
 
+    private val p3ToXyz = arrayOf(
+        doubleArrayOf(608311.0 / 1250200, 189793.0 / 714400, 198249.0 / 1000160),
+        doubleArrayOf(35783.0 / 156275, 247089.0 / 357200, 198249.0 / 2500400),
+        doubleArrayOf(0.0, 32229.0 / 714400, 5220557.0 / 5000800),
+    )
+
     private val xyzToLms = arrayOf(
         doubleArrayOf(0.819022437996703, 0.3619062600528904, -0.1288737815209879),
         doubleArrayOf(0.0329836539323885, 0.9292868615863434, 0.0361446663506424),
@@ -62,15 +68,22 @@ internal object ColorMath {
         return floor(encoded * 255 + 0.5).toInt()
     }
 
-    fun oklab(rgb: IntArray): DoubleArray {
+    fun p3Fallback(rgb: IntArray): Pair<IntArray, Boolean> {
+        val linear = DoubleArray(3) { linearChannel(rgb[it]) }
+        val srgb = multiply(Gamut.SRGB.fromXyz, multiply(p3ToXyz, linear))
+        return IntArray(3) { channelByte(srgb[it]) } to !inside(srgb)
+    }
+
+    fun oklab(rgb: IntArray, gamut: Gamut = Gamut.SRGB): DoubleArray {
         val linear = DoubleArray(3) { i -> linearChannel(rgb[i]) }
-        val lms = multiply(xyzToLms, multiply(rgbToXyz, linear))
+        val matrix = if (gamut == Gamut.DISPLAY_P3) p3ToXyz else rgbToXyz
+        val lms = multiply(xyzToLms, multiply(matrix, linear))
         for (i in lms.indices) lms[i] = Math.cbrt(lms[i])
         return multiply(lmsToLab, lms)
     }
 
-    fun oklch(rgb: IntArray): Oklch {
-        val (l, a, b) = oklab(rgb)
+    fun oklch(rgb: IntArray, gamut: Gamut = Gamut.SRGB): Oklch {
+        val (l, a, b) = oklab(rgb, gamut)
         if (rgb[0] == rgb[1] && rgb[1] == rgb[2]) return Oklch(round6(l), 0.0, 0.0)
         val hue = ((Math.atan2(b, a) * 180 / PI) % 360 + 360) % 360
         return Oklch(round6(l), round6(Math.sqrt(a * a + b * b)), round6(hue) % 360)

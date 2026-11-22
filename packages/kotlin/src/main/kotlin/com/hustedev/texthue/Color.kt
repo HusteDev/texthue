@@ -5,11 +5,22 @@ import kotlin.math.floor
 data class Rgb(val r: Int, val g: Int, val b: Int)
 data class Hsl(val h: Double, val s: Double, val l: Double)
 data class Oklch(val l: Double, val c: Double, val h: Double)
-data class Color(val hex: String, val rgb: Rgb, val hsl: Hsl, val oklch: Oklch)
+data class DisplayP3(val r: Double, val g: Double, val b: Double)
+data class Color(val hex: String, val rgb: Rgb, val hsl: Hsl, val oklch: Oklch,
+                 val p3: DisplayP3? = null, val css: String? = null, val srgbClipped: Boolean? = null)
 
 internal fun round6(value: Double) = floor(value * 1e6 + 0.5) / 1e6
 
-internal fun renderedColor(bytes: IntArray): Color {
+internal fun renderedColor(bytes: IntArray, gamut: Gamut = Gamut.SRGB): Color {
+    if (gamut == Gamut.DISPLAY_P3) {
+        val (fallback, clipped) = ColorMath.p3Fallback(bytes)
+        val channels = bytes.map { round6(it / 255.0) }
+        val css = channels.joinToString(" ", "color(display-p3 ", ")") {
+            java.math.BigDecimal.valueOf(it).stripTrailingZeros().toPlainString()
+        }
+        return renderedColor(fallback).copy(oklch = ColorMath.oklch(bytes, gamut),
+            p3 = DisplayP3(channels[0], channels[1], channels[2]), css = css, srgbClipped = clipped)
+    }
     val (red, green, blue) = bytes.map { it / 255.0 }
     val maximum = maxOf(red, green, blue)
     val minimum = minOf(red, green, blue)
