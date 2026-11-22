@@ -1,6 +1,7 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '2.2.21'
     id 'maven-publish'
+    id 'io.gitlab.arturbosch.detekt' version '1.23.8'
 }
 
 group = 'com.hustedev'
@@ -45,3 +46,7 @@ def conformance = tasks.register('conformance', Exec) {
 }
 tasks.named('check') { dependsOn conformance }
 tasks.named('publishLibraryPublicationToStagingRepository') { dependsOn tasks.named('check') }
+
+detekt {
+    baseline = file('detekt-baseline.xml')
+}
