@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "exports": { ".": { "types": "./index.d.ts", "import": "./index.js" } },
-  "files": ["index.js", "index.d.ts", "dist", "LICENSE"],
+  "files": ["index.js", "index.d.ts", "dist", "LICENSE", "SPECIFICATION.md", "THIRD_PARTY_NOTICES.md"],
   "license": "SEE LICENSE IN LICENSE",
   "scripts": { "build": "python ../../tools/build-wasm.py", "prepack": "npm run build" }
 }

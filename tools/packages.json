@@ -96,6 +96,16 @@
       "conformanceRunner": null
     },
     {
+      "id": "wasm",
+      "language": "webassembly",
+      "dir": "packages/wasm",
+      "versionFiles": [
+        { "path": "packages/wasm/package.json", "kind": "json", "field": "version" }
+      ],
+      "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+      "conformanceRunner": null
+    },
+    {
       "id": "rust",
       "language": "rust",
       "dir": "packages/rust",
