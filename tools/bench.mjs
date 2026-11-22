@@ -17,3 +17,13 @@ for (const [scenario,target,light] of [
   console.log(JSON.stringify({scenario,medianUs:(samples[49]+samples[50])/2,p95Us:samples[94]}));
 }
 console.log(JSON.stringify({workPer100Labels:await contrastWork()}));
+const labels = Array.from({length:40}, (_, i) => `item:${i}`);
+const resolver = createResolver();
+const samples = [];
+for (let i = -5; i < 20; i++) {
+  const start = performance.now();
+  resolver.assign(labels);
+  if (i >= 0) samples.push((performance.now()-start)*1000);
+}
+samples.sort((a,b) => a-b);
+console.log(JSON.stringify({scenario:'assign40',medianUs:(samples[9]+samples[10])/2,p95Us:samples[18]}));

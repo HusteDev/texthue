@@ -122,3 +122,15 @@ Compilation and resolver construction fall outside the timed region.
 | White, 21 | 674 | 813 |
 | #777777, 4.5 | 212 | 248 |
 | #777777, 21 | 630 | 879 |
+
+## Collection assignment
+
+Each sample assigns the same 40 distinct labels (`item:0` through `item:39`) with default settings, an empty registry and a previously compiled resolver. The measurement includes placement, light and dark rendering, and the closest-pair report. Five warm-ups precede 20 measured calls. The p95 is the 19th sorted observation.
+
+| Windows x64 runtime | Median per collection | p95 per collection |
+| --- | ---: | ---: |
+| JavaScript (Node.js) | 10.17 ms | 13.66 ms |
+| Python | 177.77 ms | 187.56 ms |
+| Go | 4.22 ms | 10.40 ms |
+
+Run `node tools/bench.mjs`, `python tools/bench.py`, and `go -C packages/go test -run '^$' -bench '^BenchmarkAssign40$' -benchtime=20x` after building the JavaScript package. These observations describe a single host and corpus.

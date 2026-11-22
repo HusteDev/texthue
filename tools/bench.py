@@ -64,6 +64,21 @@ def main():
             )
         )
 
+    labels = [f"item:{i}" for i in range(40)]
+    resolver = Resolver()
+    samples = []
+    for i in range(-5, 20):
+        start = perf_counter_ns()
+        resolver.assign(labels)
+        elapsed = perf_counter_ns() - start
+        if i >= 0:
+            samples.append(elapsed / 1000)
+    print(
+        json.dumps(
+            {"scenario": "assign40", "medianUs": median(samples), "p95Us": sorted(samples)[18]}
+        )
+    )
+
 
 if __name__ == "__main__":
     main()

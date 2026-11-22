@@ -71,3 +71,35 @@ func BenchmarkResolverContrast(b *testing.B) {
 		})
 	}
 }
+
+func BenchmarkAssign40(b *testing.B) {
+	resolver, err := NewResolver()
+	if err != nil {
+		b.Fatal(err)
+	}
+	labels := make([]string, 40)
+	for i := range labels {
+		labels[i] = "item:" + strconv.Itoa(i)
+	}
+	for i := 0; i < 5; i++ {
+		if _, err := resolver.Assign(labels, nil); err != nil {
+			b.Fatal(err)
+		}
+	}
+	samples := make([]time.Duration, 0, 20)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		start := time.Now()
+		if _, err := resolver.Assign(labels, nil); err != nil {
+			b.Fatal(err)
+		}
+		if len(samples) < cap(samples) {
+			samples = append(samples, time.Since(start))
+		}
+	}
+	b.StopTimer()
+	sort.Slice(samples, func(i, j int) bool { return samples[i] < samples[j] })
+	n := len(samples)
+	b.ReportMetric(float64(samples[(n-1)/2]+samples[n/2])/2000, "median-us")
+	b.ReportMetric(float64(samples[(95*n+99)/100-1])/1000, "p95-us")
+}
