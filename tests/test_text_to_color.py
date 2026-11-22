@@ -24,6 +24,24 @@ FIXTURE = json.loads((ROOT / "conformance" / "vectors.json").read_text(encoding=
 class ConformanceTests(unittest.TestCase):
     """Frozen-vector, runtime-error, and cross-language checks for the Python package."""
 
+    def test_registry_replay(self):
+        from texthue import Resolver
+
+        saved = json.loads((ROOT / "conformance/registry-v1.json").read_text(encoding="utf-8"))
+        resolver = Resolver(seed=123)
+        pins = resolver.import_registry(saved)
+        self.assertEqual(resolver.export_registry(pins), saved)
+        updated = resolver.assign(["new", "old"], pinned=pins)
+        original = resolver.assign(saved["assignments"])
+        self.assertEqual(updated["colors"]["old"], original["colors"]["old"])
+        for key, placement in pins.items():
+            self.assertEqual(updated["assignments"][key], placement)
+        with self.assertRaises(TextColorError):
+            Resolver().import_registry(saved)
+        del saved["assignments"]["old"]["moved"]
+        with self.assertRaises(TextColorError):
+            resolver.import_registry(saved)
+
     def test_portable_config_fingerprint(self):
         from texthue._fingerprint import fingerprint
 

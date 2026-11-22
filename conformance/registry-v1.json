@@ -1,0 +1,22 @@
+{
+  "schema": "texthue-registry-v1",
+  "algorithm": "text-to-color-v1",
+  "fingerprint": "461ff8b8daffe4015e72cf23e28411d786b6bdff3943d4ce8cfc58f3db81ef37",
+  "assignments": {
+    "__proto__": {
+      "hueFraction": 0.3532616109587252,
+      "ring": 0,
+      "moved": false
+    },
+    "old": {
+      "hueFraction": 0.446501486779501,
+      "ring": 0,
+      "moved": true
+    },
+    "keep": {
+      "hueFraction": 0.6889249081723392,
+      "ring": 0,
+      "moved": false
+    }
+  }
+}

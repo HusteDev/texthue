@@ -103,6 +103,14 @@ the schema, algorithm identifier, and SHA-256 fingerprint of the expanded
 settings. The fingerprint detects accidental changes. A caller able to edit the
 settings can also calculate a replacement fingerprint.
 
+To persist collection placements, export the assignment map with
+`resolver.exportRegistry(assignments)`, `resolver.export_registry(assignments)`,
+or Go's `resolver.ExportRegistry(assignments)`. Store the returned value alongside
+the configuration snapshot. On restart, restore the resolver, call its matching
+registry import method, and pass the returned pins to the next assignment call.
+A registry from a different configuration is rejected. Previously pinned labels
+retain their placements even when absent from the new batch.
+
 Use `overrides` to pin a label to a hex fill for both themes, or supply distinct light and dark fills. A palette entry has a stable `id` and at least one theme color. A single supplied theme color applies to both. The resolver prefers palette entries meeting the fill target in both themes, then ranks them by the SHA-256 digest of the identity digest followed by the UTF-8 entry ID. Reordering entries preserves assignments.
 
 ```typescript

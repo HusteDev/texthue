@@ -92,3 +92,17 @@ test('configuration round trips validate portable fingerprints', async () => {
     createResolver({palette:[b,a]}).exportConfig().fingerprint);
   assert.throws(() => importConfig({...saved,schema:'unknown'}),{code:'INVALID_OPTIONS'});
 });
+
+test('registry replay preserves absent labels and rejects incompatible configurations', async () => {
+  const {readFile} = await import('node:fs/promises');
+  const saved = JSON.parse(await readFile(new URL('../conformance/registry-v1.json',import.meta.url),'utf8'));
+  const r = createResolver({seed:123});
+  const pins = r.importRegistry(saved);
+  const next = r.assign(['new','old'],{pinned:pins});
+  assert.deepEqual(next.colors.old,r.assign(Object.keys(saved.assignments)).colors.old);
+  for (const [key,p] of Object.entries(saved.assignments)) assert.deepEqual(next.assignments[key],p);
+  assert.deepEqual(JSON.parse(JSON.stringify(r.exportRegistry(pins))),saved);
+  assert.throws(()=>createResolver().importRegistry(saved),{code:'INVALID_OPTIONS'});
+  delete saved.assignments.old.moved;
+  assert.throws(()=>r.importRegistry(saved),{code:'INVALID_OPTIONS'});
+});

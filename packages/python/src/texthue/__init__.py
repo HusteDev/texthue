@@ -71,6 +71,28 @@ def _native_options(value):
     return value
 
 
+def _registry_assignments(value):
+    if not isinstance(value, dict):
+        raise TextColorError("INVALID_OPTIONS", "Invalid registry assignments")
+    result = {}
+    for name, placement in value.items():
+        _core._text(name, "registry key", "INVALID_OPTIONS")
+        p = placement.to_dict() if isinstance(placement, Assignment) else placement
+        if not isinstance(p, dict) or set(p) != {"hueFraction", "ring", "moved"}:
+            raise TextColorError("INVALID_OPTIONS", "Invalid registry placement fields")
+        hue, ring, moved = p["hueFraction"], p["ring"], p["moved"]
+        if (
+            type(hue) not in (int, float)
+            or not 0 <= hue < 1
+            or type(ring) is not int
+            or not 0 <= ring <= 2**53 - 1
+            or type(moved) is not bool
+        ):
+            raise TextColorError("INVALID_OPTIONS", "Invalid registry placement")
+        result[name] = Assignment(hue, ring, moved)
+    return result
+
+
 class Resolver:
     """Compile options once and reuse the resolver for a collection of labels."""
 
@@ -91,6 +113,25 @@ class Resolver:
             "options": deepcopy(self._compiled[0]["exportOptions"]),
         }
         return {**payload, "fingerprint": fingerprint(payload)}
+
+    def export_registry(self, assignments):
+        return {
+            "schema": "texthue-registry-v1",
+            "algorithm": VERSION,
+            "fingerprint": self.export_config()["fingerprint"],
+            "assignments": {k: v.to_dict() for k, v in _registry_assignments(assignments).items()},
+        }
+
+    def import_registry(self, value):
+        if (
+            not isinstance(value, dict)
+            or set(value) != {"schema", "algorithm", "fingerprint", "assignments"}
+            or value["schema"] != "texthue-registry-v1"
+            or value["algorithm"] != VERSION
+            or value["fingerprint"] != self.export_config()["fingerprint"]
+        ):
+            raise TextColorError("INVALID_OPTIONS", "Incompatible assignment registry")
+        return _registry_assignments(value["assignments"])
 
     def resolve(self, text: str) -> ColorSet:
         return ColorSet.from_dict(_core.render(text, *self._compiled))

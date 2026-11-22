@@ -382,7 +382,30 @@ export function createResolver(options: TextColorOptions = {}) {
     const payload = {schema:'texthue-config-v1',algorithm:VERSION,options:structuredClone(settings.exportOptions())};
     return {...payload, fingerprint:fingerprint(payload)};
   };
-  return {resolve,batch,color,hex,assign,project,exportConfig};
+  const registryAssignments = (input:unknown) => {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) fail('INVALID_OPTIONS','Invalid registry assignments');
+    const result:Record<string,Placement> = Object.create(null);
+    for (const [name,raw] of Object.entries(input)) {
+      textValue(name,'registry key','INVALID_OPTIONS');
+      const p = record(raw,['hueFraction','ring','moved'],'registry placement');
+      const {hueFraction,ring,moved} = p;
+      if (!finite(hueFraction) || hueFraction < 0 || hueFraction >= 1 || !finite(ring) ||
+          !Number.isSafeInteger(ring) || ring < 0 || typeof moved !== 'boolean') fail('INVALID_OPTIONS','Invalid registry placement');
+      result[name] = {hueFraction,ring,moved};
+    }
+    return result;
+  };
+  const exportRegistry = (assignments:Record<string,Placement>) => ({
+    schema:'texthue-registry-v1',algorithm:VERSION,fingerprint:exportConfig().fingerprint,
+    assignments:registryAssignments(assignments)
+  });
+  const importRegistry = (input:unknown) => {
+    const saved = record(input,['schema','algorithm','fingerprint','assignments'],'registry');
+    if (saved.schema !== 'texthue-registry-v1' || saved.algorithm !== VERSION ||
+        saved.fingerprint !== exportConfig().fingerprint) fail('INVALID_OPTIONS','Incompatible assignment registry');
+    return registryAssignments(saved.assignments);
+  };
+  return {resolve,batch,color,hex,assign,project,exportConfig,exportRegistry,importRegistry};
 }
 
 export function exportConfig(resolver: ReturnType<typeof createResolver>) {

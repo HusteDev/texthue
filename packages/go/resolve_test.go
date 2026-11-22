@@ -348,3 +348,49 @@ func TestConfigRejectsChangedAndIncompletePayloads(t *testing.T) {
 		}
 	}
 }
+
+func TestRegistryReplay(t *testing.T) {
+	data, err := os.ReadFile("../../conformance/registry-v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := NewResolver(WithSeed(123))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pins, err := r.ImportRegistry(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	next, err := r.Assign([]string{"new", "old"}, pins)
+	if err != nil {
+		t.Fatal(err)
+	}
+	original, err := r.Assign([]string{"old", "keep", "__proto__"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(next.Colors["old"], original.Colors["old"]) {
+		t.Fatal("changed rendered colors")
+	}
+	for key, p := range pins {
+		if next.Assignments[key] != p {
+			t.Errorf("changed placement for %q", key)
+		}
+	}
+	out, err := r.ExportRegistry(pins)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restored, err := r.ImportRegistry(out)
+	if err != nil || !reflect.DeepEqual(restored, pins) {
+		t.Fatalf("registry round trip: %v", err)
+	}
+	other, err := NewResolver()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := other.ImportRegistry(data); err == nil {
+		t.Fatal("accepted different configuration")
+	}
+}
