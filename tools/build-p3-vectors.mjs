@@ -1,9 +1,6 @@
-// Install colorjs.io@0.5.2 with npm --prefix .cache/p3-oracle before regeneration.
 import {readFile,writeFile} from 'node:fs/promises';
-import Color from '../.cache/p3-oracle/node_modules/colorjs.io/dist/color.js';
+import Color from 'colorjs.io';
 
-const version = JSON.parse(await readFile(new URL('../.cache/p3-oracle/node_modules/colorjs.io/package.json',import.meta.url))).version;
-if(version!=='0.5.2') throw new Error('Expected Color.js 0.5.2');
 const inside = coords => coords.every(v=>v>=-1e-12 && v<=1+1e-12);
 const quantize = coords => coords.map(v=>Math.round(255*Math.max(0,Math.min(1,v))));
 const rows = [];

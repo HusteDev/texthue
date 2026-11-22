@@ -160,6 +160,11 @@ def main():
     run("preset vectors", ["node", "tools/build-preset-vectors.mjs", "--check"], env=env)
     run("tone repair vectors", ["node", "tools/repair-vectors.mjs", "--check"], env=env)
     run("renderer vectors", ["node", "tools/build-renderer-vectors.mjs", "--check"], env=env)
+    run(
+        "independent Display-P3 fit vectors",
+        ["node", "tools/build-p3-vectors.mjs", "--check"],
+        env=env,
+    )
     run("pinned color tables", ["node", "tools/tune-tables.mjs", "--check"], env=env)
     run("TypeScript public API and examples", [npm, "run", "test:types"], env=env)
     run(
