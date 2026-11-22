@@ -251,6 +251,25 @@ class ReleaseManifestTests(unittest.TestCase):
             with self.assertRaises(release.ReleaseError):
                 release.verify_bundle("1.0.0", "abc", root)
 
+    def test_matching_partial_digest_records_cannot_replace_a_required_archive(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "texthue-1.0.0.tgz").mkdir()
+            for suffix in (".tar.gz", "-py3-none-any.whl"):
+                (root / f"texthue-1.0.0{suffix}").write_bytes(suffix.encode())
+            partial = release.ReleaseManifest.from_artifacts(
+                "1.0.0", "abc", "text-to-color-v1", root
+            )
+            (root / "release-manifest.json").write_text(partial.to_json(), encoding="utf-8")
+            (root / "SHA256SUMS").write_text(
+                "".join(f"{digest}  {name}\n" for name, digest in partial.archives.items()),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(release.ReleaseError, "regular files"):
+                release.verify_bundle("1.0.0", "abc", root)
+
     def test_from_artifacts_hashes_every_file_except_the_checksum_list(self, tmp_dir=None):
         import tempfile
 

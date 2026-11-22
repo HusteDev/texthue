@@ -281,7 +281,10 @@ def _cmd_check_version(args: argparse.Namespace) -> int:
 def verify_bundle(version: str, commit: str, directory: Path) -> None:
     """Check the complete consumer archive set and both digest records."""
     names = {f"texthue-{version}{suffix}" for suffix in (".tgz", ".tar.gz", "-py3-none-any.whl")}
-    if {p.name for p in directory.iterdir()} != names | {"SHA256SUMS", "release-manifest.json"}:
+    entries = list(directory.iterdir())
+    if any(p.is_symlink() or not p.is_file() for p in entries):
+        raise ReleaseError("Release assets must be regular files.")
+    if {p.name for p in entries} != names | {"SHA256SUMS", "release-manifest.json"}:
         raise ReleaseError("Incomplete or unexpected release assets.")
     expected = ReleaseManifest.from_artifacts(version, commit, "text-to-color-v1", directory)
     saved = json.loads((directory / "release-manifest.json").read_text(encoding="utf-8"))
