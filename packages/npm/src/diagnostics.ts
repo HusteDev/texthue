@@ -34,13 +34,17 @@ export function simulateVision(hex: string, vision: Vision, severity: Severity =
   return hexFormat(simulated.map(x => Math.round(255 * encode(Math.max(0, Math.min(1, x))))) as Triple);
 }
 
+export function visionPoint(hex: string, vision: Vision | 'normal', severity: Severity = 1): Triple {
+  return toOklab(rgbBytes(vision === 'normal' ? hex : simulateVision(hex, vision, severity)));
+}
+
 /** Compare rendered sRGB swatches in input order. Distances are Euclidean OKLab units. */
 export function analyzePalette(colors: readonly string[], vision: Vision | 'normal' = 'normal', severity: Severity = 1) {
   if (!Array.isArray(colors)) throw new TypeError('Expected an array of sRGB colors');
   if (vision !== 'normal' && !Object.hasOwn(matrices, vision)) throw new RangeError('Unknown vision model');
   if (severity !== 0.5 && severity !== 1) throw new RangeError('Unknown severity');
   const originals = Array.from(colors, hex => hexFormat(rgbBytes(hex)));
-  const points = originals.map(hex => toOklab(rgbBytes(vision === 'normal' ? hex : simulateVision(hex, vision, severity))));
+  const points = originals.map(hex => visionPoint(hex, vision, severity));
   const pairs: {first: number; second: number; distance: number}[] = [];
   const nearest = points.map((): {indices: number[]; distance: number | null} => ({indices: [], distance: null}));
   const duplicates: [number, number][] = [];

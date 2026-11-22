@@ -1,10 +1,25 @@
 import { toOklab } from './color-math.js';
-import type { ColorSet } from './types.js';
+import { type Vision, visionPoint } from './diagnostics.js';
+import type { ColorSet, Triple } from './types.js';
 
 export interface Placement { hueFraction: number; ring: number; moved: boolean }
 
 const shapes = ['circle', 'square', 'triangle', 'diamond', 'star', 'cross', 'pentagon', 'hexagon'] as const;
 export type Marker = (typeof shapes)[number];
+
+export interface AssignmentOptions { markers?: boolean; vision?: readonly (Vision | 'normal')[] }
+
+function worstDistance(points: Triple[], occupied: Triple[][]) {
+  let minimum = Infinity;
+  for (const previous of occupied) {
+    for (const [index, point] of points.entries()) {
+      const other = previous[index];
+      if (!other) throw new Error('Missing vision projection');
+      minimum = Math.min(minimum, Math.hypot(point[0]-other[0], point[1]-other[1], point[2]-other[2]));
+    }
+  }
+  return minimum;
+}
 
 const wrap = (x: number) => x - Math.floor(x);
 
@@ -24,7 +39,9 @@ function place(natural: number, occupied: Placement[], separation: number): Plac
 
 export function assignCollection(texts: readonly string[], pinned: Record<string,Placement>,
   normalize: (text:string) => string, hash: (text:string) => DataView,
-  render: (digest:DataView, placement:Placement, name:string) => ColorSet, fixed: (name:string,digest:DataView)=>number|undefined, includeMarkers = false) {
+  render: (digest:DataView, placement:Placement, name:string) => ColorSet, fixed: (name:string,digest:DataView)=>number|undefined, includeMarkers = false, vision?: AssignmentOptions['vision']) {
+  if (vision !== undefined && (!Array.isArray(vision) || !vision.length ||
+      Array.from(vision).some(v => !['normal','protan','deutan','tritan'].includes(v)))) throw new TypeError('Invalid vision profiles');
   if (typeof includeMarkers !== 'boolean') throw new TypeError('markers must be a boolean');
   const names = new Set(texts.map(normalize));
   const entries = Array.from(names, name => ({name, digest: hash(name)}));
@@ -51,11 +68,41 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
     if (fraction !== undefined && !Object.hasOwn(assignments,name)) assignments[name] = {hueFraction:fraction,ring:0,moved:false};
   }
   const markers: Record<string,Marker> | undefined = includeMarkers ? Object.create(null) : undefined;
+  const projections: Triple[][] = [];
+  const pointsFor = (set:ColorSet) => (vision ?? []).flatMap(profile =>
+    [visionPoint(set.light.fill.hex,profile), visionPoint(set.dark.fill.hex,profile)]);
+  if (vision) {
+    for (const [name,placement] of Object.entries(assignments)) {
+      projections.push(pointsFor(render(hash(name),placement,name)));
+    }
+  }
   const occupied = Object.values(assignments);
   const separation = Math.min(1/12, Math.max(1/24, 1/names.size));
   for (const {name,digest} of entries) {
     if (!Object.hasOwn(assignments,name)) {
-      const p = place(digest.getUint32(0) / 4294967296,occupied,separation);
+      const natural = digest.getUint32(0) / 4294967296;
+      let p = place(natural,occupied,separation);
+      if (vision) {
+        let bestPoints = pointsFor(render(digest,p,name));
+        let best = worstDistance(bestPoints,projections);
+        const initial = p;
+        for (let step = 1; step < 24 && best !== Infinity; step++) {
+          const hueFraction = wrap(initial.hueFraction + step / 24);
+          if (occupied.some(other => {
+            const delta = Math.abs(other.hueFraction - hueFraction);
+            return other.ring === initial.ring && Math.min(delta,1-delta) < separation;
+          })) continue;
+          const candidate = {...initial,hueFraction,moved:true};
+          const candidatePoints = pointsFor(render(digest,candidate,name));
+          const score = worstDistance(candidatePoints,projections);
+          if (score > best) {
+            best = score;
+            p = candidate;
+            bestPoints = candidatePoints;
+          }
+        }
+        projections.push(bestPoints);
+      }
       assignments[name] = p;
       occupied.push(p);
     }

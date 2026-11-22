@@ -8,6 +8,7 @@
  * @packageDocumentation
  */
 
+import type {AssignmentOptions} from './assignment.js';
 import { assignCollection, type Placement } from './assignment.js';
 import { apcaContrast, blendOver, chooseColor, contrast, cusp, formats, hexFormat, hslFormat, oklchFormat, p3ApcaContrast, p3Contrast, p3Formats, rgbFormat, srgbToP3, XYZ_TO_P3 } from './color-math.js';
 import { compareBytes, fingerprint } from './fingerprint.js';
@@ -381,10 +382,10 @@ export function createResolver(options: TextColorOptions = {}) {
     const name = settings.normalize(textValue(text,'text','INVALID_TEXT'));
     return render(settings,bases,digestOf(name),name);
   };
-  const assign = (texts:readonly string[], {pinned = {}, markers = false}: {pinned?: Record<string,Placement>; markers?: boolean} = {}) =>
+  const assign = (texts:readonly string[], {pinned = {}, markers = false, vision}: AssignmentOptions & {pinned?: Record<string,Placement>} = {}) =>
     assignCollection(texts, pinned, text => settings.normalize(textValue(text, 'text', 'INVALID_TEXT')),digestOf,
       (digest,placement,name) => render(settings,bases,digest,name,placement),
-      (name,digest) => {const entry = settings.brand(name,digest); return entry ? fixedIdentity(entry.light).fraction : undefined;}, markers);
+      (name,digest) => {const entry = settings.brand(name,digest); return entry ? fixedIdentity(entry.light).fraction : undefined;}, markers, vision);
   const batch = (texts: readonly string[]) => {
     const seen = new Map<string,ColorSet>();
     return texts.map(text => {
@@ -649,7 +650,7 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
 }
 
 
-export function assignTextColors(texts: readonly string[], options: TextColorOptions = {}, pinned: Record<string,Placement> = {}, presentation: {markers?: boolean} = {}) {
+export function assignTextColors(texts: readonly string[], options: TextColorOptions = {}, pinned: Record<string,Placement> = {}, presentation: AssignmentOptions = {}) {
   return createResolver(options).assign(texts,{...presentation,pinned});
 }
 export { cssVariables, toCss } from './css.js';
