@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using Lab = (double L, double A, double B);
 
 namespace TextHue;
 
@@ -50,14 +51,50 @@ public sealed partial class Renderer
         var colors = new Dictionary<string, RenderedPalette>();
         var points = new List<(string Name, (double L, double A, double B) Lab)>();
         var fills = new HashSet<Rgb>();
-        foreach (var e in entries)
+        RenderedPalette Placed(Mapping mapping, Placement p)
         {
-            if (!placements.TryGetValue(e.Name, out var p))
-                placements[e.Name] = p = Place(e.Mapping.Fraction, placements.Values, separation);
-            var mapping = e.Mapping with { Ring = (int)(p.Ring % 5) };
+            mapping = mapping with { Ring = (int)(p.Ring % RingOffsets.Length) };
             if (mapping.Light == null)
                 mapping = mapping with { Source = "assigned", Fraction = p.HueFraction, Hue = MappedHue(p.HueFraction) };
-            var result = Render(mapping);
+            return Render(mapping);
+        }
+        static (Lab Light, Lab Dark) Project(RenderedPalette value) =>
+            (Color.ToOklab(value.Light["fill"].Rgb), Color.ToOklab(value.Dark["fill"].Rgb));
+        static double Distance(Lab a, Lab b)
+        {
+            double l = a.L - b.L, x = a.A - b.A, y = a.B - b.B;
+            return Math.Sqrt(l*l + x*x + y*y);
+        }
+        var occupied = placements.Select(entry => Project(Placed(Map(entry.Key), entry.Value))).ToList();
+        double Score((Lab Light, Lab Dark) pair) => occupied.Count == 0 ? double.PositiveInfinity :
+            occupied.Min(other => Math.Min(Distance(pair.Light, other.Light), Distance(pair.Dark, other.Dark)));
+        foreach (var e in entries)
+        {
+            bool fixedPlacement = placements.TryGetValue(e.Name, out var p);
+            if (!fixedPlacement) p = Place(e.Mapping.Fraction, placements.Values, separation);
+            var result = Placed(e.Mapping, p);
+            if (!fixedPlacement)
+            {
+                var initial = p;
+                var pair = Project(result);
+                double best = Score(pair);
+                for (int step = 1; step < 24 * RingOffsets.Length && best < 0.04; step++)
+                {
+                    double hue = (initial.HueFraction + (step % 24) / 24.0) % 1;
+                    long ring = initial.Ring + step / 24;
+                    if (placements.Values.Any(previous => {
+                        double d = Math.Abs(hue - previous.HueFraction);
+                        return previous.Ring == ring && Math.Min(d, 1-d) < separation;
+                    })) continue;
+                    var candidate = new Placement(hue, ring, true);
+                    var palette = Placed(e.Mapping, candidate);
+                    var projected = Project(palette);
+                    double distance = Score(projected);
+                    if (distance > best) (p, result, pair, best) = (candidate, palette, projected, distance);
+                }
+                placements.Add(e.Name, p);
+                occupied.Add(pair);
+            }
             colors.Add(e.Name, result);
             var fill = result.Light["fill"].Rgb;
             points.Add((e.Name, Color.ToOklab(fill)));
