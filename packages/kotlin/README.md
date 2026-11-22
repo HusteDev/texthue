@@ -65,3 +65,5 @@ python tools/check-kotlin.py --kotlinc $compiler --android-serial $serial --adb 
 ```
 
 The runner compiles production and test sources, converts the test JAR to DEX, executes the seven suites through ART, and removes the temporary device file. Tests cover linear-light sRGB compositing, identity framing, gamut fitting, contrast, rendered formats, contrast repair, and resolver and batch behavior. APK packaging and application lifecycle behavior require separate tests.
+
+On 2026-11-22 the seven suites passed on Android API 34 ART with the x86_64 Google emulator image on a Windows host. Android Studio's Kotlin compiler and Build Tools 37.0.0 produced the DEX. The run covered 6 composites, 32 identity vectors, 112 gamut fits, 1,583 contrast measurements, 640 role formats, 192 contrast repairs, and 1,060 two-theme resolver vectors, including the associated invalid-input, tie, and batch checks. This run used a read-only emulator instance and exercised the library directly through `app_process`. Physical-device and APK integration coverage remain separate.
