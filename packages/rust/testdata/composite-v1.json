@@ -1,0 +1,8 @@
+[
+  {"source":"#ffffff","alpha":0.5,"backdrop":"#000000","expected":"#bcbcbc"},
+  {"source":"#ff0000","alpha":0.5,"backdrop":"#00ff00","expected":"#bcbc00"},
+  {"source":"#123456","alpha":0,"backdrop":"#abcdef","expected":"#abcdef"},
+  {"source":"#123456","alpha":1,"backdrop":"#abcdef","expected":"#123456"},
+  {"source":"#000000","alpha":0.5,"backdrop":"#0a0a0a","expected":"#050505"},
+  {"source":"#ffffff","alpha":0.25,"backdrop":"#000000","expected":"#898989"}
+]

@@ -1,3 +1,5 @@
+mod composite;
+pub use composite::composite_over;
 mod renderer;
 mod tables;
 pub use renderer::{RenderedPalette, Renderer, RoleProfile, ThemeProfile};
