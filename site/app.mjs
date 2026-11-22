@@ -38,7 +38,7 @@ function run() {
   try {
     const input = {labels:field('labels').split(/\r?\n/).filter(Boolean), options:JSON.parse(field('options')),
       theme:field('theme'), vision:field('vision'), optimizeVision:document.getElementById('optimize-vision').checked,
-      markers:document.getElementById('markers').checked, registry:field('registry') && JSON.parse(field('registry'))};
+      minimumDistance:document.getElementById('minimum-distance').valueAsNumber, markers:document.getElementById('markers').checked, registry:field('registry') && JSON.parse(field('registry'))};
     const active = new Worker('./worker.mjs', {type:'module'});
     worker = active;
     status.textContent = 'Computing palette…';
@@ -47,7 +47,7 @@ function run() {
       if (worker !== active) return;
       active.terminate();
       if (data.error) { status.textContent = data.error; return; }
-      const {rows, diagnostics, config, registry} = data.result;
+      const {rows, diagnostics, findings, config, registry} = data.result;
       status.textContent = rows.length + ' distinct labels';
       const table = append(results, 'table');
       const head = append(table, 'tr');
@@ -69,6 +69,10 @@ function run() {
           cell.append(hex);
         }
       }
+      for (const [title,items] of [
+        ['Normalized aliases',findings.aliases], ['Closest pairs in selected vision profile',findings.closest],
+        ['Exact duplicate registry fills',findings.duplicates], ['Pairs below minimum distance',findings.belowMinimum],
+      ]) details(results,`${title} (${items.length})`,items);
       details(results,'Registry palette distances (row indices start at zero)',diagnostics);
       for (const row of rows) details(results,row.label,{contrast:row.contrast,fill:row.fill,registryFillTrace:row.registryFillTrace,css:row.variables});
       download('Download configuration', 'texthue-config.json', 'application/json', () => JSON.stringify(config, null, 2));

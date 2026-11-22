@@ -51,3 +51,16 @@ test('inspector can preview a simulation independently of optimizing new placeme
   assert.deepEqual(replay.registry,optimized.registry);
   assert.deepEqual(replay.rows.map(row => row.swatches[2]),optimized.rows.map(row => row.swatches[2]));
 });
+
+test('inspector distinguishes normalized aliases, duplicate fills and pairs below a chosen distance', () => {
+  const input = {labels:['A','a','A','b','c'],options:{normalize:{case:'lower'},
+    overrides:{a:'#112233',b:'#112233',c:'#112234'}},theme:'light',vision:'normal'};
+  const {findings} = inspect({...input,minimumDistance:0.1});
+  assert.deepEqual(findings.aliases,[{identity:'a',spellings:['A','a']}]);
+  assert.deepEqual(findings.duplicates.map(pair => pair.sort()),[['a','b']]);
+  assert.deepEqual(findings.closest.map(pair => pair.distance),[0]);
+  assert.equal(findings.belowMinimum.length,3);
+  assert.deepEqual(inspect(input).findings.belowMinimum,[]);
+  assert.deepEqual(inspect({...input,labels:['A','a']}).findings.closest,[]);
+  assert.throws(() => inspect({...input,minimumDistance:-1}),RangeError);
+});
