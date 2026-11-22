@@ -72,11 +72,7 @@ extension CollectionAssignment on Renderer {
     final colors = <String, RenderedPalette>{};
     final points = <(String, List<double>)>[];
     final fills = <String>{};
-    for (final entry in mappings.entries) {
-      final name = entry.key, m = entry.value;
-      final p = assignments[name] ??
-          _place(m.fraction, assignments.values, separation);
-      assignments[name] = p;
+    RenderedPalette placed(_Mapping m, Placement p) {
       final mapped = m.fixed != null
           ? m
           : (
@@ -87,7 +83,66 @@ extension CollectionAssignment on Renderer {
               uC: m.uC,
               fixed: m.fixed
             );
-      final palette = _render(mapped, p.ring);
+      return _render(mapped, p.ring);
+    }
+
+    List<List<double>> project(RenderedPalette palette) => [
+          for (final rgb in [
+            palette.light['fill']!.rgb,
+            palette.dark['fill']!.rgb
+          ])
+            srgbToLab(rgb.r / 255, rgb.g / 255, rgb.b / 255)
+        ];
+    final occupied = [
+      for (final e in assignments.entries)
+        project(placed(mappings[e.key] ?? _mapping(e.key), e.value))
+    ];
+    double score(List<List<double>> pair) {
+      var minimum = double.infinity;
+      for (final previous in occupied) {
+        for (var i = 0; i < pair.length; i++) {
+          var squared = 0.0;
+          for (var k = 0; k < 3; k++) {
+            final delta = pair[i][k] - previous[i][k];
+            squared += delta * delta;
+          }
+          minimum = math.min(minimum, math.sqrt(squared));
+        }
+      }
+      return minimum;
+    }
+
+    for (final entry in mappings.entries) {
+      final name = entry.key, m = entry.value;
+      final existing = assignments[name];
+      final initial =
+          existing ?? _place(m.fraction, assignments.values, separation);
+      var palette = placed(m, initial);
+      if (existing == null) {
+        var selected = initial;
+        var pair = project(palette);
+        var best = score(pair);
+        for (var step = 1; step < 120 && best < 0.04; step++) {
+          final hue = (initial.hueFraction + (step % 24) / 24) % 1.0;
+          final ring = initial.ring + step ~/ 24;
+          if (assignments.values.any((p) {
+            final delta = (p.hueFraction - hue).abs();
+            return p.ring == ring && math.min(delta, 1 - delta) < separation;
+          })) continue;
+          final candidate = (hueFraction: hue, ring: ring, moved: true);
+          final rendered = placed(m, candidate);
+          final projected = project(rendered);
+          final distance = score(projected);
+          if (distance > best) {
+            selected = candidate;
+            palette = rendered;
+            pair = projected;
+            best = distance;
+          }
+        }
+        assignments[name] = selected;
+        occupied.add(pair);
+      }
       colors[name] = palette;
       final fill = palette.light['fill']!;
       fills.add(fill.hex);
