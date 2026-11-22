@@ -104,6 +104,10 @@ jobs:
           set -euo pipefail
           VERSION=$(python tools/release.py check-version "$REQUESTED")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Verify the root release tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: python tools/release.py root-tag-state --version "$VERSION" --commit "$GITHUB_SHA"
       - name: Locate the durable release bundle
         id: bundle
         env:
@@ -332,6 +336,13 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Recheck the root release tag before promotion
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: python3 tools/release.py root-tag-state --version "$VERSION" --commit "$GITHUB_SHA"
       - name: Publish the draft release created by the build job
         env:
           GH_TOKEN: ${{ github.token }}

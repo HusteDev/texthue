@@ -59,10 +59,10 @@ The `Publish` workflow (`.github/workflows/publish.yml`) needs the following con
 
 ## Publish a release
 
-1. Bump the version in the four manifests, update the lock file, and merge the change to `main` with a green CI run.
-2. Open the Actions tab, choose **Publish**, and run it from `main` with the version (for example `0.1.0`). Leave the npm, PyPI, Go, and GitHub release options enabled unless a target was already published.
-3. The `build` job checks that every manifest declares the requested version, refuses to run if `v<version>` or `packages/go/v<version>` already exists, runs the full verification, builds the archives, and stores them as a workflow artifact. Nothing is uploaded if any step fails.
-4. `publish-npm` uploads the exact tested tarball with `--provenance --access public`. `publish-pypi` uploads the wheel and source distribution through trusted publishing. `publish-go` creates and pushes the `packages/go/v<version>` tag and asks `proxy.golang.org` to index it. `github-release` creates a `v<version>` release with the archives, `SHA256SUMS`, and generated notes.
+1. Update the manifest version sources and lock metadata together. Merge the tested commit to `main`.
+2. Dispatch **Publish** from that commit with its version and the desired targets. For recovery, select **resume** and the remaining targets.
+3. The build job checks the manifest versions and verifies that any existing root version tag resolves to the workflow commit. For a new version it verifies and builds the archives, records their digests, and stages the original bytes in a draft GitHub release. For an existing bundle it downloads and verifies the staged assets. A resume request requires that original bundle.
+4. Each selected registry job checks its own target. Matching archives or a matching Go tag are skipped. Conflicts and lookup failures stop the affected job. Once selected jobs succeed, the GitHub release job rechecks the root tag and promotes the draft if promotion was requested.
 5. Approve the environment deployments if reviewers are required.
 
 Do not use a root `v<version>` tag as the Go module tag; the nested module needs the `packages/go/` prefix. Consumers request `github.com/HusteDev/texthue/packages/go@v<version>`. See [Go's module source organization documentation](https://go.dev/doc/modules/managing-source).

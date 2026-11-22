@@ -59,3 +59,16 @@ class PublishWorkflowTests(unittest.TestCase):
                 [shutil.which("node"), "-e", expression, version], capture_output=True
             )
             self.assertEqual(result.returncode, expected, version)
+
+    def test_root_tag_checked_before_staging_and_promotion(self):
+        for job, operation in [
+            ("build", "Locate the durable release bundle"),
+            ("github-release", "Publish the draft release created by the build job"),
+        ]:
+            steps = self.jobs[job]["steps"]
+            (gate,) = [i for i, step in enumerate(steps) if "root-tag-state" in step.get("run", "")]
+            self.assertLess(
+                gate, next(i for i, step in enumerate(steps) if step.get("name") == operation)
+            )
+            self.assertIn('--commit "$GITHUB_SHA"', steps[gate]["run"])
+            self.assertNotIn("continue-on-error", steps[gate])

@@ -362,6 +362,11 @@ def _cmd_go_state(args: argparse.Namespace) -> int:
     return _print_state_and_exit_code(state)
 
 
+def _cmd_root_tag_state(args: argparse.Namespace) -> int:
+    version = validate_version(args.version)
+    return _print_state_and_exit_code(tag_state(args.remote, f"refs/tags/v{version}", args.commit))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -417,6 +422,12 @@ def main(argv: list[str] | None = None) -> int:
         "--commit", required=True, help="Commit SHA this release is built from"
     )
     go_state_parser.set_defaults(func=_cmd_go_state)
+
+    root = subparsers.add_parser("root-tag-state", help="Verify the release tag's commit.")
+    root.add_argument("--remote", default="origin")
+    root.add_argument("--version", required=True)
+    root.add_argument("--commit", required=True)
+    root.set_defaults(func=_cmd_root_tag_state)
 
     args = parser.parse_args(argv)
     return args.func(args)
