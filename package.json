@@ -14,6 +14,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspace texthue",
+    "site": "npm run build && python tools/stage-pages.py --serve",
     "test": "npm run build && node --test tests/*.test.mjs",
     "test:types": "npm run test:types --workspace texthue",
     "test:go": "go -C packages/go test ./...",

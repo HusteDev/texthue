@@ -14,7 +14,7 @@ Turn exact text into repeatable colors for labels, projects, categories, charts,
 
 TextHue is stateless. The JavaScript and Python packages have no runtime dependencies. Go uses golang.org/x/text for Unicode normalization and casing. It does not store inputs, contact a service, or require a user account. Each application decides what its input means.
 
-Choose a workflow in the [task guide](docs/GUIDE.md).
+Compare your labels in the [palette inspector](docs/GUIDE.md#preview-a-collection-in-the-palette-inspector) or choose an API in the [task guide](docs/GUIDE.md).
 
 ## Libraries
 

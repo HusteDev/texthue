@@ -7,6 +7,17 @@
 | Collection assignment | The complete set of visible labels | Recomputing with a changed set can move earlier labels. Reordering the same set preserves placements. | `assignTextColors(labels, options)` |
 | Persistent registry | New labels, saved placements, and matching configuration | Pinned placements stay fixed across additions. Old placements continue to occupy space. | `resolver.assign(labels, {pinned})` |
 
+## Preview a collection in the palette inspector
+
+From the repository root, install the workspace dependencies and start the local preview.
+
+```sh
+npm ci
+npm run site
+```
+
+Open `http://127.0.0.1:8000/site/`. Enter one label per line and select **Inspect palette**. The **Hash**, **Assigned**, and **Registry** columns show the same labels under each assignment method. Switch themes to inspect both sets of fills. Select a vision profile to see its simulated colors. Enable **Optimize new placements** and inspect again to compare how the selected profile affects assignment.
+
 ## Render a badge
 
 Use the fill and its paired foreground from the same theme. For standalone text on the configured page background, use the text role.
