@@ -19,12 +19,13 @@ fun main() {
         val palette = Resolver(decode(row[1]), row[2].toUInt(), row[3].ifEmpty { null }?.toDouble(), normalization, Preset.valueOf(row[7].uppercase()),
             ContrastModel.valueOf(row[8].uppercase()), targets, row[10].split(','),
             ForegroundPolicy.valueOf(row[11].replace('-', '_').uppercase()), arc(row[12]),
-            row[13].split('|').filter { it.isNotEmpty() }.map(::arc)).resolve(decode(row[0]))
-        check(abs(palette.hue - row[14].toDouble()) < 1e-12)
+            row[13].split('|').filter { it.isNotEmpty() }.map(::arc), Backgrounds(row[14], row[15])).resolve(decode(row[0]))
+        check(abs(palette.hue - row[16].toDouble()) < 1e-12)
         val colors = listOf(palette.light, palette.dark).flatMap { theme -> roles.map { theme.colors.getValue(it) } }
-        check(colors == row.drop(15)) { "$line: $colors" }
+        check(colors == row.drop(17)) { "$line: $colors" }
     }.count()
     check(count > 0)
+    check(runCatching { Resolver(backgrounds = Backgrounds(light = "#ffff")) }.exceptionOrNull() is IllegalArgumentException)
     for (excluded in listOf(listOf(HueArc(0.0, 360.0)), List(17) { HueArc(0.0, 1.0) })) {
         check(runCatching { Resolver(excludeHues = excluded) }.exceptionOrNull() is IllegalArgumentException)
     }

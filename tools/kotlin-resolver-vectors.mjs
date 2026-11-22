@@ -1,9 +1,9 @@
 import { createResolver } from '../packages/npm/dist/index.js';
 const roles = ['background','subtle','muted','fill','onFill','fillHover','fillActive','border','text','strong'];
 const encode = s => Buffer.from(s).toString('base64');
-function emit(text, namespace, seed, contrastTarget, normalize = {unicode:'none', case:'none', whitespace:'none'}, preset = 'labels', contrastModel = 'wcag2', contrastTargets = {}, foregrounds = ['#000000','#ffffff'], foregroundPolicy = 'best', hueRange = [0,360], excludeHues = []) {
-  const color = createResolver({namespace,seed,preset,normalize,contrastModel,contrastTargets,foregrounds,foregroundPolicy,hueRange,excludeHues,...(contrastTarget === undefined ? {} : {contrastTarget})}).resolve(text);
-  console.log([encode(text),encode(namespace),seed,contrastTarget,normalize.unicode,normalize.case,normalize.whitespace,preset,contrastModel,['fill','fillHover','fillActive','border','text','textOnSubtle','strong'].map(role=>contrastTargets[role]).join(','),foregrounds.join(','),foregroundPolicy,hueRange.join(','),excludeHues.map(arc=>arc.join(',')).join('|'),color.hue,
+function emit(text, namespace, seed, contrastTarget, normalize = {unicode:'none', case:'none', whitespace:'none'}, preset = 'labels', contrastModel = 'wcag2', contrastTargets = {}, foregrounds = ['#000000','#ffffff'], foregroundPolicy = 'best', hueRange = [0,360], excludeHues = [], backgrounds = {}) {
+  const color = createResolver({namespace,seed,preset,normalize,contrastModel,contrastTargets,foregrounds,foregroundPolicy,hueRange,excludeHues,backgrounds,...(contrastTarget === undefined ? {} : {contrastTarget})}).resolve(text);
+  console.log([encode(text),encode(namespace),seed,contrastTarget,normalize.unicode,normalize.case,normalize.whitespace,preset,contrastModel,['fill','fillHover','fillActive','border','text','textOnSubtle','strong'].map(role=>contrastTargets[role]).join(','),foregrounds.join(','),foregroundPolicy,hueRange.join(','),excludeHues.map(arc=>arc.join(',')).join('|'),backgrounds.light ?? '#ffffff',backgrounds.dark ?? '#121212',color.hue,
     ...['light','dark'].flatMap(theme=>roles.map(role=>color[theme][role].hex))].join('\t'));
 }
 for (const contrastTarget of [1, 4.5, 7, 21]) {
@@ -59,4 +59,10 @@ for (const [allowed,excluded] of [
   [[0,360],[[120,110]]], [[35.125,35.25],[]], [[0,360],[[50,50]]],
 ]) {
   for (let i=0;i<20;i++) emit(String(i),'',0,7,undefined,'labels','wcag2',{},undefined,'best',allowed,excluded);
+}
+
+for (const backgrounds of [{light:'#abcdef'}, {dark:'#eeeeee'}, {light:'#777777',dark:'#3467AF'}, {light:'#000000',dark:'#ffffff'}]) {
+  for (const model of ['apca','wcag2']) {
+    for (let i=0;i<12;i++) emit(String(i),'',0,undefined,undefined,'labels',model,{},undefined,'best',undefined,undefined,backgrounds);
+  }
 }

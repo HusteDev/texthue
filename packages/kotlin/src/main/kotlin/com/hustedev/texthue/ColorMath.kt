@@ -33,6 +33,34 @@ internal object ColorMath {
         doubleArrayOf(-0.0763729366746601, -0.4214933324022432, 1.5869240198367816),
     )
 
+    private val rgbToXyz = arrayOf(
+        doubleArrayOf(506752.0 / 1228815, 87881.0 / 245763, 12673.0 / 70218),
+        doubleArrayOf(87098.0 / 409605, 175762.0 / 245763, 12673.0 / 175545),
+        doubleArrayOf(7918.0 / 409605, 87881.0 / 737289, 1001167.0 / 1053270),
+    )
+
+    private val xyzToLms = arrayOf(
+        doubleArrayOf(0.819022437996703, 0.3619062600528904, -0.1288737815209879),
+        doubleArrayOf(0.0329836539323885, 0.9292868615863434, 0.0361446663506424),
+        doubleArrayOf(0.0481771893596242, 0.2642395317527308, 0.6335478284694309),
+    )
+
+    private val lmsToLab = arrayOf(
+        doubleArrayOf(0.210454268309314, 0.7936177747023054, -0.0040720430116193),
+        doubleArrayOf(1.9779985324311684, -2.42859224204858, 0.450593709617411),
+        doubleArrayOf(0.0259040424655478, 0.7827717124575296, -0.8086757549230774),
+    )
+
+    fun lightness(rgb: IntArray): Double {
+        val linear = DoubleArray(3) { i ->
+            val x = rgb[i] / 255.0
+            if (x <= 0.04045) x / 12.92 else ((x + 0.055) / 1.055).pow(2.4)
+        }
+        val lms = multiply(xyzToLms, multiply(rgbToXyz, linear))
+        for (i in lms.indices) lms[i] = Math.cbrt(lms[i])
+        return floor(multiply(lmsToLab, lms)[0] * 1e6 + 0.5) / 1e6
+    }
+
     private fun multiply(matrix: Array<DoubleArray>, v: DoubleArray) = DoubleArray(3) { i ->
         val row = matrix[i]
         (row[0] * v[0] + row[1] * v[1]) + row[2] * v[2]

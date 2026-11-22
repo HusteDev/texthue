@@ -26,6 +26,20 @@ data class ContrastTargets(
 
 enum class ForegroundPolicy { BEST, FIRST_PASSING }
 
+data class Backgrounds(val light: String = "#ffffff", val dark: String = "#121212")
+
+private val hexColor = Regex("#[0-9A-Fa-f]{6}")
+
+private fun parseHex(hex: String): IntArray {
+    require(hexColor.matches(hex)) { "Expected a six-digit hex color" }
+    return IntArray(3) { i -> hex.substring(1 + 2 * i, 3 + 2 * i).toInt(16) }
+}
+
+private class ThemeBackground(hex: String) {
+    val bytes = parseHex(hex)
+    val lightness = floor(ColorMath.lightness(bytes) * 4096 + 0.5) / 4096
+}
+
 class Resolver(
     namespace: String = "",
     private val seed: UInt = 0u,
@@ -38,16 +52,16 @@ class Resolver(
     private val foregroundPolicy: ForegroundPolicy = ForegroundPolicy.BEST,
     hueRange: HueArc = HueArc(0.0, 360.0),
     excludeHues: List<HueArc> = emptyList(),
+    backgrounds: Backgrounds = Backgrounds(),
 ) {
     private val apca = contrastModel == ContrastModel.APCA
     private val target = contrastTarget ?: if (apca) 60.0 else preset.target
     private val hueDomain = HueDomain(hueRange, excludeHues)
     private val scope = normalization.apply(namespace)
 
-    private val candidates = foregrounds.map { hex ->
-        require(Regex("#[0-9A-Fa-f]{6}").matches(hex)) { "Expected a six-digit foreground hex color" }
-        IntArray(3) { i -> hex.substring(1 + 2 * i, 3 + 2 * i).toInt(16) }
-    }
+    private val candidates = foregrounds.map(::parseHex)
+    private val lightBackground = ThemeBackground(backgrounds.light)
+    private val darkBackground = ThemeBackground(backgrounds.dark)
 
     init {
         require(candidates.isNotEmpty()) { "At least one foreground is required" }
@@ -67,9 +81,10 @@ class Resolver(
     }
 
     private fun theme(dark: Boolean, hue: Double, uL: Double, uC: Double): ThemePalette {
-        val background = IntArray(3) { if (dark) 18 else 255 }
+        val base = if (dark) darkBackground else lightBackground
+        val background = base.bytes
         val direction = if (dark) 1 else -1
-        val lb = floor((if (dark) 0.182204 else 1.0) * 4096 + 0.5) / 4096
+        val lb = base.lightness
         val scale = preset.minScale + (preset.maxScale - preset.minScale) * uC
         fun sample(low: Double, high: Double, role: Int): Double {
             val bias = biases[(if (dark) 2 else 0) + role]
