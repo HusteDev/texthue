@@ -137,3 +137,16 @@ contents and compressed size but does not export the archive. A draft therefore
 has no Dart archive to reuse for publication.
 
 From the repository root, run `python tools/check-dart-publication.py` to inspect the pub archive and validate its publication metadata. The dry run accepts the two advisories about the deliberately pinned runtime dependencies. Other validation warnings or failures require review.
+
+## Signing the staged Kotlin bundle
+
+With the release key available to GnuPG, run the following from the repository root.
+Supply the full key fingerprint and a new destination filename.
+
+```sh
+python tools/sign-maven.py artifacts/texthue-0.1.0-maven.zip texthue-0.1.0-signed.zip 0.1.0 "$SIGNING_FINGERPRINT"
+```
+
+The helper preserves the five staged artifacts, verifies each detached signature,
+and includes MD5, SHA-1, SHA-256 and SHA-512 checksums for each original file.
+Retain the resulting signed ZIP for publication retries.
