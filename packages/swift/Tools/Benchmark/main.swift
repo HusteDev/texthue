@@ -22,3 +22,16 @@ for (scenario, target, light) in [
     let median = (samples[49] + samples[50]) / 2
     print(#"{"scenario":"\#(scenario)","medianUs":\#(median),"p95Us":\#(samples[94])}"#)
 }
+
+let labels = (0..<40).map { "item:\($0)" }
+let renderer = try Renderer()
+var samples: [Double] = []
+for i in -5..<20 {
+    let start = DispatchTime.now().uptimeNanoseconds
+    let assignment = try renderer.assign(labels)
+    let elapsed = DispatchTime.now().uptimeNanoseconds - start
+    precondition(assignment.colors.count == labels.count)
+    if i >= 0 { samples.append(Double(elapsed) / 1000) }
+}
+samples.sort()
+print(#"{"scenario":"assign40","medianUs":\#((samples[9] + samples[10]) / 2),"p95Us":\#(samples[18])}"#)

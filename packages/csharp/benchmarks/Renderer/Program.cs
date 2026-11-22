@@ -24,3 +24,19 @@ foreach (var (scenario, target, gray) in new[] {
         scenario, medianUs = (samples[49] + samples[50]) / 2, p95Us = samples[94]
     }));
 }
+
+{
+    var renderer = new Renderer();
+    var labels = Enumerable.Range(0, 40).Select(i => $"item:{i}").ToArray();
+    var samples = new double[20];
+    for (int i = -5; i < samples.Length; i++)
+    {
+        long start = Stopwatch.GetTimestamp();
+        var assignment = renderer.Assign(labels);
+        double elapsed = Stopwatch.GetElapsedTime(start).TotalMicroseconds;
+        if (assignment.Colors.Count != labels.Length) throw new InvalidOperationException("Incomplete assignment");
+        if (i >= 0) samples[i] = elapsed;
+    }
+    Array.Sort(samples);
+    Console.WriteLine(JsonSerializer.Serialize(new { scenario = "assign40", medianUs = (samples[9] + samples[10]) / 2, p95Us = samples[18] }));
+}

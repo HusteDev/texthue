@@ -30,4 +30,21 @@ void main() {
       'p95Us': samples[94],
     }));
   }
+  final labels = List.generate(40, (i) => 'item:$i');
+  final renderer = Renderer();
+  final samples = <double>[];
+  for (var i = -5; i < 20; i++) {
+    final timer = Stopwatch()..start();
+    final result = renderer.assign(labels);
+    timer.stop();
+    if (result.colors.length != labels.length)
+      throw StateError('Incomplete assignment');
+    if (i >= 0) samples.add(timer.elapsedTicks * 1e6 / timer.frequency);
+  }
+  samples.sort();
+  print(jsonEncode({
+    'scenario': 'assign40',
+    'medianUs': (samples[9] + samples[10]) / 2,
+    'p95Us': samples[18]
+  }));
 }

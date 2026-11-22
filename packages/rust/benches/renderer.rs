@@ -53,6 +53,28 @@ fn render(c: &mut Criterion) {
         });
     }
     batches.finish();
+
+    let labels: Vec<_> = (0..40).map(|i| format!("item:{i}")).collect();
+    let pins = Default::default();
+    let mut samples = Vec::with_capacity(20);
+    for i in -5..20 {
+        let start = Instant::now();
+        let assignment = renderer.assign(&labels, &pins).unwrap();
+        let micros = start.elapsed().as_secs_f64() * 1e6;
+        assert_eq!(assignment.colors.len(), labels.len());
+        if i >= 0 {
+            samples.push(micros);
+        }
+    }
+    samples.sort_unstable_by(f64::total_cmp);
+    println!(
+        "corpus/assign40 median-us={:.2} p95-us={:.2}",
+        (samples[9] + samples[10]) / 2.0,
+        samples[18]
+    );
+    c.bench_function("assign40", |b| {
+        b.iter(|| renderer.assign(black_box(&labels), &pins).unwrap())
+    });
 }
 
 criterion_group!(benches, render);

@@ -24,3 +24,16 @@ for (scenario in listOf(
     val median = (samples[49] + samples[50]) / 2
     println("""{"scenario":"${scenario.name}","medianUs":$median,"p95Us":${samples[94]}}""")
 }
+
+val labels = List(40) { "item:$it" }
+val resolver = Resolver()
+val samples = DoubleArray(20)
+for (i in -5 until samples.size) {
+    val start = System.nanoTime()
+    val assignment = resolver.assign(labels)
+    val elapsed = System.nanoTime() - start
+    check(assignment.colors.size == labels.size)
+    if (i >= 0) samples[i] = elapsed / 1000.0
+}
+samples.sort()
+println("""{"scenario":"assign40","medianUs":${(samples[9] + samples[10]) / 2},"p95Us":${samples[18]}}""")
