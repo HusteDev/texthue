@@ -42,6 +42,15 @@ Run `python -m unittest discover -s tests -p test_text_to_color.py -k cross_lang
 
 The generated direct-resolution cases compare each runner with JavaScript. The Display-P3 cases compare each runner, including JavaScript, with Python. Both comparisons cover complete palettes and contrast reports using the test suite's numerical tolerances. The replay check compares each supporting runner's direct and restored results for exact equality.
 
+At commit `4c0acbe`, all eight implementations matched on 236 generated
+resolution cases and 24 Display-P3 cases in local runs. JavaScript, Python,
+and Go also reproduced their 236 direct results exactly from exported
+configurations. Kotlin ran on the Windows JVM using Android Studio's JDK.
+Swift ran on x86-64 Linux in Docker using Swift 6.1.3. The Windows Dart run
+used the Flutter installation's `bin/cache/dart-sdk/bin/dart.exe` directly.
+These comparisons exercise the JSON runner contract. The separate API 34
+emulator test exercises the Kotlin fixtures on Android ART.
+
 ## Registering a runner
 
 Set `conformanceRunner` in the package's entry in `tools/packages.json` to the argument list for its command. Set `conformanceReplay` to `true` if it accepts exported configurations. The parity test reads this manifest and sends the Display-P3 corpus to every registered runner.
