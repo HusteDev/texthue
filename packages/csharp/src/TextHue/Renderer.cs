@@ -30,6 +30,7 @@ public enum Preset { Labels, Controls, Chart, Subdued, Mono }
 public sealed class Renderer
 {
     private readonly string scope;
+    private readonly HueDomain hueDomain;
     private readonly uint seed;
     private readonly Rgb[] candidates;
     private readonly ForegroundPolicy foregroundPolicy;
@@ -45,10 +46,12 @@ public sealed class Renderer
                     ThemeProfile? lightProfile = null, ThemeProfile? darkProfile = null,
                     IReadOnlyDictionary<string, double>? contrastTargets = null,
                     ContrastModel contrastModel = ContrastModel.Wcag2, Preset preset = Preset.Labels,
-                    IEnumerable<Rgb>? foregrounds = null, ForegroundPolicy foregroundPolicy = ForegroundPolicy.Best)
+                    IEnumerable<Rgb>? foregrounds = null, ForegroundPolicy foregroundPolicy = ForegroundPolicy.Best,
+                    HueArc? hueRange = null, IReadOnlyList<HueArc>? excludeHues = null)
     {
         if (!Enum.IsDefined(contrastModel)) throw new ArgumentOutOfRangeException(nameof(contrastModel));
         if (!Enum.IsDefined(foregroundPolicy)) throw new ArgumentOutOfRangeException(nameof(foregroundPolicy));
+        hueDomain = new(hueRange ?? new HueArc(0, 360), excludeHues ?? []);
         this.foregroundPolicy = foregroundPolicy;
         candidates = foregrounds?.ToArray() ?? [new(0, 0, 0), new(255, 255, 255)];
         if (candidates.Length == 0) throw new ArgumentException("Expected at least one foreground.", nameof(foregrounds));
@@ -104,7 +107,7 @@ public sealed class Renderer
         double position = uH * 12;
         int i = (int)position;
         var anchors = Tables.Anchors;
-        double hue = (anchors[i] + (anchors[i + 1] - anchors[i]) * (position - i)) % 360;
+        double hue = hueDomain.Map((anchors[i] + (anchors[i + 1] - anchors[i]) * (position - i)) % 360);
         return new(uH, hue, Theme(false, hue, uL, uC), Theme(true, hue, uL, uC));
     }
 

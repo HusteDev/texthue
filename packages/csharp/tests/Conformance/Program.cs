@@ -229,3 +229,30 @@ try
 }
 catch (ArgumentException) { }
 Console.WriteLine("Passed eight foreground selection cases, input snapshot and empty-list checks.");
+
+(HueArc Allowed, HueArc[] Excluded, double Hue, string Light, string Dark)[] hueCases =
+[
+    (new(300, 60), [new(350, 10)], 341.06283164159765, "#e496c8", "#7e3668"),
+    (new(10, 220), [new(30, 80), new(70, 120), new(190, 240)], 181.9565484774379, "#6dbbae", "#2f5650"),
+    (new(0, 360), [new(120, 110)], 119.10628316415976, "#a4b566", "#4b532c"),
+    (new(35.125, 35.25), [], 35.238828539551996, "#e39d8b", "#7f3e2e"),
+    (new(0, 360), [new(50, 50)], 327.8261939097516, "#e491e2", "#793778")
+];
+foreach (var test in hueCases)
+{
+    var palette = new Renderer(hueRange: test.Allowed, excludeHues: test.Excluded).Resolve("a");
+    if (Math.Abs(palette.Hue - test.Hue) > 1e-12 || palette.Light["fill"].Hex != test.Light || palette.Dark["fill"].Hex != test.Dark)
+        throw new InvalidDataException($"Hue mismatch for {test.Allowed}");
+}
+(HueArc Allowed, HueArc[] Excluded)[] invalidDomains =
+[
+    (new(0, 0), []), (new(360, 0), []), (new(0, 360), [new(0, 360)]),
+    (new(0, 360), new HueArc[17]), (new(0, 361), []), (new(0, 360), [new(double.NaN, 2)])
+];
+foreach (var test in invalidDomains)
+{
+    try { _ = new Renderer(hueRange: test.Allowed, excludeHues: test.Excluded); }
+    catch (ArgumentException) { continue; }
+    throw new InvalidDataException("Accepted invalid hue domain.");
+}
+Console.WriteLine("Passed five reference hue assignments and six invalid domains.");
