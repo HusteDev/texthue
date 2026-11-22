@@ -37,13 +37,38 @@ def verify(archive):
         )
         ET.ElementTree(project).write(app / "Consumer.csproj", encoding="utf-8")
         (app / "Program.cs").write_text(
-            'var renderer = new TextHue.Renderer(scope: "project", seed: 42);\n'
-            'var apple = renderer.Batch(["apple", "pear", "apple"])[0];\n'
-            'var fill = renderer.Hex("apple");\n'
-            'var foreground = renderer.ResolveColor("apple", dark: true, role: "onFill");\n'
-            'if (fill != apple.Light["fill"].Hex || foreground.Rgb != apple.Dark["onFill"].Rgb)\n'
-            '    throw new System.InvalidOperationException("Single-role and batch outputs differ");\n'
-            'System.Console.WriteLine($"{fill} {foreground.Hex}");\n',
+            """using System;
+using System.Collections.Generic;
+using TextHue;
+
+var renderer = new Renderer(scope: "project", seed: 42);
+var apple = renderer.Batch(["apple", "pear", "apple"])[0];
+var fill = renderer.Hex("apple");
+var foreground = renderer.ResolveColor("apple", dark: true, role: "onFill");
+if (fill != apple.Light["fill"].Hex || foreground.Rgb != apple.Dark["onFill"].Rgb)
+    throw new InvalidOperationException("Single-role and batch outputs differ");
+
+var gray = new Rgb(119, 119, 119);
+var constrained = new Renderer(contrastModel: ContrastModel.Apca, foregrounds: [gray],
+    overrides: new Dictionary<string, BrandColors> { ["fixed"] = new(gray, gray) });
+var first = constrained.Assign(["fixed", "apple"]);
+var extended = constrained.Assign(["fixed", "apple", "pear"], first.Assignments);
+if (extended.Assignments["apple"] != first.Assignments["apple"])
+    throw new InvalidOperationException("Replay moved a pinned label");
+var palette = extended.Colors["fixed"];
+foreach (var report in new[] { palette.LightContrast, palette.DarkContrast })
+{
+    var pair = report["fill"];
+    if (pair.Model != ContrastModel.Apca || pair.MeetsTarget || pair.Value != 0 ||
+        pair.Ratio != 1 || pair.Fallback != "palette-constraint")
+        throw new InvalidOperationException("Missing fixed-fill diagnostics");
+}
+bool rejected = false;
+try { constrained.HexStrict("fixed", role: "onFill"); }
+catch (InvalidOperationException) { rejected = true; }
+if (!rejected) throw new InvalidOperationException("Strict selection accepted an unmet target");
+Console.WriteLine($"{fill} {foreground.Hex}");
+""",
             encoding="utf-8",
         )
         subprocess.run(["dotnet", "restore", "--source", str(feed)], cwd=app, env=env, check=True)
