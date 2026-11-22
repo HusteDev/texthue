@@ -46,9 +46,14 @@ application { mainClass = 'MainKt' }
             """import com.hustedev.texthue.Resolver
 
 fun main() {
-    val tones = Resolver(namespace = "project", seed = 42u).batch(listOf("apple", "pear", "apple"))
+    val resolver = Resolver(namespace = "project", seed = 42u)
+    val tones = resolver.batch(listOf("apple", "pear", "apple"))
     check(tones[0] == tones[2])
-    println(tones[0].light.color("fill").hex + " " + tones[0].dark.color("onFill").hex)
+    val fill = resolver.hex("apple")
+    val foreground = resolver.color("apple", dark = true, role = "onFill")
+    check(fill == tones[0].light.color("fill").hex)
+    check(foreground.hex == tones[0].dark.color("onFill").hex)
+    println("$fill ${foreground.hex}")
 }
 """,
             encoding="utf-8",

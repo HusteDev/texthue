@@ -2,7 +2,7 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>CyclomaticComplexMethod:Resolver.kt$Resolver$private fun theme(dark: Boolean, hue: Double, uL: Double, uC: Double, fixed: FixedTone? = null): ThemePalette</ID>
+    <ID>CyclomaticComplexMethod:Resolver.kt$Resolver$private fun theme(dark: Boolean, mapped: Mapping, selected: String? = null): ThemePalette</ID>
     <ID>DestructuringDeclarationWithTooManyEntries:CompositeTest.kt$val (source, alpha, backdrop, expected) = line.split('\t')</ID>
     <ID>DestructuringDeclarationWithTooManyEntries:IdentityTest.kt$val (text, namespace, seed, hash, fractions) = line.split('\t')</ID>
     <ID>LongMethod:ResolverTest.kt$fun main()</ID>

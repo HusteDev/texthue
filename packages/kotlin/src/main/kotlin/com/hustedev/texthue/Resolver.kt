@@ -31,7 +31,9 @@ enum class ForegroundPolicy { BEST, FIRST_PASSING }
 
 data class Backgrounds(val light: String = "#ffffff", val dark: String = "#121212")
 
-private val paletteRoles = listOf("background", "subtle", "muted", "fill", "onFill", "fillHover", "fillActive", "border", "text", "strong")
+private val paletteRoles = listOf(
+    "background", "subtle", "muted", "fill", "onFill", "fillHover", "fillActive", "border", "text", "strong"
+)
 
 private val hexColor = Regex("#[0-9A-Fa-f]{6}")
 
@@ -235,7 +237,9 @@ class Resolver(
         val unconstrained = if (apca) 0.0 else 1.0
         val borderTarget = contrastTargets.border ?: if (apca) target else minOf(3.0, target)
         val subtle by lazy(LazyThreadSafetyMode.NONE) { tone(lb + direction * 0.04, profile.fill, 0.16, unconstrained) }
-        val fill by lazy(LazyThreadSafetyMode.NONE) { fixed?.bytes ?: tone(fillL, profile.fill, 0.16, contrastTargets.fill ?: target) }
+        val fill by lazy(LazyThreadSafetyMode.NONE) {
+            fixed?.bytes ?: tone(fillL, profile.fill, 0.16, contrastTargets.fill ?: target)
+        }
         val onFill by lazy(LazyThreadSafetyMode.NONE) { foreground(fill, contrastTargets.fill ?: target) }
         fun bytes(role: String): IntArray = when (role) {
             "background" -> background
@@ -243,10 +247,13 @@ class Resolver(
             "muted" -> tone(lb + direction * 0.10, profile.fill, 0.16, unconstrained)
             "fill" -> fill
             "onFill" -> onFill
-            "fillHover" -> tone(fillL + direction * 0.025, profile.fill, 0.16, contrastTargets.fillHover ?: target, onFill, surface = true)
-            "fillActive" -> tone(fillL + direction * 0.05, profile.fill, 0.16, contrastTargets.fillActive ?: target, onFill, surface = true)
+            "fillHover" -> tone(fillL + direction * 0.025, profile.fill, 0.16,
+                contrastTargets.fillHover ?: target, onFill, surface = true)
+            "fillActive" -> tone(fillL + direction * 0.05, profile.fill, 0.16,
+                contrastTargets.fillActive ?: target, onFill, surface = true)
             "border" -> tone(lb + direction * 0.39, profile.fill, 0.16, borderTarget, background)
-            "text" -> tone(textL, profile.text, 0.19, contrastTargets.text ?: target, background, subtle, contrastTargets.textOnSubtle ?: target)
+            "text" -> tone(textL, profile.text, 0.19,
+                contrastTargets.text ?: target, background, subtle, contrastTargets.textOnSubtle ?: target)
             "strong" -> tone(textL + direction * 0.10, profile.text, 0.19, contrastTargets.strong ?: target, background)
             else -> throw IllegalArgumentException("Unknown color role: $role")
         }
