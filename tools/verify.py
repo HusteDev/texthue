@@ -67,10 +67,9 @@ def run(label, command, *, cwd=ROOT, env=None, timeout=180):
 
 
 def environment():
-    """Return a subprocess environment that keeps Go caches inside the workspace and forces UTF-8 for Python."""
+    """Return a subprocess environment that keeps the Go build cache inside the workspace and forces UTF-8 for Python."""
     env = os.environ.copy()
     env.setdefault("GOCACHE", str(ROOT / ".cache/go-build"))
-    env.setdefault("GOPATH", str(ROOT / ".cache/go-path"))
     env.setdefault("GOTOOLCHAIN", "local")
     env.setdefault("PYTHONUTF8", "1")
     env["PYTHONDONTWRITEBYTECODE"] = "1"
