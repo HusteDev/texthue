@@ -135,10 +135,10 @@ For a partial publication, dispatch the same commit and version with **resume** 
 ## Dart publication validation
 
 The release workflow runs Dart conformance, the pub dry run and the standalone
-consumer check before staging a new draft. The staging helper builds a tar.gz
-from the file inventory reported by pub and runs the consumer against its
-extracted contents. The draft stores these tested bytes and their SHA-256 digest.
-The archive is assembled by TextHue because pub's dry run only prints the inventory.
+consumer check before staging a new draft. After validating the dry run, the
+helper exports pub's native tar.gz using Dart 3.12.2. It checks the archived
+files against the validated inventory and source bytes, then runs the consumer
+against the extracted package. The draft stores that archive and its SHA-256 digest.
 
 The optional Dart publish job uses the `pub-dev` environment's `PUB_TOKEN`
 secret, which must grant upload access for texthue. It compares the staged

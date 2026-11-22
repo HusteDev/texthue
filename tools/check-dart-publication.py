@@ -1,7 +1,6 @@
 """Validate the Dart publication without uploading. Account for the required exact pins."""
 
 import argparse
-import gzip
 import re
 import shutil
 import subprocess
@@ -65,12 +64,23 @@ def accepted_pin_warnings(output):
     )
 
 
-def check_consumer(dart, archive):
+def check_consumer(dart, archive, files):
     """Exercise the public library with no monorepo fixtures or package-local tool state."""
     with tempfile.TemporaryDirectory() as temp:
         root = Path(temp)
         library = root / "library"
         with tarfile.open(archive) as staged:
+            members = staged.getmembers()
+            if sorted(m.name for m in members if not m.isdir()) != files:
+                raise ValueError("Dart archive differs from the validated pub inventory")
+            for member in members:
+                if member.isdir():
+                    continue
+                if (
+                    not member.isfile()
+                    or staged.extractfile(member).read() != (PACKAGE / member.name).read_bytes()
+                ):
+                    raise ValueError(f"Unexpected Dart archive content: {member.name}")
             staged.extractall(library, filter="data")
         app = root / "consumer"
         app.mkdir()
@@ -112,18 +122,12 @@ def main():
     files = check_archive_listing(result.stdout)
     with tempfile.TemporaryDirectory() as directory:
         archive = Path(directory) / "package.tar.gz"
-        with (
-            archive.open("wb") as raw,
-            gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0) as compressed,
-        ):
-            with tarfile.open(fileobj=compressed, mode="w|") as staged:
-                for name in files:
-                    path = PACKAGE / name
-                    info = tarfile.TarInfo(name)
-                    info.size = path.stat().st_size
-                    with path.open("rb") as source:
-                        staged.addfile(info, source)
-        check_consumer(dart, archive)
+        subprocess.run(
+            [dart, "pub", "publish", "--skip-validation", f"--to-archive={archive}"],
+            cwd=PACKAGE,
+            check=True,
+        )
+        check_consumer(dart, archive, files)
         if args.stage:
             with args.stage.open("xb") as output, archive.open("rb") as source:
                 shutil.copyfileobj(source, output)
