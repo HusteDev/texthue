@@ -94,7 +94,7 @@ mod tests {
             vectors: Vec<Value>,
         }
         let corpus: Corpus =
-            serde_json::from_str(include_str!("../../../conformance/vectors.json")).unwrap();
+            serde_json::from_str(include_str!("../testdata/vectors.json")).unwrap();
         let rows = corpus.vectors;
         assert_eq!(rows.len(), 32);
         for row in rows {
@@ -118,8 +118,7 @@ mod tests {
     #[test]
     fn shared_normalization() {
         let rows: Vec<Value> =
-            serde_json::from_str(include_str!("../../../conformance/normalization-v1.json"))
-                .unwrap();
+            serde_json::from_str(include_str!("../testdata/normalization-v1.json")).unwrap();
         assert_eq!(rows.len(), 90);
         for row in rows {
             let opts = &row["normalize"];

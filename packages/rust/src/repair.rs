@@ -81,7 +81,7 @@ mod tests {
 
     #[test]
     fn shared_repairs() {
-        let corpus = include_str!("../../../conformance/tone-repair-v1.tsv");
+        let corpus = include_str!("../testdata/tone-repair-v1.tsv");
         assert_eq!(corpus.lines().count(), 192);
         for line in corpus.lines() {
             let f: Vec<_> = line.split('\t').collect();

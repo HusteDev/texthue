@@ -301,7 +301,7 @@ mod tests {
             vectors: Vec<Value>,
         }
         let corpus: Corpus =
-            serde_json::from_str(include_str!("../../../conformance/vectors.json")).unwrap();
+            serde_json::from_str(include_str!("../testdata/vectors.json")).unwrap();
         let mut count = 0;
         for row in corpus.vectors {
             let opts = &row["options"];

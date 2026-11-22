@@ -92,6 +92,24 @@
       ],
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
       "conformanceRunner": null
+    },
+    {
+      "id": "rust",
+      "language": "rust",
+      "dir": "packages/rust",
+      "versionFiles": [
+        { "path": "packages/rust/Cargo.toml", "kind": "toml", "field": ["package", "version"] }
+      ],
+      "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+      "extraSyncTargets": [
+        { "source": "root:conformance/apca-srgb-v1.json", "dest": "testdata/apca-srgb-v1.json" },
+        { "source": "root:conformance/normalization-v1.json", "dest": "testdata/normalization-v1.json" },
+        { "source": "root:conformance/p3-contrast-v1.json", "dest": "testdata/p3-contrast-v1.json" },
+        { "source": "root:conformance/p3-fit-v1.json", "dest": "testdata/p3-fit-v1.json" },
+        { "source": "root:conformance/tone-repair-v1.tsv", "dest": "testdata/tone-repair-v1.tsv" },
+        { "source": "root:conformance/vectors.json", "dest": "testdata/vectors.json" }
+      ],
+      "conformanceRunner": null
     }
   ]
 }

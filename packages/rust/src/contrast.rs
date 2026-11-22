@@ -91,9 +91,9 @@ mod tests {
             lc: f64,
         }
         let srgb: Vec<SrgbRow> =
-            serde_json::from_str(include_str!("../../../conformance/apca-srgb-v1.json")).unwrap();
+            serde_json::from_str(include_str!("../testdata/apca-srgb-v1.json")).unwrap();
         let p3: Vec<P3Row> =
-            serde_json::from_str(include_str!("../../../conformance/p3-contrast-v1.json")).unwrap();
+            serde_json::from_str(include_str!("../testdata/p3-contrast-v1.json")).unwrap();
         assert_eq!(srgb.len() + 2 * p3.len(), 1135);
         let check = |actual: f64, expected: f64| {
             assert!((actual - expected).abs() <= 1e-12, "{actual} vs {expected}")

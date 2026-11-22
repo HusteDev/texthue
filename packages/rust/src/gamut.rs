@@ -151,7 +151,7 @@ mod tests {
             clipped: bool,
         }
         let rows: Vec<Row> =
-            serde_json::from_str(include_str!("../../../conformance/p3-fit-v1.json")).unwrap();
+            serde_json::from_str(include_str!("../testdata/p3-fit-v1.json")).unwrap();
         assert_eq!(rows.len(), 108);
         for row in rows {
             let fit = Gamut::DisplayP3.fit(row.l, row.c, row.h);
