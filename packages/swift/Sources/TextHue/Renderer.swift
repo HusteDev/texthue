@@ -7,6 +7,8 @@ struct RoleProfile: Decodable {
 }
 
 struct RenderOptions: Decodable {
+    var namespace: String?
+    var seed: UInt32?
     var contrastTarget: Double?
     var contrastTargets: [String: Double]?
     var backgrounds: [String: String]?
@@ -15,15 +17,28 @@ struct RenderOptions: Decodable {
 
 enum RenderError: Error { case invalidOptions }
 
-struct RenderedPalette {
-    let hue: Double
-    let light, dark: [String: Color]
+public struct RenderedPalette {
+    public let hue: Double
+    public let light, dark: [String: Color]
 }
 
-struct Renderer {
+public struct Renderer {
     let options: RenderOptions
 
-    func render(hueFraction: Double, lightness: Double, chroma: Double) throws -> RenderedPalette {
+    init(options: RenderOptions) { self.options = options }
+
+    public init(namespace: String = "", seed: UInt32 = 0, contrastTarget: Double = 4.5) throws {
+        guard (1...21).contains(contrastTarget) else { throw RenderError.invalidOptions }
+        options = RenderOptions(namespace: namespace, seed: seed, contrastTarget: contrastTarget)
+    }
+
+    public func resolve(_ text: String) throws -> RenderedPalette {
+        let digest = try identityDigest(text, namespace: options.namespace ?? "", seed: options.seed ?? 0)
+        let fractions = identityFractions(digest)
+        return try render(hueFraction: fractions[0], lightness: fractions[1], chroma: fractions[2])
+    }
+
+    private func render(hueFraction: Double, lightness: Double, chroma: Double) throws -> RenderedPalette {
         let position = hueFraction * 12, slot = Int(position)
         let hue = (anchors[slot] + (anchors[slot + 1] - anchors[slot]) * (position - Double(slot)))
             .truncatingRemainder(dividingBy: 360)

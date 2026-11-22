@@ -2,18 +2,21 @@ import XCTest
 @testable import TextHue
 
 final class RendererTests: XCTestCase {
-    func testFrozenTonesFromIdentityFractions() throws {
+    func testFrozenTonesFromText() throws {
         struct Theme: Decodable {
             let background, subtle, muted, fill, onFill, fillHover, fillActive, border, text, strong: Color
         }
         struct Palette: Decodable { let hue: Double; let light, dark: Theme }
-        struct Vector: Decodable { let options: RenderOptions; let fractions: [Double]; let expected: Palette }
+        struct Encoding: Decodable { let sha256: String }
+        struct Vector: Decodable { let text: String; let encoding: Encoding; let options: RenderOptions; let fractions: [Double]; let expected: Palette }
         struct Corpus: Decodable { let vectors: [Vector] }
         let corpus = try fixture("vectors.json", as: Corpus.self)
         XCTAssertEqual(corpus.vectors.count, 32)
         for vector in corpus.vectors {
-            let f = vector.fractions
-            let actual = try Renderer(options: vector.options).render(hueFraction: f[0], lightness: f[1], chroma: f[2])
+            let digest = try identityDigest(vector.text, namespace: vector.options.namespace ?? "", seed: vector.options.seed ?? 0)
+            XCTAssertEqual(digest.map { String(format: "%02x", $0) }.joined(), vector.encoding.sha256)
+            XCTAssertEqual(identityFractions(digest), vector.fractions)
+            let actual = try Renderer(options: vector.options).resolve(vector.text)
             XCTAssertEqual(actual.hue, vector.expected.hue, accuracy: 1e-12)
             for (colors, expected) in [(actual.light, vector.expected.light), (actual.dark, vector.expected.dark)] {
                 let roles = ["background":expected.background, "subtle":expected.subtle, "muted":expected.muted,
