@@ -19,6 +19,22 @@ fun main() {
 
 Batch results follow input order. The resolver shares work for duplicate normalized labels within one batch. Exact-text hashing is the default. To treat canonically equivalent spellings as one identity, pass `normalization = Normalization(unicode = UnicodeForm.NFC)` when constructing the resolver.
 
+## Consume the JVM package
+
+From the repository root, run `gradle -p packages/kotlin publishLibraryPublicationToStagingRepository` with Gradle 8.14 and a JDK. This creates a Maven repository under `packages/kotlin/build/repository` with the library JAR, source JAR, POM and Gradle module metadata.
+
+In a separate Kotlin/JVM project's Gradle build, add the staging repository and dependency, adjusting the checkout path.
+
+```kotlin
+repositories {
+    maven { url = uri("../texthue/packages/kotlin/build/repository") }
+    mavenCentral()
+}
+dependencies {
+    implementation("com.hustedev:texthue:0.1.0")
+}
+```
+
 ## Run the conformance suite
 
 From the repository root, install the locked JavaScript development dependencies and build the reference implementation. The runner requires Python, Node, a Kotlin compiler, and a JDK.

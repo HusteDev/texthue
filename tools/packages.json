@@ -61,7 +61,9 @@
       "id": "kotlin",
       "language": "kotlin",
       "dir": "packages/kotlin",
-      "versionFiles": [],
+      "versionFiles": [
+        { "path": "packages/kotlin/build.gradle", "kind": "pyRegex", "pattern": "^version = '([^']+)'$" }
+      ],
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
       "conformanceRunner": null
     },

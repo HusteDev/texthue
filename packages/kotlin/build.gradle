@@ -1,0 +1,36 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '2.2.21'
+    id 'maven-publish'
+}
+
+group = 'com.hustedev'
+version = '0.1.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+    withSourcesJar()
+}
+kotlin.compilerOptions.jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8
+
+tasks.named('jar') {
+    into('META-INF') { from files('LICENSE', 'THIRD_PARTY_NOTICES.md', 'SPECIFICATION.md') }
+}
+publishing {
+    publications {
+        library(MavenPublication) {
+            from components.java
+            pom {
+                name = 'TextHue'
+                description = 'Deterministic text-to-color assignments for Kotlin/JVM.'
+                url = 'https://github.com/HusteDev/texthue'
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = 'staging'
+            url = layout.buildDirectory.dir('repository')
+        }
+    }
+}
