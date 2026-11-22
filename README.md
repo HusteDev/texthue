@@ -24,7 +24,19 @@ Choose a workflow in the [task guide](docs/GUIDE.md).
 | Python | `texthue` on PyPI | [Typed Python package](packages/python/README.md) |
 | Go | `github.com/HusteDev/texthue/packages/go` | [Native Go module](packages/go/README.md) |
 
-JavaScript and TypeScript share one npm package. Python and Go have independent native implementations of the same specification.
+### Additional source ports
+
+These ports support single-label resolution, ordered batches, collection assignment, and replay of pinned placements. Each guide describes its toolchain and how to run the port from a checkout.
+
+| Platform | Assign a collection with previous placements | Guide |
+| --- | --- | --- |
+| Rust | `compiled.assign(labels, &previous.assignments)` | [Rust](packages/rust/README.md) |
+| C# / .NET | `renderer.Assign(labels, previous.Assignments)` | [.NET](packages/csharp/README.md) |
+| Kotlin | `resolver.assign(labels, pinned = previous.assignments)` | [Kotlin and Android](packages/kotlin/README.md) |
+| Swift | `try renderer.assign(labels, pinned: previous.assignments)` | [SwiftPM](packages/swift/README.md) |
+| Dart | `renderer.assign(labels, pinned: previous.assignments)` | [Dart](packages/dart/README.md) |
+
+Keep the resolver configuration stable when reusing placements. JavaScript, Python, and Go also expose configuration and registry import/export with fingerprint verification.
 
 ```bash
 npm install texthue
