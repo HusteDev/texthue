@@ -39,11 +39,11 @@ pub struct Color {
 }
 
 pub(crate) fn oklab(rgb: [u8; 3]) -> [f64; 3] {
-    lab_from_channels(rgb, &RGBTOXYZ)
+    lab_from_channels(rgb.map(|v| f64::from(v) / 255.0), &RGBTOXYZ)
 }
 
-fn lab_from_channels(rgb: [u8; 3], matrix: &[[f64; 3]; 3]) -> [f64; 3] {
-    let xyz = multiply(matrix, rgb.map(|v| linear_channel(f64::from(v) / 255.0)));
+fn lab_from_channels(rgb: [f64; 3], matrix: &[[f64; 3]; 3]) -> [f64; 3] {
+    let xyz = multiply(matrix, rgb.map(linear_channel));
     let lms = multiply(&XYZTOLMS, xyz);
     multiply(&LMSTOLAB, lms.map(f64::cbrt))
 }
@@ -79,7 +79,7 @@ impl From<[u8; 3]> for Color {
                 s: round6(100.0 * saturation),
                 l: round6(100.0 * light),
             },
-            oklch: coordinates(rgb, &RGBTOXYZ),
+            oklch: coordinates([r, g, b], &RGBTOXYZ),
             p3: None,
             css: None,
             srgb_clipped: false,
@@ -87,7 +87,7 @@ impl From<[u8; 3]> for Color {
     }
 }
 
-fn coordinates(rgb: [u8; 3], matrix: &[[f64; 3]; 3]) -> Oklch {
+fn coordinates(rgb: [f64; 3], matrix: &[[f64; 3]; 3]) -> Oklch {
     let [l, a, lab_b] = lab_from_channels(rgb, matrix);
     let neutral = rgb[0] == rgb[1] && rgb[1] == rgb[2];
     let degrees = (lab_b.atan2(a) * 180.0 / std::f64::consts::PI + 360.0) % 360.0;
@@ -109,11 +109,15 @@ fn coordinates(rgb: [u8; 3], matrix: &[[f64; 3]; 3]) -> Oklch {
 impl Color {
     /// Build a native Display-P3 rendition and its clipped sRGB fallback.
     pub fn from_display_p3(bytes: [u8; 3]) -> Self {
-        let (fallback, srgb_clipped) = crate::p3_fallback(bytes);
-        let channels = bytes.map(|v| round6(f64::from(v) / 255.0));
+        Self::from_p3_channels(bytes.map(|v| f64::from(v) / 255.0))
+    }
+
+    pub(crate) fn from_p3_channels(native: [f64; 3]) -> Self {
+        let (fallback, srgb_clipped) = crate::gamut::fallback_channels(native);
+        let channels = native.map(round6);
         let [r, g, b] = channels;
         Self {
-            oklch: coordinates(bytes, &crate::gamut::P3TOXYZ),
+            oklch: coordinates(native, &crate::gamut::P3TOXYZ),
             p3: Some(channels),
             css: Some(format!("color(display-p3 {r} {g} {b})")),
             srgb_clipped,

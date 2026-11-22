@@ -72,10 +72,11 @@ pub(crate) fn channel_byte(linear: f64) -> u8 {
 
 /// Convert quantized Display-P3 channels to sRGB and report whether clipping was required.
 pub fn p3_fallback(bytes: [u8; 3]) -> ([u8; 3], bool) {
-    let xyz = multiply(
-        &P3TOXYZ,
-        bytes.map(|b| linear_channel(f64::from(b) / 255.0)),
-    );
+    fallback_channels(bytes.map(|v| f64::from(v) / 255.0))
+}
+
+pub(crate) fn fallback_channels(channels: [f64; 3]) -> ([u8; 3], bool) {
+    let xyz = multiply(&P3TOXYZ, channels.map(linear_channel));
     let rgb = multiply(&XYZTORGB, xyz);
     (rgb.map(channel_byte), !inside(rgb))
 }

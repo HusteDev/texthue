@@ -115,7 +115,7 @@ const ROLES: [&str; 10] = [
     "strong",
 ];
 struct RawTheme {
-    roles: BTreeMap<&'static str, [u8; 3]>,
+    roles: BTreeMap<&'static str, [f64; 3]>,
     flags: BTreeMap<&'static str, (bool, bool, bool, Option<&'static str>)>,
 }
 
@@ -152,6 +152,7 @@ pub struct CompiledRenderer<'a> {
 }
 
 pub struct Renderer {
+    pub gamut: Gamut,
     pub preset: Preset,
     /// Stable entry IDs mapped to their approved light and dark fills.
     pub palette: Option<BTreeMap<String, BrandColors>>,
@@ -175,6 +176,7 @@ pub struct Renderer {
 impl Default for Renderer {
     fn default() -> Self {
         Self {
+            gamut: Gamut::Srgb,
             preset: Preset::Labels,
             palette: None,
             overrides: Default::default(),
@@ -209,7 +211,7 @@ impl CompiledRenderer<'_> {
         self.renderer.resolve_normalized(&normalized, self)
     }
 
-    fn selected(&self, text: &str, dark: bool, role: &str) -> Result<[u8; 3], &'static str> {
+    fn selected(&self, text: &str, dark: bool, role: &str) -> Result<[f64; 3], &'static str> {
         if !ROLES.contains(&role) {
             return Err("Unknown role");
         }
@@ -220,11 +222,12 @@ impl CompiledRenderer<'_> {
     }
 
     pub fn color(&self, text: &str, dark: bool, role: &str) -> Result<Color, &'static str> {
-        self.selected(text, dark, role).map(Color::from)
+        self.selected(text, dark, role)
+            .map(|channels| self.renderer.display(channels))
     }
 
     pub fn hex(&self, text: &str, dark: bool, role: &str) -> Result<String, &'static str> {
-        let [r, g, b] = self.selected(text, dark, role)?;
+        let [r, g, b] = self.renderer.fallback(self.selected(text, dark, role)?);
         Ok(format!("#{r:02x}{g:02x}{b:02x}"))
     }
 
@@ -244,11 +247,12 @@ impl CompiledRenderer<'_> {
         } else {
             renderer.light_background
         };
+        let bg = renderer.gamut.channels_from_srgb(bg);
         let require = |pair, front, back| {
             let target = renderer.required_target(pair, renderer.default_target());
             if renderer
                 .contrast_model
-                .measure(front, back, Gamut::Srgb)
+                .measure_channels(front, back, renderer.gamut)
                 .abs()
                 < target
             {
@@ -267,7 +271,7 @@ impl CompiledRenderer<'_> {
             "strong" | "border" => require(role, rgb, bg)?,
             _ => {}
         }
-        let [r, g, b] = rgb;
+        let [r, g, b] = renderer.fallback(rgb);
         Ok(format!("#{r:02x}{g:02x}{b:02x}"))
     }
 
@@ -304,6 +308,20 @@ impl Renderer {
         labels: impl IntoIterator<Item = S>,
     ) -> Result<Vec<Arc<RenderedPalette>>, &'static str> {
         self.compile()?.batch(labels)
+    }
+
+    fn fallback(&self, channels: [f64; 3]) -> [u8; 3] {
+        match self.gamut {
+            Gamut::Srgb => channels.map(|v| (v * 255.0).round() as u8),
+            Gamut::DisplayP3 => crate::gamut::fallback_channels(channels).0,
+        }
+    }
+
+    fn display(&self, channels: [f64; 3]) -> Color {
+        match self.gamut {
+            Gamut::Srgb => Color::from(self.fallback(channels)),
+            Gamut::DisplayP3 => Color::from_p3_channels(channels),
+        }
     }
 
     fn default_target(&self) -> f64 {
@@ -362,9 +380,16 @@ impl Renderer {
                 .copied()
                 .unwrap_or_else(|| self.default_target());
             let passes = |rgb| {
-                self.foregrounds
-                    .iter()
-                    .any(|fg| self.contrast_model.measure(*fg, rgb, Gamut::Srgb).abs() >= target)
+                self.foregrounds.iter().any(|fg| {
+                    self.contrast_model
+                        .measure_channels(
+                            self.gamut.channels_from_srgb(*fg),
+                            self.gamut.channels_from_srgb(rgb),
+                            self.gamut,
+                        )
+                        .abs()
+                        >= target
+                })
             };
             palette.extend(
                 entries
@@ -488,6 +513,7 @@ impl Renderer {
             self.light_background
         };
         let lb = (Color::from(bg).oklch.l * 4096.0).round() / 4096.0;
+        let bg = self.gamut.channels_from_srgb(bg);
         let direction = if dark { 1.0 } else { -1.0 };
         let theme = if dark {
             self.dark_profile
@@ -512,11 +538,12 @@ impl Renderer {
             (low + (high - low) * u_l + offset + [0.0, 0.08, -0.08, 0.16, -0.16][mapped.ring % 5])
                 .clamp(0.0, 1.0)
         };
-        let score = |a, b| self.contrast_model.measure(a, b, Gamut::Srgb).abs();
+        let score = |a, b| self.contrast_model.measure_channels(a, b, self.gamut).abs();
         let foreground = |rgb, target| {
-            let mut best = self.foregrounds[0];
+            let mut best = self.gamut.channels_from_srgb(self.foregrounds[0]);
             let mut best_score = -1.0;
             for &candidate in &self.foregrounds {
+                let candidate = self.gamut.channels_from_srgb(candidate);
                 let value = score(candidate, rgb);
                 if self.foreground_policy == ForegroundPolicy::FirstPassing && value >= target {
                     return candidate;
@@ -530,8 +557,8 @@ impl Renderer {
         };
         enum Against {
             Candidates,
-            Text([u8; 3]),
-            Background([u8; 3]),
+            Text([f64; 3]),
+            Background([f64; 3]),
         }
         use Against::*;
         let mut flags = BTreeMap::new();
@@ -540,11 +567,11 @@ impl Renderer {
                         fill: bool,
                         target: f64,
                         against: Against,
-                        second: Option<[u8; 3]>| {
+                        second: Option<[f64; 3]>| {
             let l = value.clamp(0.0, 1.0);
             let role = profile(fill);
             let (low, high) = role.chroma_scale.unwrap_or(self.preset.chroma_scale());
-            let c = Gamut::Srgb.cusp(l, hue)
+            let c = self.gamut.cusp(l, hue)
                 * ((low + (high - low) * u_c) * if mapped.ring % 5 < 3 { 1.0 } else { 0.6 });
             let secondary = if second.is_some() {
                 required("textOnSubtle")
@@ -556,12 +583,13 @@ impl Renderer {
             } else {
                 c.min(role.chroma_cap.unwrap_or(if fill { 0.16 } else { 0.19 }))
             };
-            let repair = Gamut::Srgb.repair(
+            let repair = self.gamut.repair(
                 l,
                 capped,
                 hue,
                 if target == 0.0 { secondary } else { target },
                 |rgb| {
+                    let rgb = rgb.map(|v| f64::from(v) / 255.0);
                     let primary = match against {
                         Candidates => score(foreground(rgb, target), rgb),
                         Text(text) => score(text, rgb),
@@ -584,7 +612,7 @@ impl Renderer {
                     repair.fallback,
                 ),
             );
-            repair.color.bytes
+            repair.color.bytes.map(|v| f64::from(v) / 255.0)
         };
         let lf = fixed.map_or_else(|| sample(true), |tone| tone.lightness);
         let lt = sample(false);
@@ -622,7 +650,7 @@ impl Renderer {
                 ),
                 "fill" => fixed.map_or_else(
                     || tone(role, lf, true, required(role), Candidates, None),
-                    |f| f.rgb,
+                    |f| self.gamut.channels_from_srgb(f.rgb),
                 ),
                 "onFill" => foreground(roles["fill"], required("fill")),
                 "fillHover" | "fillActive" => {
@@ -673,10 +701,6 @@ impl Renderer {
         let wcag = self.contrast_model == ContrastModel::Wcag2;
         let default_target = self.default_target();
         let required = |role: &str| self.required_target(role, default_target);
-        let colors: Theme = roles
-            .into_iter()
-            .map(|(name, rgb)| (name, Color::from(rgb)))
-            .collect();
         let mut relationships = BTreeMap::new();
         for (role, color, backdrop, surface) in [
             ("fill", "fill", on_fill, true),
@@ -687,13 +711,15 @@ impl Renderer {
             ("border", "border", bg, false),
             ("strong", "strong", bg, false),
         ] {
-            let rgb = colors[color].rgb;
+            let rgb = roles[color];
             let (front, back) = if surface {
                 (backdrop, rgb)
             } else {
                 (rgb, backdrop)
             };
-            let value = self.contrast_model.measure(front, back, Gamut::Srgb);
+            let value = self
+                .contrast_model
+                .measure_channels(front, back, self.gamut);
             let meets_target = value.abs() >= required(role);
             let (lightness_adjusted, chroma_capped, chroma_reduced, fallback) =
                 flags.get(color).copied().unwrap_or_default();
@@ -703,7 +729,7 @@ impl Renderer {
                     ratio: if wcag {
                         value
                     } else {
-                        ContrastModel::Wcag2.measure(front, back, Gamut::Srgb)
+                        ContrastModel::Wcag2.measure_channels(front, back, self.gamut)
                     },
                     apca_value: (!wcag).then_some(value),
                     meets_target,
@@ -718,6 +744,10 @@ impl Renderer {
                 },
             );
         }
+        let colors: Theme = roles
+            .into_iter()
+            .map(|(name, rgb)| (name, self.display(rgb)))
+            .collect();
         (
             colors,
             ContrastReport {

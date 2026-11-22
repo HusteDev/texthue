@@ -53,6 +53,7 @@ struct Normalize {
 struct Options {
     namespace: String,
     seed: u32,
+    gamut: Option<String>,
     preset: Option<String>,
     contrast_model: Option<String>,
     contrast_target: Option<f64>,
@@ -102,6 +103,11 @@ impl Options {
         let mut renderer = Renderer {
             namespace: self.namespace,
             seed: self.seed,
+            gamut: match self.gamut.as_deref().unwrap_or("srgb") {
+                "srgb" => Gamut::Srgb,
+                "display-p3" => Gamut::DisplayP3,
+                _ => return Err("unknown gamut".into()),
+            },
             light_profile: self.profiles.light.into(),
             dark_profile: self.profiles.dark.into(),
             contrast_target: self.contrast_target,
@@ -185,6 +191,11 @@ fn theme(colors: BTreeMap<&str, Color>, report: ContrastReport) -> Value {
     for (role, c) in colors {
         let [r, g, b] = c.rgb;
         result[role] = json!({"hex":c.hex,"rgb":{"r":r,"g":g,"b":b},"hsl":{"h":c.hsl.h,"s":c.hsl.s,"l":c.hsl.l},"oklch":{"l":c.oklch.l,"c":c.oklch.c,"h":c.oklch.h}});
+        if let Some([r, g, b]) = c.p3 {
+            result[role]["p3"] = json!({"r":r,"g":g,"b":b});
+            result[role]["css"] = json!(c.css);
+            result[role]["srgbClipped"] = json!(c.srgb_clipped);
+        }
     }
     let mut contrast = json!({"target":report.target});
     for (role, p) in report.relationships {
