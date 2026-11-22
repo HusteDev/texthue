@@ -29,9 +29,16 @@ func TestDisplayP3CSSVariables(t *testing.T) {
 	if len(native) != 10 || len(fallback) != 10 {
 		t.Fatal("missing role variables")
 	}
-	for key, value := range native {
-		if !strings.HasPrefix(value, "color(display-p3 ") || !strings.HasPrefix(fallback[key], "#") {
-			t.Fatalf("invalid renditions for %s: %s / %s", key, value, fallback[key])
+	roles := map[string]Color{
+		"background": colors.Dark.Background, "subtle": colors.Dark.Subtle,
+		"muted": colors.Dark.Muted, "fill": colors.Dark.Fill, "on-fill": colors.Dark.OnFill,
+		"fill-hover": colors.Dark.FillHover, "fill-active": colors.Dark.FillActive,
+		"border": colors.Dark.Border, "text": colors.Dark.Text, "strong": colors.Dark.Strong,
+	}
+	for role, color := range roles {
+		key := "--brand-badge-8805cd-" + role
+		if native[key] != color.CSS || fallback[key] != color.Hex {
+			t.Fatalf("%s: got %q / %q, want %q / %q", key, native[key], fallback[key], color.CSS, color.Hex)
 		}
 	}
 }
