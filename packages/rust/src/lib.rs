@@ -1,3 +1,6 @@
+mod contrast;
+pub use contrast::{ContrastModel, Gamut};
+
 use sha2::{Digest, Sha256};
 use unicode_normalization::UnicodeNormalization;
 
