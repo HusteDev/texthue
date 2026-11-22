@@ -173,6 +173,14 @@ def main():
         "Python conformance and three-language parity",
         [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"],
         env=env,
+        # Generated parity runs registered toolchains sequentially. Each native
+        # runner has its own cold-build timeout inside the test.
+        timeout=180
+        + sum(
+            1200 if package.get("optionalToolchain") else 60
+            for package in load_packages()
+            if package.get("conformanceRunner")
+        ),
     )
     go_dir = package_dir("go")
     run(
