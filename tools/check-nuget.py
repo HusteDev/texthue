@@ -39,7 +39,11 @@ def verify(archive):
         (app / "Program.cs").write_text(
             'var renderer = new TextHue.Renderer(scope: "project", seed: 42);\n'
             'var apple = renderer.Batch(["apple", "pear", "apple"])[0];\n'
-            'System.Console.WriteLine($"{apple.Light["fill"].Hex} {apple.Dark["onFill"].Hex}");\n',
+            'var fill = renderer.Hex("apple");\n'
+            'var foreground = renderer.ResolveColor("apple", dark: true, role: "onFill");\n'
+            'if (fill != apple.Light["fill"].Hex || foreground.Rgb != apple.Dark["onFill"].Rgb)\n'
+            '    throw new System.InvalidOperationException("Single-role and batch outputs differ");\n'
+            'System.Console.WriteLine($"{fill} {foreground.Hex}");\n',
             encoding="utf-8",
         )
         subprocess.run(["dotnet", "restore", "--source", str(feed)], cwd=app, env=env, check=True)
