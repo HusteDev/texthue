@@ -3,6 +3,7 @@ import 'color.dart';
 import 'contrast.dart';
 import 'gamut_fit.dart';
 import 'identity.dart';
+import 'normalization.dart';
 import 'hue_domain.dart';
 import 'tables.dart';
 import 'tone_repair.dart';
@@ -75,6 +76,8 @@ final class Renderer {
   final Preset preset;
   final ThemeProfile lightProfile, darkProfile;
   final String namespace;
+  final Normalization normalization;
+  final String _scope;
   final int seed;
   final double contrastTarget;
   final Map<String, double> contrastTargets;
@@ -84,6 +87,7 @@ final class Renderer {
   final _Background _light, _dark;
   Renderer(
       {this.namespace = '',
+      this.normalization = const Normalization(),
       this.seed = 0,
       this.lightProfile = const ThemeProfile(),
       this.darkProfile = const ThemeProfile(),
@@ -97,7 +101,8 @@ final class Renderer {
       Map<String, double> contrastTargets = const {},
       String lightBackground = '#ffffff',
       String darkBackground = '#121212'})
-      : contrastTarget = contrastTarget ??
+      : _scope = normalization.apply(namespace),
+        contrastTarget = contrastTarget ??
             (contrastModel == ContrastModel.apca
                 ? 60
                 : preset == Preset.controls
@@ -133,13 +138,17 @@ final class Renderer {
   List<RenderedPalette> batch(Iterable<String> labels) {
     final cache = <String, RenderedPalette>{};
     return [
-      for (final label in labels) cache.putIfAbsent(label, () => resolve(label))
+      for (final key in labels.map(normalization.apply))
+        cache.putIfAbsent(key, () => _resolveNormalized(key))
     ];
   }
 
-  RenderedPalette resolve(String text) {
-    final f = identityFractions(
-        identityDigest(text, namespace: namespace, seed: seed));
+  RenderedPalette resolve(String text) =>
+      _resolveNormalized(normalization.apply(text));
+
+  RenderedPalette _resolveNormalized(String text) {
+    final f =
+        identityFractions(identityDigest(text, namespace: _scope, seed: seed));
     final pos = f[0] * 12, i = pos.floor();
     final hue = _hues
         .map((anchors[i] + (anchors[i + 1] - anchors[i]) * (pos - i)) % 360);

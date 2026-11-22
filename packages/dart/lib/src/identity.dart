@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 
-List<int> _strictUtf8(String value) {
+void validateUtf16(String value) {
   for (var i = 0; i < value.length; i++) {
     final unit = value.codeUnitAt(i);
     if (unit < 0xd800 || unit > 0xdfff) continue;
@@ -15,6 +15,10 @@ List<int> _strictUtf8(String value) {
       throw FormatException('Unpaired surrogate', value, i - 1);
     }
   }
+}
+
+List<int> _strictUtf8(String value) {
+  validateUtf16(value);
   return utf8.encode(value);
 }
 
