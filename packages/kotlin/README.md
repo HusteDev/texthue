@@ -71,6 +71,8 @@ The runner compiles production and test sources, converts the test JAR to DEX, e
 
 On 2026-11-22 all eight suites passed on Android API 34 ART with the x86_64 Google emulator image on a Windows host. Android Studio's Kotlin compiler and Build Tools 37.0.0 produced the DEX. The run covered 9 shared collection assignment vectors, 6 composites, 32 identity vectors, 112 gamut fits, 1,583 contrast measurements, 640 role formats, 192 contrast repairs, and 1,060 two-theme resolver vectors, including the associated invalid-input, tie, batch and strict WCAG/APCA role checks. This run used a read-only emulator instance and exercised the library directly through `app_process`. Physical-device and APK integration coverage remain separate.
 
+At commit `79890aa`, the eight suites passed again on API 34 ART. The resolver suite compared 14,840 contrast reports with JavaScript (seven relationships in each theme across 1,060 inputs), including numerical measurements, target status, adjustment flags, and fallback reasons.
+
 At commit `3cf48c8`, all seven suites passed on the JVM and on Android 14 ART
 using the Google API 34 x86-64 emulator image (build 10921827). The 1,060
 resolver vectors compared individual hex and color selections with full
