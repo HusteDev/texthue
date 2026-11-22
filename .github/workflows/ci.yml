@@ -60,6 +60,10 @@ jobs:
           python tools/verify.py --port wasm
           archive=$(npm pack --silent ./packages/wasm | tail -1)
           python3 tools/check-browser.py google-chrome --wasm-package "$archive"
+          python3 -m pip install playwright==1.59.0
+          python3 -m playwright install --with-deps firefox webkit
+          python3 tools/check-browser.py firefox --wasm-package "$archive"
+          python3 tools/check-browser.py webkit --wasm-package "$archive"
 
   csharp:
     name: C# conformance and NuGet packaging (${{ matrix.os }})
