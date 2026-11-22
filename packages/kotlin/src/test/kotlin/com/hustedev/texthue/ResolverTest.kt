@@ -50,7 +50,18 @@ fun main() {
         check(abs(palette.hueFraction - row[23].toDouble()) < 1e-12)
         check(abs(palette.hue - row[24].toDouble()) < 1e-12)
         val colors = listOf(palette.light, palette.dark).flatMap { theme -> roles.map { theme.colors.getValue(it) } }
-        check(colors == row.drop(25)) { "$line: $colors" }
+        check(colors == row.subList(25, 45)) { "$line: $colors" }
+        val pairs = listOf("fill","fillHover","fillActive","border","text","textOnSubtle","strong")
+        val reports = listOf(palette.light, palette.dark).flatMap { theme -> pairs.map(theme.contrast::getValue) }
+        check(row.size == 45 + reports.size)
+        reports.forEachIndexed { index, report ->
+            val fields = row[45 + index].split(',')
+            check(abs(report.ratio - fields[0].toDouble()) < 1e-10)
+            check(abs(report.value - fields[1].toDouble()) < 1e-10)
+            val flags = listOf(report.model.name.lowercase(), report.meetsTarget, report.lightnessAdjusted,
+                report.chromaCapped, report.chromaReduced, report.fallback.orEmpty()).map { it.toString() }
+            check(flags == fields.drop(2)) { "$label ${pairs[index % pairs.size]}: $flags vs $fields" }
+        }
     }.count()
     check(count > 0)
     val duplicate = PaletteEntry("duplicate", light = "#abcdef")

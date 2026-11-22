@@ -4,7 +4,7 @@ import kotlin.math.abs
 import kotlin.math.floor
 import java.security.MessageDigest
 
-data class ThemePalette(val colors: Map<String, String>) {
+data class ThemePalette(val colors: Map<String, String>, val contrast: Map<String, ContrastRelationship> = emptyMap()) {
     fun color(role: String): Color = renderedColor(parseHex(colors.getValue(role)))
 }
 data class Palette(val hue: Double, val light: ThemePalette, val dark: ThemePalette, val source: String, val hueFraction: Double)
@@ -228,13 +228,15 @@ class Resolver(
         val fillL = fixed?.lightness ?: sample(fillRange.low, fillRange.high, 0)
         val textRange = profile.text.lightness ?: if (dark) UnitRange(0.72, 0.82) else UnitRange(0.43, 0.53)
         val textL = sample(textRange.low, textRange.high, 1)
-        fun tone(l: Double, role: RoleProfile, defaultCap: Double, target: Double, backdrop: IntArray? = null, second: IntArray? = null, secondTarget: Double = target, surface: Boolean = false): IntArray {
+        val adjustments = if (selected == null) mutableMapOf<String, ToneAdjustment>() else null
+        fun tone(name: String, l: Double, role: RoleProfile, defaultCap: Double, target: Double, backdrop: IntArray? = null, second: IntArray? = null, secondTarget: Double = target, surface: Boolean = false): IntArray {
             val lightness = l.coerceIn(0.0, 1.0)
             val scale = (role.chromaScale?.sample(uC) ?: defaultScale) * ringScale(mapped.ring)
             val cap = if (fixed?.neutral == true) 0.0 else role.chromaCap ?: defaultCap
-            val chroma = minOf(cap, ColorMath.cusp(lightness, hue, Gamut.SRGB) * scale)
+            val requested = ColorMath.cusp(lightness, hue, Gamut.SRGB) * scale
+            val chroma = minOf(cap, requested)
             val threshold = if (target == 0.0 && second != null) secondTarget else target
-            return repairTone(lightness, chroma, hue, Gamut.SRGB, threshold) { rgb ->
+            val repaired = repairTone(lightness, chroma, hue, Gamut.SRGB, threshold) { rgb ->
                 val primary = if (backdrop == null || surface) contrast(backdrop ?: foreground(rgb, target), rgb)
                     else contrast(rgb, backdrop)
                 when {
@@ -242,34 +244,46 @@ class Resolver(
                     target == 0.0 -> contrast(rgb, second)
                     else -> minOf(primary, contrast(rgb, second) * (target / secondTarget))
                 }
-            }.color.bytes
+            }
+            adjustments?.put(name, ToneAdjustment(repaired.color.lightness != lightness, requested > cap,
+                repaired.color.chroma < chroma, repaired.fallback))
+            return repaired.color.bytes
         }
         val unconstrained = if (apca) 0.0 else 1.0
         val borderTarget = contrastTargets.required("border", target, apca)
-        val subtle by lazy(LazyThreadSafetyMode.NONE) { tone(lb + direction * 0.04, profile.fill, 0.16, unconstrained) }
+        val subtle by lazy(LazyThreadSafetyMode.NONE) {
+            tone("subtle", lb + direction * 0.04, profile.fill, 0.16, unconstrained)
+        }
         val fill by lazy(LazyThreadSafetyMode.NONE) {
-            fixed?.bytes ?: tone(fillL, profile.fill, 0.16, contrastTargets.fill ?: target)
+            fixed?.bytes ?: tone("fill", fillL, profile.fill, 0.16, contrastTargets.fill ?: target)
         }
         val onFill by lazy(LazyThreadSafetyMode.NONE) { foreground(fill, contrastTargets.fill ?: target) }
         fun bytes(role: String): IntArray = when (role) {
             "background" -> background
             "subtle" -> subtle
-            "muted" -> tone(lb + direction * 0.10, profile.fill, 0.16, unconstrained)
+            "muted" -> tone(role, lb + direction * 0.10, profile.fill, 0.16, unconstrained)
             "fill" -> fill
             "onFill" -> onFill
-            "fillHover" -> tone(fillL + direction * 0.025, profile.fill, 0.16,
+            "fillHover" -> tone(role, fillL + direction * 0.025, profile.fill, 0.16,
                 contrastTargets.fillHover ?: target, onFill, surface = true)
-            "fillActive" -> tone(fillL + direction * 0.05, profile.fill, 0.16,
+            "fillActive" -> tone(role, fillL + direction * 0.05, profile.fill, 0.16,
                 contrastTargets.fillActive ?: target, onFill, surface = true)
-            "border" -> tone(lb + direction * 0.39, profile.fill, 0.16, borderTarget, background)
-            "text" -> tone(textL, profile.text, 0.19,
+            "border" -> tone(role, lb + direction * 0.39, profile.fill, 0.16, borderTarget, background)
+            "text" -> tone(role, textL, profile.text, 0.19,
                 contrastTargets.text ?: target, background, subtle, contrastTargets.textOnSubtle ?: target)
-            "strong" -> tone(textL + direction * 0.10, profile.text, 0.19, contrastTargets.strong ?: target, background)
+            "strong" -> tone(role, textL + direction * 0.10, profile.text, 0.19,
+                contrastTargets.strong ?: target, background)
             else -> throw IllegalArgumentException("Unknown color role: $role")
         }
         val roles = selected?.let { listOf(it) } ?: paletteRoles
         val colors = roles.associateWith(::bytes)
-        return ThemePalette(java.util.Collections.unmodifiableMap(colors.mapValues { (_, rgb) -> rgb.joinToString("", prefix = "#") { it.toString(16).padStart(2, '0') } }))
+        val hex = colors.mapValues { (_, rgb) ->
+            rgb.joinToString("", prefix = "#") { it.toString(16).padStart(2, '0') }
+        }
+        val report = adjustments?.let { relationshipReport(colors, it, contrastModel, fixed != null) { pair ->
+            contrastTargets.required(pair, target, apca)
+        } }.orEmpty()
+        return ThemePalette(java.util.Collections.unmodifiableMap(hex), java.util.Collections.unmodifiableMap(report))
     }
 }
 
@@ -289,7 +303,7 @@ private fun List<RankedEntry>.selectEntry(digest: ByteArray): Pair<FixedTone, Fi
     return winner?.colors
 }
 
-private fun contrastPairs(role: String): List<Triple<String, String, String>> = when (role) {
+internal fun contrastPairs(role: String): List<Triple<String, String, String>> = when (role) {
     "fill", "onFill" -> listOf(Triple("fill", "onFill", "fill"))
     "fillHover", "fillActive" -> listOf(Triple(role, "onFill", role))
     "text" -> listOf(Triple(role, role, "background"), Triple("textOnSubtle", role, "subtle"))

@@ -79,4 +79,6 @@ and the API 34 platform library.
 
 Use `resolver.hex(text, role = "text", strict = true)` to enforce contrast against the background and subtle surface. An unmet target throws `IllegalStateException`.
 
+Read `resolver.resolve(text).light.contrast.getValue("textOnSubtle")` to inspect the rendered text against the subtle surface. Both themes report seven relationships. Each includes the WCAG ratio, the selected model and its measured value (signed Lc for APCA), target status, lightness and chroma adjustments, and any fallback reason.
+
 Use `resolver.assign(labels)` to assign a collection. Pass `pinned = previous.assignments` to retain prior placements. The report measures closest pairs by rendered light-fill OKLab distance.

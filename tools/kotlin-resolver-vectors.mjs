@@ -8,7 +8,11 @@ function emit(text, namespace, seed, contrastTarget, normalize = {unicode:'none'
       const p = profiles[theme]?.[role];
       return [p?.lightness?.join(','),p?.chromaScale?.join(','),p?.chromaCap].join('|');
     })),Object.entries(overrides).map(([key,pair]) => [encode(key),pair.light,pair.dark].join(',')).join('|'),(palette ?? []).map(entry=>[encode(entry.id),entry.light,entry.dark].join(',')).join('|'),color.source,color.hueFraction,color.hue,
-    ...['light','dark'].flatMap(theme=>roles.map(role=>color[theme][role].hex))].join('\t'));
+    ...['light','dark'].flatMap(theme=>roles.map(role=>color[theme][role].hex)),
+    ...['light','dark'].flatMap(theme => ['fill','fillHover','fillActive','border','text','textOnSubtle','strong'].map(role => {
+      const r = color[theme].contrast[role];
+      return [r.ratio,r.value ?? r.ratio,r.model ?? 'wcag2',r.meetsTarget,r.lightnessAdjusted,r.chromaCapped,r.chromaReduced,r.fallback].join(',');
+    }))].join('\t'));
 }
 for (const contrastTarget of [1, 4.5, 7, 21]) {
   for (const [namespace,seed] of [['',0],['scope🐈',4294967295]]) {
