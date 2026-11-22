@@ -48,11 +48,31 @@ internal static class GamutFit
         return new(Row(0), Row(1), Row(2));
     }
 
-    internal static byte ChannelByte(double linear)
+    internal static byte ChannelByte(double linear) => (byte)Math.Floor(Encode(linear) * 255 + 0.5);
+
+    private static double Encode(double linear)
     {
         double x = Math.Clamp(linear, 0, 1);
-        double encoded = x <= 0.0031308 ? x * 12.92 : 1.055 * Math.Pow(x, 1 / 2.4) - 0.055;
-        return (byte)Math.Floor(encoded * 255 + 0.5);
+        return x <= 0.0031308 ? x * 12.92 : 1.055 * Math.Pow(x, 1 / 2.4) - 0.055;
+
+    }
+
+    internal static Triple SRgbToXyz(Rgb rgb)
+    {
+        double r = Contrast.LinearChannel(rgb.R / 255.0);
+        double g = Contrast.LinearChannel(rgb.G / 255.0);
+        double b = Contrast.LinearChannel(rgb.B / 255.0);
+        double x = (506752.0 / 1228815) * r + (87881.0 / 245763) * g + (12673.0 / 70218) * b;
+        double y = (87098.0 / 409605) * r + (175762.0 / 245763) * g + (12673.0 / 175545) * b;
+        double z = (7918.0 / 409605) * r + (87881.0 / 737289) * g + (1001167.0 / 1053270) * b;
+        return new(x, y, z);
+    }
+
+    internal static EncodedRgb FromSRgb(this Gamut gamut, Rgb rgb)
+    {
+        if (gamut == Gamut.SRgb) return EncodedRgb.FromBytes(rgb);
+        var (r, g, b) = Multiply(xyzToP3, SRgbToXyz(rgb));
+        return new(Encode(r), Encode(g), Encode(b));
     }
 
     internal static (Rgb Bytes, bool Clipped) P3Fallback(Rgb color) =>

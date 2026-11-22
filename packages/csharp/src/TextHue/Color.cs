@@ -12,8 +12,11 @@ public sealed class Color
     public Hsl Hsl { get; }
     public Oklch Oklch { get; }
 
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public P3Channels? P3 { get; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public string? Css { get; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public bool? SrgbClipped { get; }
 
     private static double Round6(double value) => Math.Floor(value * 1e6 + 0.5) / 1e6;
@@ -82,12 +85,7 @@ public sealed class Color
 
     internal static (double L, double A, double B) ToOklab(Rgb rgb)
     {
-        double r = Contrast.LinearChannel(rgb.R / 255.0);
-        double g = Contrast.LinearChannel(rgb.G / 255.0);
-        double b = Contrast.LinearChannel(rgb.B / 255.0);
-        double x = (506752.0 / 1228815) * r + (87881.0 / 245763) * g + (12673.0 / 70218) * b;
-        double y = (87098.0 / 409605) * r + (175762.0 / 245763) * g + (12673.0 / 175545) * b;
-        double z = (7918.0 / 409605) * r + (87881.0 / 737289) * g + (1001167.0 / 1053270) * b;
+        var (x, y, z) = GamutFit.SRgbToXyz(rgb);
         return XyzToOklab(x, y, z);
     }
 

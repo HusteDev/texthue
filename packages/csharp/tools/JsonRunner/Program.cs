@@ -67,8 +67,8 @@ static Renderer Compile(JsonObject o)
     var policy = (string?)o["foregroundPolicy"] switch {
         "first-passing" => ForegroundPolicy.FirstPassing, null or "best" => ForegroundPolicy.Best,
         _ => throw new ArgumentException("Unknown foreground policy") };
-    if (o["gamut"] != null && (string?)o["gamut"] != "srgb") throw new ArgumentException("Renderer supports sRGB");
-    return new Renderer(scope: (string?)o["namespace"] ?? "", seed: (uint?)o["seed"] ?? 0,
+    var gamut = (string?)o["gamut"] switch { null or "srgb" => Gamut.SRgb, "display-p3" => Gamut.DisplayP3, _ => throw new ArgumentException("Unknown gamut") };
+    return new Renderer(gamut: gamut, scope: (string?)o["namespace"] ?? "", seed: (uint?)o["seed"] ?? 0,
         contrastTarget: (double?)o["contrastTarget"], lightBackground: OptionalHex(o["backgrounds"]?["light"]),
         darkBackground: OptionalHex(o["backgrounds"]?["dark"]), lightProfile: Profile("light"), darkProfile: Profile("dark"),
         contrastTargets: o["contrastTargets"]?.AsObject().ToDictionary(e => e.Key, e => (double)e.Value!),

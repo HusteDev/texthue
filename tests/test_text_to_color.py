@@ -641,7 +641,7 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
                 continue
             inputs = cases + replay if package.get("conformanceReplay") else cases
             wide_start = len(inputs)
-            if name in ("dart", "kotlin", "rust", "swift"):
+            if name in ("csharp", "dart", "kotlin", "rust", "swift"):
                 inputs = inputs + wide_cases
             with self.subTest(runner=name):
                 if command[0] == "python":

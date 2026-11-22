@@ -54,7 +54,8 @@ public sealed partial class Renderer
     private readonly string scope;
     private readonly HueDomain hueDomain;
     private readonly uint seed;
-    private readonly Rgb[] candidates;
+    private readonly Gamut gamut;
+    private readonly EncodedRgb[] candidates;
     private readonly ForegroundPolicy foregroundPolicy;
     private readonly ContrastModel contrastModel;
     private readonly (double Low, double High) chromaScale;
@@ -71,13 +72,15 @@ public sealed partial class Renderer
                     IEnumerable<Rgb>? foregrounds = null, ForegroundPolicy foregroundPolicy = ForegroundPolicy.Best,
                     HueArc? hueRange = null, IReadOnlyList<HueArc>? excludeHues = null,
                     IReadOnlyDictionary<string, BrandColors>? overrides = null, IEnumerable<PaletteEntry>? palette = null,
-                    Normalization? normalization = null)
+                    Normalization? normalization = null, Gamut gamut = Gamut.SRgb)
     {
         if (!Enum.IsDefined(contrastModel)) throw new ArgumentOutOfRangeException(nameof(contrastModel));
         if (!Enum.IsDefined(foregroundPolicy)) throw new ArgumentOutOfRangeException(nameof(foregroundPolicy));
         hueDomain = new(hueRange ?? new HueArc(0, 360), excludeHues ?? []);
         this.foregroundPolicy = foregroundPolicy;
-        candidates = foregrounds?.ToArray() ?? [new(0, 0, 0), new(255, 255, 255)];
+        if (!Enum.IsDefined(gamut)) throw new ArgumentOutOfRangeException(nameof(gamut));
+        this.gamut = gamut;
+        candidates = (foregrounds ?? [new Rgb(0, 0, 0), new Rgb(255, 255, 255)]).Select(rgb => gamut.FromSRgb(rgb)).ToArray();
         if (candidates.Length == 0) throw new ArgumentException("Expected at least one foreground.", nameof(foregrounds));
         this.contrastModel = contrastModel;
         chromaScale = preset switch
@@ -121,7 +124,7 @@ public sealed partial class Renderer
             if (this.palette.Count == 0) throw new ArgumentException("Empty palette.", nameof(palette));
             double threshold = targets.GetValueOrDefault("fill", this.contrastTarget);
             bool Passes(FixedTone tone) => candidates.Any(candidate =>
-                Math.Abs(Contrast.Measure(candidate, tone.Bytes, contrastModel)) >= threshold);
+                Math.Abs(Contrast.MeasureChannels(candidate, gamut.FromSRgb(tone.Bytes), contrastModel, gamut)) >= threshold);
             var passing = this.palette.FindAll(entry => Passes(entry.Light) && Passes(entry.Dark));
             if (passing.Count > 0) this.palette = passing;
         }
@@ -164,18 +167,19 @@ public sealed partial class Renderer
         (FrozenDictionary<string, Color> Colors, FrozenDictionary<string, ContrastRelationship> Report) Theme(bool dark)
         {
             var flags = new Dictionary<string, ToneFlags>();
-            var bytes = RoleRenderer(mapping, dark, flags);
-            var colors = Roles.ToFrozenDictionary(role => role, role => new Color(bytes(role)));
+            var render = RoleRenderer(mapping, dark, flags);
+            var channels = Roles.ToDictionary(role => role, render);
+            var colors = channels.ToFrozenDictionary(pair => pair.Key, pair => Display(pair.Value));
             var report = new Dictionary<string, ContrastRelationship>();
             foreach (var (pair, frontRole, backRole) in Relationships)
             {
-                var front = colors[frontRole].Rgb;
-                var back = colors[backRole].Rgb;
-                double value = Contrast.Measure(front, back, contrastModel);
+                var front = channels[frontRole];
+                var back = channels[backRole];
+                double value = Contrast.MeasureChannels(front, back, contrastModel, gamut);
                 bool passes = Math.Abs(value) >= Target(pair);
                 var tone = flags.GetValueOrDefault(pair == "textOnSubtle" ? "text" : pair);
                 string? fallback = pair == "fill" && mapping.Light != null && !passes ? "palette-constraint" : tone.Fallback;
-                double ratio = contrastModel == ContrastModel.Wcag2 ? value : Contrast.Measure(front, back, ContrastModel.Wcag2);
+                double ratio = contrastModel == ContrastModel.Wcag2 ? value : Contrast.MeasureChannels(front, back, ContrastModel.Wcag2, gamut);
                 report.Add(pair, new(ratio, passes, tone.Adjusted, tone.Capped, tone.Reduced, fallback, contrastModel, value));
             }
             return (colors, report.ToFrozenDictionary());
@@ -187,10 +191,10 @@ public sealed partial class Renderer
     }
 
     public Color ResolveColor(string text, bool dark = false, string role = "fill") =>
-        new(SelectedBytes(text, dark, role));
+        Display(SelectedChannels(text, dark, role));
 
     public string Hex(string text, bool dark = false, string role = "fill") =>
-        Color.FormatHex(SelectedBytes(text, dark, role));
+        Color.FormatHex(Fallback(SelectedChannels(text, dark, role)));
 
     private double Target(string role) => targets.GetValueOrDefault(role, role == "border" && contrastModel == ContrastModel.Wcag2 ? Math.Min(3, contrastTarget) : contrastTarget);
 
@@ -198,9 +202,9 @@ public sealed partial class Renderer
     {
         var render = RoleRenderer(Map(normalization.Apply(text)), dark);
         var value = render(role);
-        void Require(string relationship, Rgb front, Rgb back)
+        void Require(string relationship, EncodedRgb front, EncodedRgb back)
         {
-            if (Math.Abs(Contrast.Measure(front, back, contrastModel)) < Target(relationship))
+            if (Math.Abs(Contrast.MeasureChannels(front, back, contrastModel, gamut)) < Target(relationship))
                 throw new InvalidOperationException($"Contrast target for {relationship} was not met.");
         }
         switch (role)
@@ -216,10 +220,16 @@ public sealed partial class Renderer
             case "strong":
             case "border": Require(role, value, render("background")); break;
         }
-        return Color.FormatHex(value);
+        return Color.FormatHex(Fallback(value));
     }
 
-    private Rgb SelectedBytes(string text, bool dark, string role) =>
+    private Color Display(EncodedRgb channels) => gamut == Gamut.DisplayP3
+        ? Color.FromDisplayP3(channels.AsP3) : new(channels.Bytes);
+
+    private Rgb Fallback(EncodedRgb channels) => gamut == Gamut.DisplayP3
+        ? GamutFit.FallbackFromXyz(GamutFit.P3ToXyz(channels.AsP3)).Bytes : channels.Bytes;
+
+    private EncodedRgb SelectedChannels(string text, bool dark, string role) =>
         RoleRenderer(Map(normalization.Apply(text)), dark)(role);
 
     private Mapping Map(string text, byte[]? digest = null)
@@ -267,11 +277,12 @@ public sealed partial class Renderer
     ];
     private readonly record struct ToneFlags(bool Adjusted, bool Capped, bool Reduced, string? Fallback);
 
-    private Func<string, Rgb> RoleRenderer(Mapping mapping, bool dark, Dictionary<string, ToneFlags>? flags = null)
+    private Func<string, EncodedRgb> RoleRenderer(Mapping mapping, bool dark, Dictionary<string, ToneFlags>? flags = null)
     {
         var fixedTone = dark ? mapping.Dark : mapping.Light;
         double hue = fixedTone?.Hue ?? mapping.Hue, uL = mapping.UL, uC = mapping.UC;
         var background = dark ? darkBackground : lightBackground;
+        var bgChannels = gamut.FromSRgb(background.Rgb);
         double lb = Math.Floor(background.Oklch.L * 4096 + 0.5) / 4096;
         var profile = dark ? darkProfile : lightProfile;
         int direction = dark ? 1 : -1;
@@ -288,8 +299,8 @@ public sealed partial class Renderer
             return Math.Clamp(low + (high - low) * uL + offset + RingOffsets[mapping.Ring], 0, 1);
         }
 
-        double Score(Rgb text, Rgb bg) => Math.Abs(Contrast.Measure(text, bg, contrastModel));
-        Rgb Foreground(Rgb rgb, double required)
+        double Score(EncodedRgb text, EncodedRgb bg) => Math.Abs(Contrast.MeasureChannels(text, bg, contrastModel, gamut));
+        EncodedRgb Foreground(EncodedRgb rgb, double required)
         {
             var best = candidates[0];
             double bestScore = -1;
@@ -305,44 +316,45 @@ public sealed partial class Renderer
             }
             return best;
         }
-        Rgb Tone(string name, double value, bool fill, double target, Rgb? back = null, Rgb? second = null, bool surface = false)
+        EncodedRgb Tone(string name, double value, bool fill, double target, EncodedRgb? back = null, EncodedRgb? second = null, bool surface = false)
         {
             double l = Math.Clamp(value, 0, 1);
             var role = fill ? profile.Fill : profile.Text;
             var (low, high) = role?.ChromaScale ?? chromaScale;
             double cap = fixedTone?.Neutral == true ? 0 : role?.ChromaCap ?? (fill ? 0.16 : 0.19);
-            double requested = Gamut.SRgb.Cusp(l, hue) * ((low + (high - low) * uC) * (mapping.Ring < 3 ? 1 : 0.6));
+            double requested = gamut.Cusp(l, hue) * ((low + (high - low) * uC) * (mapping.Ring < 3 ? 1 : 0.6));
             double c = Math.Min(requested, cap);
             double secondary = second.HasValue ? Target("textOnSubtle") : 0;
-            var repair = Gamut.SRgb.Repair(l, c, hue, target == 0 ? secondary : target, rgb =>
+            var repair = gamut.Repair(l, c, hue, target == 0 ? secondary : target, bytes =>
             {
-                double primary = back is Rgb bg ? (surface ? Score(bg, rgb) : Score(rgb, bg)) : Score(Foreground(rgb, target), rgb);
-                if (second is not Rgb other || secondary == 0) return primary;
+                var rgb = EncodedRgb.FromBytes(bytes);
+                double primary = back is EncodedRgb bg ? (surface ? Score(bg, rgb) : Score(rgb, bg)) : Score(Foreground(rgb, target), rgb);
+                if (second is not EncodedRgb other || secondary == 0) return primary;
                 double otherScore = Score(rgb, other);
                 return target == 0 ? otherScore : Math.Min(primary, otherScore * (target / secondary));
             });
             if (flags != null) flags[name] = new(repair.Color.Lightness != l, requested > cap, repair.Color.Chroma < c, repair.Fallback);
-            return repair.Color.Bytes;
+            return EncodedRgb.FromBytes(repair.Color.Bytes);
         }
 
         double lf = fixedTone?.Lightness ?? Sample(true), lt = Sample(false);
         double unconstrained = contrastModel == ContrastModel.Apca ? 0 : 1;
-        Rgb? subtle = null, fill = null, onFill = null;
-        Rgb Subtle() => subtle ??= Tone("subtle", lb + direction * 0.04, true, unconstrained);
-        Rgb Fill() => fill ??= fixedTone?.Bytes ?? Tone("fill", lf, true, Target("fill"));
-        Rgb OnFill() => onFill ??= Foreground(Fill(), Target("fill"));
+        EncodedRgb? subtle = null, fill = null, onFill = null;
+        EncodedRgb Subtle() => subtle ??= Tone("subtle", lb + direction * 0.04, true, unconstrained);
+        EncodedRgb Fill() => fill ??= fixedTone is null ? Tone("fill", lf, true, Target("fill")) : gamut.FromSRgb(fixedTone.Bytes);
+        EncodedRgb OnFill() => onFill ??= Foreground(Fill(), Target("fill"));
         return role => role switch
         {
-            "background" => background.Rgb,
+            "background" => bgChannels,
             "subtle" => Subtle(),
             "muted" => Tone(role, lb + direction * 0.10, true, unconstrained),
             "fill" => Fill(),
             "onFill" => OnFill(),
             "fillHover" => Tone(role, lf + direction * 0.025, true, Target("fillHover"), OnFill(), surface: true),
             "fillActive" => Tone(role, lf + direction * 0.05, true, Target("fillActive"), OnFill(), surface: true),
-            "border" => Tone(role, lb + direction * 0.39, true, Target("border"), background.Rgb),
-            "text" => Tone(role, lt, false, Target("text"), background.Rgb, Subtle()),
-            "strong" => Tone(role, lt + direction * 0.10, false, Target("strong"), background.Rgb),
+            "border" => Tone(role, lb + direction * 0.39, true, Target("border"), bgChannels),
+            "text" => Tone(role, lt, false, Target("text"), bgChannels, Subtle()),
+            "strong" => Tone(role, lt + direction * 0.10, false, Target("strong"), bgChannels),
             _ => throw new ArgumentOutOfRangeException(nameof(role), role, "Unknown color role.")
         };
     }
