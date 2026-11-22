@@ -28,6 +28,11 @@ sources JAR, POM and Gradle module metadata under their Maven coordinates.
 The build tests a separate Kotlin consumer against the extracted ZIP before
 staging it. Maven Central signing and publication remain separate steps.
 
+Run `python tools/check-swift-tag.py` with Swift 6 and Git to verify version
+resolution before releasing. It tags the current commit in a disposable local
+clone, resolves the exact version from an independent SwiftPM application,
+checks the resolved commit and runs the example.
+
 ## Build and verify locally
 
 Install Node.js 22+, Python 3.11+, and Go 1.23+. From the repository root:

@@ -172,6 +172,7 @@ jobs:
           swift --version
           swift test --package-path ../.. --force-resolved-versions
           python3 ../../tools/verify.py --port swift
+          python3 ../../tools/check-swift-tag.py
       - run: python tools/verify.py
       - name: Verify CSS fallback and rendered pixels in Chrome
         if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
