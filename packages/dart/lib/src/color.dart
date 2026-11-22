@@ -18,6 +18,9 @@ const _lmsToLab = <List<double>>[
   [0.0259040424655478, 0.7827717124575296, -0.8086757549230774],
 ];
 
+String rgbHex(List<int> bytes) =>
+    '#' + bytes.map((v) => v.toRadixString(16).padLeft(2, '0')).join();
+
 double _round6(double value) => (value * 1e6 + 0.5).floor() / 1e6;
 
 final class Color {
@@ -46,8 +49,7 @@ final class Color {
     for (final byte in bytes) {
       RangeError.checkValueInInterval(byte, 0, 255, 'channel');
     }
-    final hex =
-        '#' + bytes.map((v) => v.toRadixString(16).padLeft(2, '0')).join();
+    final hex = rgbHex(bytes);
     final r = red / 255, g = green / 255, b = blue / 255;
     final hi = math.max(r, math.max(g, b)), lo = math.min(r, math.min(g, b));
     final delta = hi - lo, light = (hi + lo) / 2;

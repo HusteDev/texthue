@@ -45,7 +45,15 @@ void main() {
     for (final theme in {'light': p.light, 'dark': p.dark}.entries) {
       if (theme.value.length != 10) throw StateError('Missing roles');
       for (final role in theme.value.entries) {
-        if (role.value.hex != expected[theme.key][role.key]['hex'])
+        if (renderer.hex(row['text'],
+                    dark: theme.key == 'dark', role: role.key) !=
+                role.value.hex ||
+            renderer
+                    .color(row['text'],
+                        dark: theme.key == 'dark', role: role.key)
+                    .oklch !=
+                role.value.oklch ||
+            role.value.hex != expected[theme.key][role.key]['hex'])
           throw StateError(
               'Mismatch for ${row["id"]} ${theme.key} ${role.key}');
       }

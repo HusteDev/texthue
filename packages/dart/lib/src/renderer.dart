@@ -35,6 +35,15 @@ final class PaletteEntry {
   const PaletteEntry(this.id, {this.light, this.dark});
 }
 
+typedef _Mapping = ({
+  String source,
+  double hue,
+  double fraction,
+  double uL,
+  double uC,
+  (_FixedTone, _FixedTone)? fixed
+});
+
 typedef _RankedTone = ({List<int> id, (_FixedTone, _FixedTone) tones});
 typedef BrandColors = ({String light, String dark});
 
@@ -211,21 +220,45 @@ final class Renderer {
   RenderedPalette resolve(String text) =>
       _resolveNormalized(normalization.apply(text));
 
-  RenderedPalette _fixedPalette((_FixedTone, _FixedTone) tones, String source) {
-    final (light, dark) = tones;
-    return (
-      version: 'text-to-color-v1',
-      source: source,
-      hue: light.hue,
-      hueFraction: light.fraction,
-      light: _theme(false, light.hue, 0.5, 0.5, light),
-      dark: _theme(true, dark.hue, 0.5, 0.5, dark)
-    );
+  List<int> _selected(String text, bool dark, String role) =>
+      _theme(dark, _mapping(normalization.apply(text)), role)[role] ??
+      (throw ArgumentError.value(role, 'role', 'Unknown color role'));
+
+  String hex(String text, {bool dark = false, String role = 'fill'}) =>
+      rgbHex(_selected(text, dark, role));
+
+  Color color(String text, {bool dark = false, String role = 'fill'}) {
+    final bytes = _selected(text, dark, role);
+    return Color.fromRgb(bytes[0], bytes[1], bytes[2]);
   }
 
   RenderedPalette _resolveNormalized(String text) {
+    final mapping = _mapping(text);
+    Map<String, Color> theme(bool dark) =>
+        Map.unmodifiable(_theme(dark, mapping)
+            .map((role, v) => MapEntry(role, Color.fromRgb(v[0], v[1], v[2]))));
+    return (
+      version: 'text-to-color-v1',
+      source: mapping.source,
+      hue: mapping.hue,
+      hueFraction: mapping.fraction,
+      light: theme(false),
+      dark: theme(true)
+    );
+  }
+
+  _Mapping _fixedMapping((_FixedTone, _FixedTone) tones, String source) => (
+        source: source,
+        hue: tones.$1.hue,
+        fraction: tones.$1.fraction,
+        uL: 0.5,
+        uC: 0.5,
+        fixed: tones
+      );
+
+  _Mapping _mapping(String text) {
     final fixed = _overrides[text];
-    if (fixed != null) return _fixedPalette(fixed, 'override');
+    if (fixed != null) return _fixedMapping(fixed, 'override');
     final digest = identityDigest(text, namespace: _scope, seed: seed);
     _RankedTone? winner;
     var best = '';
@@ -236,23 +269,25 @@ final class Renderer {
         best = rank;
       }
     }
-    if (winner != null) return _fixedPalette(winner.tones, 'palette');
+    if (winner != null) return _fixedMapping(winner.tones, 'palette');
     final f = identityFractions(digest);
     final pos = f[0] * 12, i = pos.floor();
     final hue = _hues
         .map((anchors[i] + (anchors[i + 1] - anchors[i]) * (pos - i)) % 360);
     return (
-      version: 'text-to-color-v1',
       source: 'hash',
       hue: hue,
-      hueFraction: f[0],
-      light: _theme(false, hue, f[1], f[2]),
-      dark: _theme(true, hue, f[1], f[2])
+      fraction: f[0],
+      uL: f[1],
+      uC: f[2],
+      fixed: null
     );
   }
 
-  Map<String, Color> _theme(bool dark, double hue, double uL, double uC,
-      [_FixedTone? fixed]) {
+  Map<String, List<int>> _theme(bool dark, _Mapping mapping,
+      [String? selected]) {
+    final fixed = dark ? mapping.fixed?.$2 : mapping.fixed?.$1;
+    final hue = fixed?.hue ?? mapping.hue, uL = mapping.uL, uC = mapping.uC;
     final base = dark ? _dark : _light, direction = dark ? 1 : -1;
     double target(String role) =>
         contrastTargets[role] ??
@@ -320,30 +355,35 @@ final class Renderer {
           .bytes;
     }
 
-    final lb = base.lightness,
+    late final lb = base.lightness,
         lf = fixed?.lightness ?? sample(true),
         lt = sample(false);
-    final subtle = tone(lb + direction * 0.04, true, unconstrained);
-    final fill = fixed?.bytes ?? tone(lf, true, target('fill')),
+    late final subtle = tone(lb + direction * 0.04, true, unconstrained);
+    late final fill = fixed?.bytes ?? tone(lf, true, target('fill')),
         onFill = foreground(fill, target('fill'));
-    final roles = {
-      'background': base.bytes,
-      'subtle': subtle,
-      'muted': tone(lb + direction * 0.10, true, unconstrained),
-      'fill': fill,
-      'onFill': onFill,
-      'fillHover': tone(lf + direction * 0.025, true, target('fillHover'),
-          background: onFill, surface: true),
-      'fillActive': tone(lf + direction * 0.05, true, target('fillActive'),
-          background: onFill, surface: true),
-      'border': tone(lb + direction * 0.39, true, target('border'),
-          background: base.bytes),
-      'text': tone(lt, false, target('text'),
-          background: base.bytes, subtle: subtle),
-      'strong': tone(lt + direction * 0.10, false, target('strong'),
-          background: base.bytes)
+    return {
+      if (selected == null || selected == 'background')
+        'background': base.bytes,
+      if (selected == null || selected == 'subtle') 'subtle': subtle,
+      if (selected == null || selected == 'muted')
+        'muted': tone(lb + direction * 0.10, true, unconstrained),
+      if (selected == null || selected == 'fill') 'fill': fill,
+      if (selected == null || selected == 'onFill') 'onFill': onFill,
+      if (selected == null || selected == 'fillHover')
+        'fillHover': tone(lf + direction * 0.025, true, target('fillHover'),
+            background: onFill, surface: true),
+      if (selected == null || selected == 'fillActive')
+        'fillActive': tone(lf + direction * 0.05, true, target('fillActive'),
+            background: onFill, surface: true),
+      if (selected == null || selected == 'border')
+        'border': tone(lb + direction * 0.39, true, target('border'),
+            background: base.bytes),
+      if (selected == null || selected == 'text')
+        'text': tone(lt, false, target('text'),
+            background: base.bytes, subtle: subtle),
+      if (selected == null || selected == 'strong')
+        'strong': tone(lt + direction * 0.10, false, target('strong'),
+            background: base.bytes)
     };
-    return Map.unmodifiable(roles
-        .map((role, v) => MapEntry(role, Color.fromRgb(v[0], v[1], v[2]))));
   }
 }
