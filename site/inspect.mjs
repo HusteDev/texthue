@@ -6,9 +6,9 @@ function surfaceContrast({fill, background}) {
   const bytes = ({r,g,b}) => [r,g,b];
   const result = {srgbRatio:contrast(bytes(fill.rgb), bytes(background.rgb))};
   if (fill.p3 && background.p3) {
-    // The renderer serializes quantized P3 channels in the CSS 0–1 range.
-    const p3Bytes = color => bytes(color.p3).map(v => Math.round(v * 255));
-    result.displayP3LuminanceRatio = p3Contrast(p3Bytes(fill), p3Bytes(background));
+    // p3Contrast takes encoded channels on a 0–255 scale, including fractions.
+    const scaledChannels = color => bytes(color.p3).map(v => v * 255);
+    result.displayP3LuminanceRatio = p3Contrast(scaledChannels(fill), scaledChannels(background));
   }
   return result;
 }

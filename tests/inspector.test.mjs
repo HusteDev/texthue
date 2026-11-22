@@ -12,6 +12,15 @@ test('registry fill visibility is measured separately from text contrast and vis
   assert.ok(Math.abs(dark.fillOnBackground.displayP3LuminanceRatio - 21) < 1e-10);
 });
 
+test('supplied P3 fills retain fractional channels when measuring visibility', () => {
+  const options = {gamut:'display-p3', overrides:{badge:'#ff0000'}, backgrounds:{light:'#000000'}};
+  const {rows:[row]} = inspect({labels:['badge'],options,theme:'light',vision:'normal'});
+  // Converting sRGB red to Display-P3 preserves its XYZ Y coordinate.
+  const expected = (87098 / 409605 + 0.05) / 0.05;
+  // The inspector reads the six-decimal channels emitted for CSS.
+  assert.ok(Math.abs(row.fillOnBackground.displayP3LuminanceRatio - expected) < 0.00001);
+});
+
 test('inspector compares placements and preserves a registry across label changes', () => {
   const input = {labels:['design','research'], options:{}, theme:'light', vision:'normal'};
   const first = inspect(input);
