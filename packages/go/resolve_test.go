@@ -277,3 +277,20 @@ func TestStrictHexRelationships(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestPortableConfigFingerprint(t *testing.T) {
+	data, err := os.ReadFile("../../conformance/config-v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var value map[string]any
+	if err := json.Unmarshal(data, &value); err != nil {
+		t.Fatal(err)
+	}
+	want := value["fingerprint"]
+	delete(value, "fingerprint")
+	got, err := fingerprint(value)
+	if err != nil || got != want {
+		t.Fatalf("fingerprint %s, want %s: %v", got, want, err)
+	}
+}

@@ -1,0 +1,99 @@
+{
+  "schema": "texthue-config-v1",
+  "algorithm": "text-to-color-v1",
+  "options": {
+    "preset": "labels",
+    "seed": 4294967295,
+    "namespace": "色",
+    "hueRange": [
+      0,
+      360
+    ],
+    "excludeHues": [],
+    "normalize": {
+      "unicode": "none",
+      "case": "none",
+      "whitespace": "none"
+    },
+    "contrastTarget": 4.5,
+    "contrastTargets": {
+      "fill": 4.5,
+      "fillHover": 4.5,
+      "fillActive": 4.5,
+      "border": 3,
+      "text": 4.5,
+      "textOnSubtle": 4.5,
+      "strong": 4.5
+    },
+    "profiles": {
+      "light": {
+        "fill": {
+          "lightness": [
+            0.72,
+            0.82
+          ],
+          "chromaCap": 0.16,
+          "chromaScale": [
+            0.6,
+            0.8
+          ]
+        },
+        "text": {
+          "lightness": [
+            0.43,
+            0.53
+          ],
+          "chromaCap": 0.19,
+          "chromaScale": [
+            0.6,
+            0.8
+          ]
+        }
+      },
+      "dark": {
+        "fill": {
+          "lightness": [
+            0.4,
+            0.5
+          ],
+          "chromaCap": 0.16,
+          "chromaScale": [
+            0.6,
+            0.8
+          ]
+        },
+        "text": {
+          "lightness": [
+            0.72,
+            0.82
+          ],
+          "chromaCap": 0.19,
+          "chromaScale": [
+            0.6,
+            0.8
+          ]
+        }
+      }
+    },
+    "backgrounds": {
+      "light": "#ffffff",
+      "dark": "#121212"
+    },
+    "foregroundPolicy": "best",
+    "foregrounds": [
+      "#ffffff",
+      "#000000"
+    ],
+    "overrides": {
+      "🐈": {
+        "light": "#ab1234",
+        "dark": "#ab1234"
+      },
+      "": {
+        "light": "#4321ab",
+        "dark": "#4321ab"
+      }
+    }
+  },
+  "fingerprint": "4c0edce820601a221364179161dd965c9d54843c18325a8e13c30ebb31b3f4da"
+}

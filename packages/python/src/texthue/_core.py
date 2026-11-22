@@ -563,11 +563,44 @@ def _options(options):
             return "palette", palette[ident][1]
         return None, None
 
+    domain = _hue_domain(source.get("hueRange", [0, 360]), source.get("excludeHues", []))
+
+    def hex_color(rgb):
+        return "#" + bytes(rgb).hex()
+
+    expanded = {
+        "preset": preset,
+        "seed": int(seed),
+        "namespace": namespace,
+        "hueRange": list(source.get("hueRange", [0, 360])),
+        "excludeHues": sorted(list(arc) for arc in source.get("excludeHues", [])),
+        "normalize": {
+            key: source.get("normalize", {}).get(key, "none")
+            for key in ("unicode", "case", "whitespace")
+        },
+        "foregroundPolicy": policy,
+        "foregrounds": [hex_color(c) for c in colors],
+        "contrastTarget": target,
+        "contrastTargets": targets,
+        "profiles": profiles,
+        "backgrounds": {theme: hex_color(rgb) for theme, rgb in backgrounds.items()},
+        "overrides": {
+            key: {theme: hex_color(rgb) for theme, rgb in pairs[normalize(key)].items()}
+            for key in overrides
+        },
+    }
+    if palette:
+        expanded["palette"] = [
+            {"id": ident.decode(), **{k: hex_color(rgb) for k, rgb in palette[ident][1].items()}}
+            for ident in sorted(palette)
+        ]
+
     return {
+        "exportOptions": expanded,
         "brand": brand,
         "selectForeground": select_foreground,
         "namespace": normalize(namespace),
-        "hueDomain": _hue_domain(source.get("hueRange", [0, 360]), source.get("excludeHues", [])),
+        "hueDomain": domain,
         "normalize": normalize,
         "seed": int(seed),
         "targets": targets,

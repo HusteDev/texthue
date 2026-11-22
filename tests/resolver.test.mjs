@@ -77,3 +77,18 @@ test('strict hex enforces only the selected role requirements', () => {
   assert.equal(resolver.hex('sample', {theme:'light',role:'border',strict:true}), full.border.hex);
   assert.throws(() => resolver.hex('sample', {theme:'light',role:'text',strict:1}), {code:'INVALID_OPTIONS'});
 });
+
+test('configuration round trips validate portable fingerprints', async () => {
+  const {readFile} = await import('node:fs/promises');
+  const {importConfig, exportConfig} = await import('../packages/npm/dist/index.js');
+  const saved = JSON.parse(await readFile(new URL('../conformance/config-v1.json',import.meta.url),'utf8'));
+  const restored = importConfig(saved);
+  assert.deepEqual(exportConfig(restored),saved);
+  assert.deepEqual(restored.resolve('🐈'),createResolver(saved.options).resolve('🐈'));
+  saved.options.seed--;
+  assert.throws(() => importConfig(saved),{code:'INVALID_OPTIONS'});
+  const a = {id:'a', light:'#abcdef'}, b = {id:'b',dark:'#ffffff'};
+  assert.equal(createResolver({palette:[a,b]}).exportConfig().fingerprint,
+    createResolver({palette:[b,a]}).exportConfig().fingerprint);
+  assert.throws(() => importConfig({...saved,schema:'unknown'}),{code:'INVALID_OPTIONS'});
+});

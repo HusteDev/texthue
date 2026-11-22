@@ -80,6 +80,18 @@ class Resolver:
         source = kwargs if options is _OMITTED else options
         self._compiled = _core.compile_settings(_native_options(source))
 
+    def export_config(self):
+        from copy import deepcopy
+
+        from ._fingerprint import fingerprint
+
+        payload = {
+            "schema": "texthue-config-v1",
+            "algorithm": VERSION,
+            "options": deepcopy(self._compiled[0]["exportOptions"]),
+        }
+        return {**payload, "fingerprint": fingerprint(payload)}
+
     def resolve(self, text: str) -> ColorSet:
         return ColorSet.from_dict(_core.render(text, *self._compiled))
 
@@ -137,6 +149,31 @@ class Resolver:
         return getattr(selected, role).hex
 
 
+def export_config(resolver: Resolver):
+    return resolver.export_config()
+
+
+def import_config(value) -> Resolver:
+    from ._fingerprint import fingerprint
+
+    keys = {"schema", "algorithm", "options", "fingerprint"}
+    if (
+        not isinstance(value, dict)
+        or set(value) != keys
+        or value["schema"] != "texthue-config-v1"
+        or value["algorithm"] != VERSION
+    ):
+        raise TextColorError("INVALID_OPTIONS", "Unsupported configuration schema or algorithm")
+    resolver = Resolver(value["options"])
+    payload = {key: value[key] for key in ("schema", "algorithm", "options")}
+    if (
+        resolver.export_config()["fingerprint"] != value["fingerprint"]
+        or fingerprint(payload) != value["fingerprint"]
+    ):
+        raise TextColorError("INVALID_OPTIONS", "Configuration fingerprint mismatch")
+    return resolver
+
+
 def resolve_text_colors(
     text: str, options: TextColorOptions = _OMITTED_OPTIONS, **kwargs
 ) -> ColorSet:
@@ -150,6 +187,8 @@ def assign_text_colors(texts, options=_OMITTED_OPTIONS, *, pinned=None, **kwargs
 
 
 __all__ = [
+    "export_config",
+    "import_config",
     "assign_text_colors",
     "Assignment",
     "css_variables",

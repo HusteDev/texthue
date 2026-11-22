@@ -10,6 +10,7 @@
 
 import { assignCollection, type Placement } from './assignment.js';
 import { chooseColor, contrast, cusp, formats, hexFormat, hslFormat, oklchFormat, rgbFormat } from './color-math.js';
+import { compareBytes, fingerprint } from './fingerprint.js';
 import { sha256 } from './sha256.js';
 import { anchors, biases } from './tables.js';
 import type { ChosenColor, ColorSet, Range, ResolvedOptions, TextColorErrorCode, TextColorOptions, ThemeColors, Triple } from './types.js';
@@ -236,6 +237,7 @@ function optionsValue(options: unknown): ResolvedOptions {
     if (typeof hex !== 'string' || !/^#[0-9a-f]{6}$/i.test(hex)) fail('INVALID_OPTIONS','Invalid brand hex');
     return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)) as Triple;
   };
+  const originalNames = new Map<string,string>();
   const rawOverrides = own(source,'overrides',{});
   const pairs = new Map<string,{light:Triple;dark:Triple}>();
   const entries = record(rawOverrides,Object.keys(rawOverrides ?? {}),'overrides');
@@ -243,6 +245,7 @@ function optionsValue(options: unknown): ResolvedOptions {
     const name = normalize(textValue(key,'overrides','INVALID_OPTIONS'));
     if (pairs.has(name)) fail('INVALID_OPTIONS','Duplicate normalized override');
     const pair = typeof value === 'string' ? {light:value,dark:value} : record(value,['light','dark'],'override');
+    originalNames.set(name,key);
     pairs.set(name,{light:parseBrandHex(pair.light),dark:parseBrandHex(pair.dark)});
   }
   const rawPalette = own(source,'palette',[]);
@@ -255,7 +258,7 @@ function optionsValue(options: unknown): ResolvedOptions {
     ids.add(id);
     const light = parseBrandHex(own(entry,'light',entry.dark)), dark = parseBrandHex(own(entry,'dark',entry.light));
     const passing = [light,dark].every(rgb => contrast(rgb,selectForeground(rgb,targets.fill)) >= targets.fill);
-    return {id:new TextEncoder().encode(id),light,dark,passing};
+    return {name:id,id:new TextEncoder().encode(id),light,dark,passing};
   });
   const brand:ResolvedOptions['brand'] = (name,digest) => {
     const pinned = pairs.get(name);
@@ -269,7 +272,21 @@ function optionsValue(options: unknown): ResolvedOptions {
     }
     return winner ? {light:winner.light,dark:winner.dark,source:'palette'} : undefined;
   };
-  return { brand, selectForeground, hueDomain, normalize, targets, seed, namespace:normalize(namespace), backgrounds, contrastTarget, profiles };
+  const hueRange = structuredClone(own(source,'hueRange',[0,360]));
+  const exclusions = structuredClone(own(source,'excludeHues',[])) as number[][];
+  exclusions.sort((a,b) => Number(a[0])-Number(b[0]) || Number(a[1])-Number(b[1]));
+  const exportOptions = () => ({
+    preset, seed, namespace, hueRange, excludeHues: exclusions,
+    normalize: {unicode:form, case:casing, whitespace:space},
+    contrastTarget, contrastTargets:targets, profiles,
+    backgrounds:{light:hexFormat(backgrounds.light),dark:hexFormat(backgrounds.dark)},
+    foregroundPolicy:policy, foregrounds:foregrounds.map(hexFormat),
+    overrides:Object.fromEntries([...pairs].map(([name,pair]) => [originalNames.get(name) ?? name,{light:hexFormat(pair.light),dark:hexFormat(pair.dark)}])),
+    ...(palette.length ? {palette:[...palette].sort((a,b)=>compareBytes(a.id,b.id)).map(entry=>({
+      id:entry.name,light:hexFormat(entry.light),dark:hexFormat(entry.dark)
+    }))} : {})
+  });
+  return { exportOptions, brand, selectForeground, hueDomain, normalize, targets, seed, namespace:normalize(namespace), backgrounds, contrastTarget, profiles };
 }
 
 /**
@@ -361,7 +378,28 @@ export function createResolver(options: TextColorOptions = {}) {
     if (!selected) fail('INVALID_OPTIONS','Unknown role');
     return selected;
   };
-  return {resolve,batch,color,hex,assign,project};
+  const exportConfig = () => {
+    const payload = {schema:'texthue-config-v1',algorithm:VERSION,options:structuredClone(settings.exportOptions())};
+    return {...payload, fingerprint:fingerprint(payload)};
+  };
+  return {resolve,batch,color,hex,assign,project,exportConfig};
+}
+
+export function exportConfig(resolver: ReturnType<typeof createResolver>) {
+  return resolver.exportConfig();
+}
+
+export function importConfig(value: unknown) {
+  const saved = record(value,['schema','algorithm','options','fingerprint'],'configuration');
+  if (saved.schema !== 'texthue-config-v1' || saved.algorithm !== VERSION || typeof saved.fingerprint !== 'string') {
+    fail('INVALID_OPTIONS','Unsupported configuration schema or algorithm');
+  }
+  const resolver = createResolver(saved.options as TextColorOptions);
+  const exported = resolver.exportConfig();
+  if (exported.fingerprint !== saved.fingerprint || fingerprint({
+    schema:saved.schema,algorithm:saved.algorithm,options:saved.options
+  }) !== saved.fingerprint) fail('INVALID_OPTIONS','Configuration fingerprint mismatch');
+  return resolver;
 }
 
 export function resolveTextColor(text: string, select: Selection, options: TextColorOptions = {}) {

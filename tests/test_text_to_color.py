@@ -24,6 +24,18 @@ FIXTURE = json.loads((ROOT / "conformance" / "vectors.json").read_text(encoding=
 class ConformanceTests(unittest.TestCase):
     """Frozen-vector, runtime-error, and cross-language checks for the Python package."""
 
+    def test_portable_config_fingerprint(self):
+        from texthue._fingerprint import fingerprint
+
+        saved = json.loads((ROOT / "conformance/config-v1.json").read_text(encoding="utf-8"))
+        from texthue import import_config
+
+        self.assertEqual(import_config(saved).export_config(), saved)
+        expected = saved.pop("fingerprint")
+        self.assertEqual(fingerprint(saved), expected)
+        self.assertEqual(fingerprint(-0.0), fingerprint(0.0))
+        self.assertNotEqual(fingerprint([1, 2]), fingerprint([2, 1]))
+
     def test_strict_hex_relationships(self):
         from texthue import Resolver
 

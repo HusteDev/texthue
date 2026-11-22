@@ -162,6 +162,7 @@ export interface ResolvedProfile { lightness: Range; chromaCap: number; chromaSc
 
 /** Options after validation, with defaults applied and backgrounds parsed to RGB bytes. */
 export interface ResolvedOptions {
+  exportOptions: () => Record<string,unknown>;
   brand: (name:string,digest:DataView)=>{light:Triple;dark:Triple;source:'palette'|'override'}|undefined;
   selectForeground: (rgb:Triple, target:number)=>Triple;
   hueDomain: (hue:number)=>number;
