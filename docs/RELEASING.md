@@ -14,6 +14,8 @@ The [package manifest](../tools/packages.json) lists each package directory, ver
 | WebAssembly | npm package | `python tools/verify.py --port wasm` |
 | React and Tailwind | npm adapters | After `npm ci` and `npm run build`, run `python tools/verify.py --port react` and `python tools/verify.py --port tailwind`. |
 
+For Rust distribution testing, run `python tools/stage-rust.py .cache/rust-staging`. It tests the unpacked crate and executes its bundled consumer before copying the original Cargo archive into the destination. A conflicting archive at the same destination fails staging.
+
 These local checks exercise the listed packages. Public registry delivery for these rows requires separate publishing integration.
 
 ## Build and verify locally
