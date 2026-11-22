@@ -24,12 +24,15 @@ public sealed record RoleProfile((double Low, double High)? Lightness = null,
 
 public sealed record ThemeProfile(RoleProfile? Fill = null, RoleProfile? Text = null);
 
+public enum ForegroundPolicy { Best, FirstPassing }
 public enum Preset { Labels, Controls, Chart, Subdued, Mono }
 
 public sealed class Renderer
 {
     private readonly string scope;
     private readonly uint seed;
+    private readonly Rgb[] candidates;
+    private readonly ForegroundPolicy foregroundPolicy;
     private readonly ContrastModel contrastModel;
     private readonly (double Low, double High) chromaScale;
     private readonly double contrastTarget;
@@ -41,9 +44,14 @@ public sealed class Renderer
                     Rgb? lightBackground = null, Rgb? darkBackground = null,
                     ThemeProfile? lightProfile = null, ThemeProfile? darkProfile = null,
                     IReadOnlyDictionary<string, double>? contrastTargets = null,
-                    ContrastModel contrastModel = ContrastModel.Wcag2, Preset preset = Preset.Labels)
+                    ContrastModel contrastModel = ContrastModel.Wcag2, Preset preset = Preset.Labels,
+                    IEnumerable<Rgb>? foregrounds = null, ForegroundPolicy foregroundPolicy = ForegroundPolicy.Best)
     {
         if (!Enum.IsDefined(contrastModel)) throw new ArgumentOutOfRangeException(nameof(contrastModel));
+        if (!Enum.IsDefined(foregroundPolicy)) throw new ArgumentOutOfRangeException(nameof(foregroundPolicy));
+        this.foregroundPolicy = foregroundPolicy;
+        candidates = foregrounds?.ToArray() ?? [new(0, 0, 0), new(255, 255, 255)];
+        if (candidates.Length == 0) throw new ArgumentException("Expected at least one foreground.", nameof(foregrounds));
         this.contrastModel = contrastModel;
         chromaScale = preset switch
         {
@@ -120,9 +128,23 @@ public sealed class Renderer
             return Math.Clamp(low + (high - low) * uL + offset, 0, 1);
         }
 
-        Rgb white = new(255, 255, 255), black = new(0, 0, 0);
         double Score(Rgb text, Rgb bg) => Math.Abs(Contrast.Measure(text, bg, contrastModel));
-        Rgb Foreground(Rgb rgb) => Score(black, rgb) >= Score(white, rgb) ? black : white;
+        Rgb Foreground(Rgb rgb, double required)
+        {
+            var best = candidates[0];
+            double bestScore = -1;
+            foreach (var candidate in candidates)
+            {
+                double score = Score(candidate, rgb);
+                if (foregroundPolicy == ForegroundPolicy.FirstPassing && score >= required) return candidate;
+                if (score > bestScore)
+                {
+                    best = candidate;
+                    bestScore = score;
+                }
+            }
+            return best;
+        }
         Rgb Tone(double value, bool fill, double target, Rgb? back = null, Rgb? second = null, bool surface = false)
         {
             double l = Math.Clamp(value, 0, 1);
@@ -132,7 +154,7 @@ public sealed class Renderer
             double secondary = second.HasValue ? Target("textOnSubtle") : 0;
             return Gamut.SRgb.Repair(l, c, hue, target == 0 ? secondary : target, rgb =>
             {
-                double primary = back is Rgb bg ? (surface ? Score(bg, rgb) : Score(rgb, bg)) : Score(Foreground(rgb), rgb);
+                double primary = back is Rgb bg ? (surface ? Score(bg, rgb) : Score(rgb, bg)) : Score(Foreground(rgb, target), rgb);
                 if (second is not Rgb other || secondary == 0) return primary;
                 double otherScore = Score(rgb, other);
                 return target == 0 ? otherScore : Math.Min(primary, otherScore * (target / secondary));
@@ -143,7 +165,7 @@ public sealed class Renderer
         double unconstrained = contrastModel == ContrastModel.Apca ? 0 : 1;
         var subtle = Tone(lb + direction * 0.04, true, unconstrained);
         var fill = Tone(lf, true, Target("fill"));
-        var onFill = Foreground(fill);
+        var onFill = Foreground(fill, Target("fill"));
         return new Dictionary<string, Rgb>
         {
             ["background"] = background.Rgb, ["subtle"] = subtle,

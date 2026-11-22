@@ -202,3 +202,30 @@ foreach (var row in presets.RootElement.EnumerateArray())
 }
 if (presets.RootElement.GetArrayLength() != 20) throw new InvalidDataException("Unexpected preset corpus size.");
 Console.WriteLine("Passed 20 two-theme preset cases.");
+
+foreach (var model in Enum.GetValues<ContrastModel>())
+foreach (var policy in Enum.GetValues<ForegroundPolicy>())
+foreach (bool high in new[] { false, true })
+{
+    Rgb[] candidates = [new(85, 102, 119), new(0, 0, 0), new(255, 255, 255)];
+    var renderer = new Renderer(contrastModel: model, foregroundPolicy: policy, foregrounds: candidates,
+        contrastTarget: model == ContrastModel.Apca ? (high ? 106 : 0) : (high ? 21 : 1));
+    candidates[0] = new(255, 0, 0);
+    var palette = renderer.Resolve("foreground");
+    var actual = from theme in new[] { palette.Light, palette.Dark }
+                 from role in new[] { "fill", "onFill", "fillHover" }
+                 select theme[role].Hex;
+    string darkFill = model == ContrastModel.Apca ? "#002206" : "#000000";
+    string[] expected = high
+        ? ["#ffffff", "#000000", "#ffffff", darkFill, "#ffffff", darkFill]
+        : ["#72da7e", policy == ForegroundPolicy.Best ? "#000000" : "#556677", "#6ad277",
+           "#2e7137", policy == ForegroundPolicy.Best ? "#ffffff" : "#556677", "#32793c"];
+    if (!actual.SequenceEqual(expected)) throw new InvalidDataException($"Foreground mismatch for {model} {policy} {high}.");
+}
+try
+{
+    _ = new Renderer(foregrounds: []);
+    throw new InvalidDataException("Empty foreground list accepted.");
+}
+catch (ArgumentException) { }
+Console.WriteLine("Passed eight foreground selection cases, input snapshot and empty-list checks.");
