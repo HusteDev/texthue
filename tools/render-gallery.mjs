@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { simulateVision } from '../packages/npm/dist/diagnostics.js';
 import { assignTextColors, resolveTextColors } from '../packages/npm/dist/index.js';
 
 const labels = ['Design', 'Research', 'Platform', 'Support', 'Finance', 'Operations'];
@@ -23,9 +24,13 @@ const rows = [
   row('Independent labels · dark', labels.map((s, i) => [s, hashed[i].dark.fill.hex]), 94, true),
   row('Collection assignment · light', labels.map(s => [s, assigned[s].light.fill.hex]), 188),
   row('Design · light theme roles', scale.map(role => [role, hashed[0].light[role].hex]), 282),
+  ...['protan','deutan','tritan'].map((vision, i) => row(
+    `Collection assignment · ${vision} simulation (severity 1)`,
+    labels.map(s => [s, simulateVision(assigned[s].light.fill.hex, vision)]), 376 + 94 * i,
+  )),
 ];
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 376" role="img" aria-labelledby="title" font-family="system-ui, sans-serif">
-<title id="title">TextHue label colors in both themes, collection assignment, and tonal roles</title>
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 658" role="img" aria-labelledby="title" font-family="system-ui, sans-serif">
+<title id="title">TextHue label colors in both themes, collection assignment, tonal roles, and simulated color vision</title>
 ${rows.join('\n')}
 </svg>
 `;

@@ -7,6 +7,7 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" },
+    "./diagnostics": { "types": "./dist/diagnostics.d.ts", "import": "./dist/diagnostics.js", "default": "./dist/diagnostics.js" },
     "./package.json": "./package.json"
   },
   "files": ["assets", "dist", "src", "examples", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md", "SPECIFICATION.md"],

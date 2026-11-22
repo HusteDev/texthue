@@ -57,7 +57,7 @@ const LMS_TO_LAB: Matrix = [
 ];
 
 /** Multiplies a 3x3 matrix by a column vector. Each row is evaluated as `(m0*v0 + m1*v1) + m2*v2`. */
-const multiply = (matrix: Matrix, v: Triple): Triple => matrix.map(row =>
+export const multiply = (matrix: Matrix, v: Triple): Triple => matrix.map(row =>
   row[0] * v[0] + row[1] * v[1] + row[2] * v[2]) as Triple;
 /** Clamps a linear channel to `[0, 1]`. */
 const clamp = (x: number) => Math.max(0, Math.min(1, x));
@@ -68,9 +68,9 @@ const round6 = (x: number) => Math.floor(x * 1e6 + 0.5) / 1e6;
 /** Normalizes an angle in degrees into `[0, 360)`. */
 const hueDegrees = (x: number) => ((x % 360) + 360) % 360;
 /** sRGB transfer function: encoded channel to linear light. */
-const decode = (x: number) => x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+export const decode = (x: number) => x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
 /** sRGB transfer function: linear light to encoded channel. */
-const encode = (x: number) => x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055;
+export const encode = (x: number) => x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055;
 
 /**
  * Converts OKLCH coordinates to linear sRGB without clamping.
