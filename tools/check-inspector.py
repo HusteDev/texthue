@@ -16,18 +16,7 @@ from playwright.sync_api import expect, sync_playwright
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def check_issue_labels(page):
-    labels = (
-        "bug",
-        "documentation",
-        "duplicate",
-        "enhancement",
-        "good first issue",
-        "help wanted",
-        "invalid",
-        "question",
-        "wontfix",
-    )
+def check_review_labels(page, labels):
     page.locator("#labels").fill("\n".join(labels))
     for theme in ("light", "dark"):
         page.locator("#theme").select_option(theme)
@@ -37,7 +26,7 @@ def check_issue_labels(page):
             page.get_by_role("button", name="Inspect palette").click()
             page.wait_for_function("table => !table.isConnected", arg=previous)
             previous.dispose()
-            expect(page.get_by_role("status")).to_have_text("9 distinct labels")
+            expect(page.get_by_role("status")).to_have_text(f"{len(labels)} distinct labels")
             assigned = page.locator("tr td:nth-of-type(2) span").evaluate_all(
                 "(chips) => chips.map(chip => getComputedStyle(chip).color)"
             )
@@ -73,7 +62,37 @@ def exercise(page, url, clipboard):
     page.goto(url)
     status = page.get_by_role("status")
     expect(status).to_have_text("3 distinct labels")
-    check_issue_labels(page)
+    check_review_labels(
+        page,
+        (
+            "bug",
+            "documentation",
+            "duplicate",
+            "enhancement",
+            "good first issue",
+            "help wanted",
+            "invalid",
+            "question",
+            "wontfix",
+        ),
+    )
+    check_review_labels(
+        page,
+        (
+            "Alice",
+            "Bob",
+            "Carol",
+            "Dave",
+            "Eve",
+            "Frank",
+            "Grace",
+            "Heidi",
+            "Ivan",
+            "Judy",
+            "Mallory",
+            "Oscar",
+        ),
+    )
     page.goto(url)
     expect(status).to_have_text("3 distinct labels")
     page.locator("#labels").fill("badge")
