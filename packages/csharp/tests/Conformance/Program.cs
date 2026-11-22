@@ -308,3 +308,26 @@ foreach (var invalid in new PaletteEntry[][] { [], [entries[0], entries[0]], [ne
     throw new InvalidDataException("Invalid palette accepted.");
 }
 Console.WriteLine("Passed approved palette ranks, contrast filtering, fixed overrides and validation.");
+using var normalizedCases = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "normalization-v1.json")));
+if (normalizedCases.RootElement.GetArrayLength() != 90) throw new InvalidDataException("Unexpected normalization corpus size.");
+foreach (var row in normalizedCases.RootElement.EnumerateArray())
+{
+    var rules = row.GetProperty("normalize");
+    var norm = new Normalization(Enum.Parse<UnicodeForm>(rules.GetProperty("unicode").GetString()!, true),
+        rules.GetProperty("case").GetString() == "lower", Enum.Parse<Whitespace>(rules.GetProperty("whitespace").GetString()!, true));
+    var label = row.GetProperty("text").GetString()!;
+    var scope = row.GetProperty("namespace").GetString()!;
+    var seed = row.GetProperty("seed").GetUInt32();
+    var hash = Identity.Digest(norm.Apply(label), norm.Apply(scope), seed);
+    if (Convert.ToHexStringLower(hash) != row.GetProperty("digest").GetString() ||
+        Math.Abs(new Renderer(scope, seed, normalization: norm).Resolve(label).Hue - row.GetProperty("hue").GetDouble()) > 1e-12)
+        throw new InvalidDataException($"Normalization mismatch: {row}");
+}
+var folding = new Normalization(UnicodeForm.NFC, true);
+var pins = new Dictionary<string, BrandColors> { ["É"] = new(new(1,2,3),new(4,5,6)) };
+var same = new Renderer(overrides: pins, normalization: folding).Batch(["É","e\u0301"]);
+if (same[0].Source != "override" || !ReferenceEquals(same[0], same[1])) throw new InvalidDataException("Normalized lookup failed.");
+pins.Add("é", default);
+try { _ = new Renderer(overrides: pins, normalization: folding); throw new InvalidDataException("Normalized collision accepted."); }
+catch (ArgumentException) { }
+Console.WriteLine("Passed 90 normalization vectors, normalized overrides and batch reuse.");

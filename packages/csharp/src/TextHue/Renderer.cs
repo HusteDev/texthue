@@ -45,6 +45,7 @@ public sealed class Renderer
 
     private readonly FrozenDictionary<string, (FixedTone Light, FixedTone Dark)> overrides;
     private readonly List<(byte[] Id, FixedTone Light, FixedTone Dark)> palette = [];
+    private readonly Normalization normalization;
     private readonly string scope;
     private readonly HueDomain hueDomain;
     private readonly uint seed;
@@ -64,7 +65,8 @@ public sealed class Renderer
                     ContrastModel contrastModel = ContrastModel.Wcag2, Preset preset = Preset.Labels,
                     IEnumerable<Rgb>? foregrounds = null, ForegroundPolicy foregroundPolicy = ForegroundPolicy.Best,
                     HueArc? hueRange = null, IReadOnlyList<HueArc>? excludeHues = null,
-                    IReadOnlyDictionary<string, BrandColors>? overrides = null, IEnumerable<PaletteEntry>? palette = null)
+                    IReadOnlyDictionary<string, BrandColors>? overrides = null, IEnumerable<PaletteEntry>? palette = null,
+                    Normalization? normalization = null)
     {
         if (!Enum.IsDefined(contrastModel)) throw new ArgumentOutOfRangeException(nameof(contrastModel));
         if (!Enum.IsDefined(foregroundPolicy)) throw new ArgumentOutOfRangeException(nameof(foregroundPolicy));
@@ -96,9 +98,12 @@ public sealed class Renderer
             profile.Text?.Validate();
         }
         var utf8 = new UTF8Encoding(false, true);
-        this.overrides = (overrides ?? new Dictionary<string, BrandColors>()).ToFrozenDictionary(
-            pair => { utf8.GetByteCount(pair.Key); return pair.Key; },
-            pair => (new FixedTone(pair.Value.Light), new FixedTone(pair.Value.Dark)), StringComparer.Ordinal);
+        this.normalization = normalization ?? new();
+        var normalized = new Dictionary<string,(FixedTone Light, FixedTone Dark)>(StringComparer.Ordinal);
+        if (overrides is not null)
+            foreach (var (key, colors) in overrides)
+                normalized.Add(this.normalization.Apply(key), (new(colors.Light), new(colors.Dark)));
+        this.overrides = normalized.ToFrozenDictionary(StringComparer.Ordinal);
         if (palette is not null)
         {
             var ids = new HashSet<string>(StringComparer.Ordinal);
@@ -115,7 +120,7 @@ public sealed class Renderer
             var passing = this.palette.FindAll(entry => Passes(entry.Light) && Passes(entry.Dark));
             if (passing.Count > 0) this.palette = passing;
         }
-        this.scope = scope;
+        this.scope = this.normalization.Apply(scope);
         this.seed = seed;
         this.lightBackground = new(lightBackground ?? new Rgb(255, 255, 255));
         this.darkBackground = new(darkBackground ?? new Rgb(18, 18, 18));
@@ -128,17 +133,20 @@ public sealed class Renderer
         var result = new List<RenderedPalette>();
         foreach (var label in labels)
         {
-            if (!cache.TryGetValue(label, out var palette))
+            string key = normalization.Apply(label);
+            if (!cache.TryGetValue(key, out var palette))
             {
-                palette = Resolve(label);
-                cache.Add(label, palette);
+                palette = ResolveNormalized(key);
+                cache.Add(key, palette);
             }
             result.Add(palette);
         }
         return result.AsReadOnly();
     }
 
-    public RenderedPalette Resolve(string text)
+    public RenderedPalette Resolve(string text) => ResolveNormalized(normalization.Apply(text));
+
+    private RenderedPalette ResolveNormalized(string text)
     {
         if (overrides.TryGetValue(text, out var pinned)) return Fixed(pinned.Light, pinned.Dark, "override");
         var digest = Identity.Digest(text, scope, seed);
