@@ -481,6 +481,55 @@
   },
   {
     "texts": [
+      "free",
+      "fixed",
+      "fixed-2"
+    ],
+    "options": {
+      "overrides": {
+        "fixed": "#123456",
+        "fixed-2": {
+          "light": "#777777",
+          "dark": "#333333"
+        }
+      }
+    },
+    "assignments": {
+      "fixed-2": {
+        "hueFraction": 0.9721623713205614,
+        "ring": 0,
+        "moved": false
+      },
+      "fixed": {
+        "hueFraction": 0.6529561057828069,
+        "ring": 0,
+        "moved": false
+      },
+      "free": {
+        "hueFraction": 0.5591660051140934,
+        "ring": 0,
+        "moved": false
+      }
+    },
+    "report": {
+      "minDistance": 0.19128639220812338,
+      "closestPairs": [
+        [
+          "fixed-2",
+          "free"
+        ]
+      ],
+      "withinRingCapacity": true,
+      "distinctFills": true
+    },
+    "lightFills": {
+      "fixed-2": "#777777",
+      "fixed": "#123456",
+      "free": "#5abac9"
+    }
+  },
+  {
+    "texts": [
       "four",
       "five",
       "two",

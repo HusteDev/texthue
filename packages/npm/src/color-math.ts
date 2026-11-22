@@ -174,7 +174,12 @@ export function foreground(rgb: Triple): Triple {
  * @returns Hex, RGB, HSL, and OKLCH describing the same color.
  */
 export function formats(rgb: Triple): Color {
-  const [r, g, b] = rgb;
+  return { hex: hexFormat(rgb), rgb: rgbFormat(rgb), hsl: hslFormat(rgb), oklch: oklchFormat(rgb) };
+}
+
+export const hexFormat = (rgb:Triple) => `#${rgb.map(x => x.toString(16).padStart(2,'0')).join('')}`;
+export const rgbFormat = ([r,g,b]:Triple) => ({r,g,b});
+export function hslFormat(rgb:Triple) {
   const values = rgb.map(x => x / 255) as Triple;
   const maximum = Math.max(...values);
   const minimum = Math.min(...values);
@@ -191,18 +196,17 @@ export function formats(rgb: Triple): Color {
     else hue = (red - green) / delta + 4;
     hue *= 60;
   }
+  return {h:round6(hue)%360,s:round6(saturation*100),l:round6(light*100)};
+}
+export function oklchFormat(rgb:Triple) {
+  const [r,g,b] = rgb;
+  const values = rgb.map(x => x/255);
   const xyz = multiply(RGB_TO_XYZ, values.map(decode) as Triple);
   const lab = multiply(LMS_TO_LAB, multiply(XYZ_TO_LMS, xyz).map(Math.cbrt) as Triple);
   const neutral = r === g && g === b;
   const chroma = neutral ? 0 : Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
   const okHue = neutral ? 0 : hueDegrees(Math.atan2(lab[2], lab[1]) * 180 / Math.PI);
-  return {
-    hex: `#${rgb.map(x => x.toString(16).padStart(2, '0')).join('')}`,
-    rgb: { r, g, b },
-    // A rounded 360 wraps to 0 so hue stays within [0, 360).
-    hsl: { h: round6(hue) % 360, s: round6(saturation * 100), l: round6(light * 100) },
-    oklch: { l: round6(lab[0]), c: round6(chroma), h: round6(okHue) % 360 },
-  };
+  return {l:round6(lab[0]),c:round6(chroma),h:round6(okHue)%360};
 }
 
 /**
@@ -224,14 +228,14 @@ export function formats(rgb: Triple): Color {
  * @returns Final RGB bytes with contrast metadata.
  * @throws {Error} If no lightness candidate passes for a fill. The endpoints guarantee this cannot happen for valid targets.
  */
-export function chooseColor(lightness: number, chroma: number, hue: number, background: Triple | null, target: number, second?: Triple, secondTarget = target): ChosenColor {
-  const measure = (rgb: Triple) => Math.min(contrast(rgb, background ?? foreground(rgb)), second ? contrast(rgb, second) * (target / secondTarget) : Infinity);
+export function chooseColor(lightness: number, chroma: number, hue: number, background: Triple | null, target: number, second?: Triple, secondTarget = target, selectForeground: (rgb:Triple, target:number)=>Triple = foreground): ChosenColor {
+  const measure = (rgb: Triple) => Math.min(contrast(rgb, background ?? selectForeground(rgb,target)), second ? contrast(rgb, second) * (target / secondTarget) : Infinity);
   const initial = fitColor(lightness, chroma, hue);
   let chosen = initial;
   let ratio = measure(initial.rgb);
   let fallback: ChosenColor['metadata']['fallback'] = null;
   if (ratio < target) {
-    if (background && Math.max(measure([0, 0, 0]), measure([255, 255, 255])) < target) {
+    if (Math.max(measure([0, 0, 0]), measure([255, 255, 255])) < target) {
       const rgb: Triple = measure([0,0,0]) >= measure([255,255,255]) ? [0,0,0] : [255,255,255];
       chosen = { rgb, lightness: rgb[0] / 255, chroma: 0 };
       ratio = measure(rgb);

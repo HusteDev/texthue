@@ -86,7 +86,7 @@ class ContrastResult(_Record):
     chroma_reduced: bool
     chroma_capped: bool
     #: ``"unattainable-contrast"`` when no sRGB text can reach the target; otherwise ``None``.
-    fallback: Literal["unattainable-contrast"] | None
+    fallback: Literal["unattainable-contrast", "palette-constraint"] | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -133,6 +133,7 @@ class ColorSet(_Record):
     #: Algorithm identifier that produced this result.
     version: Literal["text-to-color-v1"]
     #: Hash-derived identity hue in degrees, unrounded. Shared by all four roles before gamut fitting.
+    source: Literal["hash", "assigned", "palette", "override"]
     hue_fraction: float
     hue: float
     light: ThemeColors

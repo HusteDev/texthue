@@ -20,7 +20,7 @@ function place(natural: number, occupied: Placement[], separation: number): Plac
 
 export function assignCollection(texts: readonly string[], pinned: Record<string,Placement>,
   normalize: (text:string) => string, hash: (text:string) => DataView,
-  render: (digest:DataView, placement:Placement) => ColorSet) {
+  render: (digest:DataView, placement:Placement, name:string) => ColorSet, fixed: (name:string,digest:DataView)=>number|undefined) {
   const names = new Set(texts.map(normalize));
   const entries = Array.from(names, name => ({name, digest: hash(name)}));
   entries.sort((a,b) => {
@@ -41,6 +41,10 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
     assignments[name] = {...p};
     names.add(name);
   }
+  for (const {name,digest} of entries) {
+    const fraction = fixed(name,digest);
+    if (fraction !== undefined && !Object.hasOwn(assignments,name)) assignments[name] = {hueFraction:fraction,ring:0,moved:false};
+  }
   const occupied = Object.values(assignments);
   const separation = Math.min(1/12, Math.max(1/24, 1/names.size));
   for (const {name,digest} of entries) {
@@ -50,7 +54,7 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
       occupied.push(p);
     }
     const placement = assignments[name];
-    if (placement) colors[name] = render(digest,placement);
+    if (placement) colors[name] = render(digest,placement,name);
   }
   let minDistance: number | null = null;
   let closestPairs: [string,string][] = [];

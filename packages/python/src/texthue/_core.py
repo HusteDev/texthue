@@ -203,7 +203,9 @@ def _formats(rgb):
     }
 
 
-def _choose(lightness, chroma, hue, background, target, second=None, second_target=None):
+def _choose(
+    lightness, chroma, hue, background, target, second=None, second_target=None, select=None
+):
     """Select the final color for one role, enforcing the contrast target.
 
     The sampled color is fitted first. If it fails the target, an text whose
@@ -230,7 +232,14 @@ def _choose(lightness, chroma, hue, background, target, second=None, second_targ
     """
 
     def measure(rgb):
-        ratio = _contrast(rgb, background if background is not None else _foreground(rgb))
+        ratio = _contrast(
+            rgb,
+            (
+                background
+                if background is not None
+                else (select(rgb, target) if select else _foreground(rgb))
+            ),
+        )
         return (
             min(ratio, _contrast(rgb, second) * (target / (second_target or target)))
             if second is not None
@@ -241,7 +250,7 @@ def _choose(lightness, chroma, hue, background, target, second=None, second_targ
     ratio = measure(chosen["rgb"])
     fallback = None
     if ratio < target:
-        if background is not None and max(measure([0, 0, 0]), measure([255, 255, 255])) < target:
+        if max(measure([0, 0, 0]), measure([255, 255, 255])) < target:
             rgb = max(([0, 0, 0], [255, 255, 255]), key=measure)
             chosen = {"rgb": rgb, "lightness": rgb[0] / 255, "chroma": 0}
             ratio = measure(rgb)
@@ -411,6 +420,10 @@ def _options(options):
     source = _record(
         options,
         (
+            "overrides",
+            "palette",
+            "foregrounds",
+            "foregroundPolicy",
             "preset",
             "hueRange",
             "excludeHues",
@@ -426,6 +439,30 @@ def _options(options):
     )
     normalize = _normalizer(source.get("normalize", {}))
     namespace = _text(source.get("namespace", ""), "namespace", "INVALID_OPTIONS")
+    candidates = source.get("foregrounds", ["#000000", "#ffffff"])
+    policy = source.get("foregroundPolicy", "best")
+    if (
+        not isinstance(candidates, list)
+        or not candidates
+        or policy not in ("best", "first-passing")
+    ):
+        raise TextColorError("INVALID_OPTIONS", "Invalid foreground list or policy")
+    colors = []
+    for hex_value in candidates:
+        if not isinstance(hex_value, str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", hex_value):
+            raise TextColorError("INVALID_OPTIONS", "Invalid foreground color")
+        colors.append([int(hex_value[i : i + 2], 16) for i in (1, 3, 5)])
+
+    def select_foreground(rgb, target):
+        selected, best = colors[0], -1
+        for candidate in colors:
+            ratio = _contrast(rgb, candidate)
+            if policy == "first-passing" and ratio >= target:
+                return candidate
+            if ratio > best:
+                selected, best = candidate, ratio
+        return selected
+
     preset = source.get("preset", "labels")
     if preset not in ("labels", "controls", "chart", "subdued", "mono"):
         raise TextColorError("INVALID_OPTIONS", "Unknown preset")
@@ -479,7 +516,56 @@ def _options(options):
                 "chromaScale": _range(profile.get("chromaScale", scale), 1, f"{path}.chromaScale"),
                 "chromaCap": cap,
             }
+
+    def parse_hex(value):
+        if not isinstance(value, str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", value):
+            raise TextColorError("INVALID_OPTIONS", "Invalid brand hex")
+        return [int(value[i : i + 2], 16) for i in (1, 3, 5)]
+
+    pairs = {}
+    overrides = source.get("overrides", {})
+    if not isinstance(overrides, dict):
+        raise TextColorError("INVALID_OPTIONS", "Invalid overrides")
+    for key, value in overrides.items():
+        name = normalize(_text(key, "overrides", "INVALID_OPTIONS"))
+        if name in pairs:
+            raise TextColorError("INVALID_OPTIONS", "Duplicate normalized override")
+        pair = (
+            {"light": value, "dark": value}
+            if isinstance(value, str)
+            else _record(value, ("light", "dark"), "override")
+        )
+        pairs[name] = {k: parse_hex(pair.get(k)) for k in ("light", "dark")}
+    raw_palette = source.get("palette", [])
+    if not isinstance(raw_palette, list) or ("palette" in source and not raw_palette):
+        raise TextColorError("INVALID_OPTIONS", "Empty palette")
+    palette = {}
+    for value in raw_palette:
+        entry = _record(value, ("id", "light", "dark"), "palette")
+        ident = _text(entry.get("id"), "palette.id", "INVALID_OPTIONS").encode()
+        if ident in palette:
+            raise TextColorError("INVALID_OPTIONS", "Duplicate palette ID")
+        pair = {
+            "light": parse_hex(entry.get("light", entry.get("dark"))),
+            "dark": parse_hex(entry.get("dark", entry.get("light"))),
+        }
+        passing = all(
+            _contrast(rgb, select_foreground(rgb, targets["fill"])) >= targets["fill"]
+            for rgb in pair.values()
+        )
+        palette[ident] = (passing, pair)
+
+    def brand(name, digest):
+        if name in pairs:
+            return "override", pairs[name]
+        if palette:
+            ident = max(palette, key=lambda i: (palette[i][0], hashlib.sha256(digest + i).digest()))
+            return "palette", palette[ident][1]
+        return None, None
+
     return {
+        "brand": brand,
+        "selectForeground": select_foreground,
         "namespace": normalize(namespace),
         "hueDomain": _hue_domain(source.get("hueRange", [0, 360]), source.get("excludeHues", [])),
         "normalize": normalize,
@@ -508,6 +594,13 @@ def compile_settings(options):
     return settings, prefix, bases
 
 
+def fixed_fraction(rgb):
+    hue = (math.floor(_formats(rgb)["oklch"]["h"] * 1024 + 0.5) / 1024) % 360
+    angle = hue + 360 if hue < ANCHORS[0] else hue
+    i = next(index for index, value in enumerate(ANCHORS) if value > angle) - 1
+    return (i + (angle - ANCHORS[i]) / (ANCHORS[i + 1] - ANCHORS[i])) / 12
+
+
 def render(text, settings, prefix, bases, placement=None, digest=None):
     _text(text, "text", "INVALID_TEXT")
     if digest is None:
@@ -523,14 +616,29 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
     index = int(position)
     hue = (ANCHORS[index] + (ANCHORS[index + 1] - ANCHORS[index]) * (position - index)) % 360
     hue = settings["hueDomain"](hue)
-    result = {"version": VERSION, "hue": hue, "hueFraction": hue_fraction}
+    name = text if placement else settings["normalize"](text)
+    source, brand = settings["brand"](name, digest)
+
+    def snapped(rgb):
+        return (math.floor(_formats(rgb)["oklch"]["h"] * 1024 + 0.5) / 1024) % 360
+
+    natural_hue = hue
+    if brand:
+        fractions[1:3] = [0.5, 0.5]
+    result = {
+        "version": VERSION,
+        "source": source or ("assigned" if placement else "hash"),
+        "hue": snapped(brand["light"]) if brand else hue,
+        "hueFraction": fixed_fraction(brand["light"]) if brand else hue_fraction,
+    }
     for theme in ("light", "dark"):
         background = settings["backgrounds"][theme]
         base = bases[theme]
         lb = math.floor(base["oklch"]["l"] * 4096 + 0.5) / 4096
+        hue = snapped(brand[theme]) if brand else natural_hue
         direction = -1 if theme == "light" else 1
 
-        def sample(role, theme=theme):
+        def sample(role, theme=theme, hue=hue):
             profile = settings["profiles"][theme][role]
             low, high = profile["lightness"]
             bias = BIASES[(0 if theme == "light" else 2) + (0 if role == "fill" else 1)]
@@ -546,22 +654,46 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
                 profile["chromaCap"],
             )
 
-        def tone(lightness, profile, backdrop, target, second=None, second_target=None):
+        def tone(lightness, profile, backdrop, target, second=None, second_target=None, hue=hue):
             lightness = max(0, min(1, lightness))
             chroma = _cusp(lightness, hue) * profile[1]
             value = _choose(
-                lightness, min(chroma, profile[2]), hue, backdrop, target, second, second_target
+                lightness,
+                min(chroma, profile[2]),
+                hue,
+                backdrop,
+                target,
+                second,
+                second_target,
+                settings["selectForeground"],
             )
             value["metadata"]["chromaCapped"] = chroma > profile[2]
             return value
 
         fp, tp = sample("fill"), sample("text")
+        if brand:
+            fixed = _formats(brand[theme])["oklch"]
+            fp = (math.floor(fixed["l"] * 4096 + 0.5) / 4096, fp[1], fp[2] if fixed["c"] else 0)
+            if not fixed["c"]:
+                tp = (tp[0], tp[1], 0)
         target = settings["contrastTarget"]
         targets = settings["targets"]
         subtle = tone(lb + direction * 0.04, fp, None, 1)
         muted = tone(lb + direction * 0.10, fp, None, 1)
         fill = tone(fp[0], fp, None, targets["fill"])
-        on_fill = _foreground(fill["rgb"])
+        if brand:
+            fill["rgb"] = brand[theme]
+        on_fill = settings["selectForeground"](fill["rgb"], targets["fill"])
+        if brand:
+            ratio = _contrast(fill["rgb"], on_fill)
+            fill["metadata"] = {
+                "ratio": ratio,
+                "meetsTarget": ratio >= targets["fill"],
+                "lightnessAdjusted": False,
+                "chromaReduced": False,
+                "chromaCapped": False,
+                "fallback": "palette-constraint" if ratio < targets["fill"] else None,
+            }
         colors = {
             "subtle": subtle,
             "muted": muted,

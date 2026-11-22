@@ -229,14 +229,48 @@ func (n NormalizeOptions) transform(text string) string {
 	return text
 }
 
+func compileForegrounds(options Options) (func(rgb8, float64) rgb8, error) {
+	values := options.Foregrounds
+	if values == nil {
+		values = []string{"#000000", "#ffffff"}
+	}
+	if len(values) == 0 || (options.ForegroundPolicy != "" && options.ForegroundPolicy != "best" && options.ForegroundPolicy != "first-passing") {
+		return nil, invalid("foregrounds")
+	}
+	colors := make([]rgb8, len(values))
+	for i, hex := range values {
+		color, err := background(hex)
+		if err != nil {
+			return nil, invalid("foregrounds")
+		}
+		colors[i] = color
+	}
+	first := options.ForegroundPolicy == "first-passing"
+	return func(rgb rgb8, target float64) rgb8 {
+		selected, best := colors[0], -1.0
+		for _, candidate := range colors {
+			ratio := contrast(rgb, candidate)
+			if first && ratio >= target {
+				return candidate
+			}
+			if ratio > best {
+				selected, best = candidate, ratio
+			}
+		}
+		return selected
+	}, nil
+}
+
 type Resolver struct {
-	domain    hueDomain
-	normalize NormalizeOptions
-	prefix    []byte
-	target    float64
-	targets   map[string]float64
-	profiles  [2]resolvedTheme
-	bases     [2]Color
+	brand            brandConfig
+	selectForeground func(rgb8, float64) rgb8
+	domain           hueDomain
+	normalize        NormalizeOptions
+	prefix           []byte
+	target           float64
+	targets          map[string]float64
+	profiles         [2]resolvedTheme
+	bases            [2]Color
 }
 
 func NewResolver(options ...Option) (*Resolver, error) {
@@ -250,6 +284,10 @@ func NewResolver(options ...Option) (*Resolver, error) {
 	if err != nil {
 		return nil, err
 	}
+	selectForeground, err := compileForegrounds(raw)
+	if err != nil {
+		return nil, err
+	}
 	domain, err := compileHueDomain(raw.HueRange, raw.ExcludeHues)
 	if err != nil {
 		return nil, err
@@ -257,6 +295,14 @@ func NewResolver(options ...Option) (*Resolver, error) {
 	var normalization NormalizeOptions
 	if raw.Normalize != nil {
 		normalization = *raw.Normalize
+	}
+	fillTarget := target
+	if value, ok := raw.ContrastTargets["fill"]; ok {
+		fillTarget = value
+	}
+	brand, err := compileBrand(raw, normalization, fillTarget, selectForeground)
+	if err != nil {
+		return nil, err
 	}
 	namespace = normalization.transform(namespace)
 	if uint64(len(namespace)) > math.MaxUint32 {
@@ -266,7 +312,7 @@ func NewResolver(options ...Option) (*Resolver, error) {
 	prefix = binary.BigEndian.AppendUint32(prefix, raw.Seed)
 	prefix = binary.BigEndian.AppendUint32(prefix, uint32(len(namespace)))
 	prefix = append(prefix, namespace...)
-	return &Resolver{domain: domain, normalize: normalization, prefix: prefix, target: target, targets: maps.Clone(raw.ContrastTargets), profiles: profiles,
+	return &Resolver{brand: brand, selectForeground: selectForeground, domain: domain, normalize: normalization, prefix: prefix, target: target, targets: maps.Clone(raw.ContrastTargets), profiles: profiles,
 		bases: [2]Color{formats(profiles[0].background), formats(profiles[1].background)}}, nil
 }
 
@@ -292,7 +338,8 @@ func (r *Resolver) Resolve(text string) (ColorSet, error) {
 	if !utf8.ValidString(text) {
 		return ColorSet{}, &Error{Code: "INVALID_TEXT", Message: "text contains malformed UTF-8"}
 	}
-	return r.render(r.digest(r.normalize.transform(text)), nil), nil
+	name := r.normalize.transform(text)
+	return r.render(r.digest(name), nil, name), nil
 }
 
 func (r *Resolver) digest(normalized string) []byte {
@@ -302,7 +349,7 @@ func (r *Resolver) digest(normalized string) []byte {
 	return hash.Sum(nil)
 }
 
-func (r *Resolver) render(digest []byte, placement *Assignment) ColorSet {
+func (r *Resolver) render(digest []byte, placement *Assignment, name string) ColorSet {
 	target := r.target
 	// The first three big-endian 32-bit digest words become fractions in [0, 1) for hue, lightness, and chroma.
 	uH := float64(binary.BigEndian.Uint32(digest[0:4])) / 4294967296
@@ -327,8 +374,21 @@ func (r *Resolver) render(digest []byte, placement *Assignment) ColorSet {
 		}
 		return target
 	}
+	naturalHue := hue
+	source, brand := r.brand.selectBrand(name, digest)
+	if brand != nil {
+		uL, uC = .5, .5
+	} else if placement != nil {
+		source = "assigned"
+	} else {
+		source = "hash"
+	}
 	var themes [2]ThemeColors
 	for i, theme := range r.profiles {
+		hue = naturalHue
+		if brand != nil {
+			hue = snappedHue(brand[i])
+		}
 		// Explicit float64 conversions block fused multiply-add so the
 		// interpolation rounds exactly as the specification requires.
 		fillL := theme.fill.l[0] + float64((theme.fill.l[1]-theme.fill.l[0])*uL)
@@ -348,10 +408,18 @@ func (r *Resolver) render(digest []byte, placement *Assignment) ColorSet {
 		}
 		fillL = biased(fillL, 0)
 		textL = biased(textL, 1)
+		if brand != nil {
+			fixed := formats(brand[i]).OKLCH
+			fillL = math.Round(fixed.L*4096) / 4096
+			if fixed.C == 0 {
+				theme.fill.cap = 0
+				theme.text.cap = 0
+			}
+		}
 		tone := func(l, scale, cap float64, backdrop *rgb8, required float64, second ...surfaceConstraint) (rgb8, ContrastResult) {
 			l = math.Max(0, math.Min(1, l))
 			c := cusp(l, hue) * scale
-			rgb, meta := choose(l, math.Min(c, cap), hue, backdrop, required, second...)
+			rgb, meta := chooseForeground(l, math.Min(c, cap), hue, backdrop, required, r.selectForeground, second...)
 			meta.ChromaCapped = c > cap
 			return rgb, meta
 		}
@@ -364,7 +432,17 @@ func (r *Resolver) render(digest []byte, placement *Assignment) ColorSet {
 		subtle, _ := tone(lb+direction*.04, fillC, theme.fill.cap, nil, 1)
 		muted, _ := tone(lb+direction*.10, fillC, theme.fill.cap, nil, 1)
 		fill, fillMeta := tone(fillL, fillC, theme.fill.cap, nil, required("fill"))
-		onFill := foreground(fill)
+		if brand != nil {
+			fill = brand[i]
+		}
+		onFill := r.selectForeground(fill, required("fill"))
+		if brand != nil {
+			ratio := contrast(fill, onFill)
+			fillMeta = ContrastResult{Ratio: ratio, MeetsTarget: ratio >= required("fill")}
+			if !fillMeta.MeetsTarget {
+				fillMeta.Fallback = Ptr("palette-constraint")
+			}
+		}
 		hover, hoverMeta := tone(fillL+direction*.025, fillC, theme.fill.cap, &onFill, required("fillHover"))
 		active, activeMeta := tone(fillL+direction*.05, fillC, theme.fill.cap, &onFill, required("fillActive"))
 		border, borderMeta := tone(lb+direction*.39, fillC, theme.fill.cap, &theme.background, required("border"))
@@ -380,5 +458,9 @@ func (r *Resolver) render(digest []byte, placement *Assignment) ColorSet {
 			Contrast: ThemeContrast{Target: target, Fill: fillMeta, FillHover: hoverMeta, FillActive: activeMeta, Border: borderMeta, Text: textMeta, TextOnSubtle: subtleMeta, Strong: strongMeta}}
 
 	}
-	return ColorSet{Version: Version, HueFraction: uH, Hue: hue, Light: themes[0], Dark: themes[1]}
+	if brand != nil {
+		hue = snappedHue(brand[0])
+		uH = fixedFraction(brand[0])
+	}
+	return ColorSet{Source: source, Version: Version, HueFraction: uH, Hue: hue, Light: themes[0], Dark: themes[1]}
 }

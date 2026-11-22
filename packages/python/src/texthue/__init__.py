@@ -44,6 +44,7 @@ _OMITTED_OPTIONS = cast(TextColorOptions, _OMITTED)
 
 
 _ALIASES = {
+    "foreground_policy": "foregroundPolicy",
     "hue_range": "hueRange",
     "exclude_hues": "excludeHues",
     "contrast_target": "contrastTarget",
@@ -63,7 +64,7 @@ def _native_options(value):
             name = _ALIASES.get(key, key)
             if name in output:
                 raise TextColorError("INVALID_OPTIONS", f"Duplicate option {name}")
-            output[name] = _native_options(item)
+            output[name] = item if name == "overrides" else _native_options(item)
         return output
     if isinstance(value, tuple):
         return list(value)

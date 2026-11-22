@@ -158,6 +158,39 @@ class ConformanceTests(unittest.TestCase):
                 resolve_text_colors(raw, item["options"]),
                 resolve_text_colors(expected, namespace=expected),
             )
+        entries = [
+            {"id": "ocean", "light": "#147fad"},
+            {"id": "ruby", "dark": "#901641"},
+            {"id": "neutral", "light": "#777777", "dark": "#999999"},
+        ]
+        for name in ["brand", "other", "neutral"]:
+            for palette in [entries, entries[::-1]]:
+                cases.append(
+                    {
+                        "text": name,
+                        "options": {
+                            "palette": palette,
+                            "overrides": {
+                                "brand": {"light": "#0077bb", "dark": "#cc8800"},
+                                "neutral": "#777777",
+                            },
+                            "foregrounds": ["#555555"],
+                            "contrastTarget": 7,
+                        },
+                    }
+                )
+        for policy in ("best", "first-passing"):
+            for target in (1, 4.5, 21):
+                cases.append(
+                    {
+                        "text": "foreground",
+                        "options": {
+                            "foregroundPolicy": policy,
+                            "foregrounds": ["#888888", "#555555"],
+                            "contrastTarget": target,
+                        },
+                    }
+                )
         for preset in ("labels", "controls", "chart", "subdued", "mono"):
             cases.append({"text": "preset", "options": {"preset": preset}})
         for i in range(16):

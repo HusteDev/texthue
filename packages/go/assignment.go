@@ -83,6 +83,14 @@ func (r *Resolver) Assign(texts []string, pinned map[string]Assignment) (Collect
 		}
 		result.Assignments[key] = p
 	}
+	for _, name := range names {
+		if _, ok := result.Assignments[name]; ok {
+			continue
+		}
+		if _, brand := r.brand.selectBrand(name, digests[name]); brand != nil {
+			result.Assignments[name] = Assignment{HueFraction: fixedFraction(brand[0])}
+		}
+	}
 	sep := math.Min(1.0/12, math.Max(1.0/24, 1/float64(size)))
 	unique := map[string]bool{}
 	report := AssignmentReport{ClosestPairs: [][2]string{}, WithinRingCapacity: size <= 5*int(math.Floor(1/sep))}
@@ -94,7 +102,7 @@ func (r *Resolver) Assign(texts []string, pinned map[string]Assignment) (Collect
 			p = place(float64(binary.BigEndian.Uint32(digest))/4294967296, result.Assignments, sep)
 			result.Assignments[name] = p
 		}
-		color := r.render(digest, &p)
+		color := r.render(digest, &p, name)
 		result.Colors[name] = color
 		unique[color.Light.Fill.Hex] = true
 		tone := color.Light.Fill.OKLCH

@@ -9,7 +9,7 @@
  */
 
 import { assignCollection, type Placement } from './assignment.js';
-import { chooseColor, contrast, cusp, foreground, formats } from './color-math.js';
+import { chooseColor, contrast, cusp, formats, hexFormat, hslFormat, oklchFormat, rgbFormat } from './color-math.js';
 import { sha256 } from './sha256.js';
 import { anchors, biases } from './tables.js';
 import type { ChosenColor, ColorSet, Range, ResolvedOptions, TextColorErrorCode, TextColorOptions, ThemeColors, Triple } from './types.js';
@@ -155,7 +155,25 @@ function compileHueDomain(allowed:unknown, excluded:unknown) {
 }
 
 function optionsValue(options: unknown): ResolvedOptions {
-  const source = record(options, ['preset','hueRange','excludeHues','normalize','namespace', 'seed', 'backgrounds', 'contrastTarget', 'contrastTargets', 'profiles'], 'options');
+  const source = record(options, ['overrides','palette','foregrounds','foregroundPolicy','preset','hueRange','excludeHues','normalize','namespace', 'seed', 'backgrounds', 'contrastTarget', 'contrastTargets', 'profiles'], 'options');
+  const candidates = own(source,'foregrounds',['#000000','#ffffff']);
+  const policy = own(source,'foregroundPolicy','best');
+  if (!Array.isArray(candidates) || candidates.length === 0 || !['best','first-passing'].some(v => v === policy)) {
+    fail('INVALID_OPTIONS','Invalid foreground list or policy');
+  }
+  const foregrounds = Array.from(candidates,hex => {
+    if (typeof hex !== 'string' || !/^#[0-9a-f]{6}$/i.test(hex)) fail('INVALID_OPTIONS','Invalid foreground color');
+    return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)) as Triple;
+  });
+  const selectForeground = (rgb:Triple,target:number):Triple => {
+    let selected:Triple = [0,0,0], best = -1;
+    for (const candidate of foregrounds) {
+      const ratio = contrast(rgb,candidate);
+      if (policy === 'first-passing' && ratio >= target) return candidate;
+      if (ratio > best) { best = ratio; selected = candidate; }
+    }
+    return selected;
+  };
   const preset = own(source,'preset','labels');
   if (typeof preset !== 'string' || !['labels','controls','chart','subdued','mono'].includes(preset)) fail('INVALID_OPTIONS','Unknown preset');
   const scale = preset === 'mono' ? [0,0] : preset === 'subdued' ? [0.2,0.4] : preset === 'chart' ? [0.8,1] : [0.6,0.8];
@@ -214,7 +232,44 @@ function optionsValue(options: unknown): ResolvedOptions {
       };
     }
   }
-  return { hueDomain, normalize, targets, seed, namespace:normalize(namespace), backgrounds, contrastTarget, profiles };
+  const parseBrandHex = (hex:unknown):Triple => {
+    if (typeof hex !== 'string' || !/^#[0-9a-f]{6}$/i.test(hex)) fail('INVALID_OPTIONS','Invalid brand hex');
+    return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)) as Triple;
+  };
+  const rawOverrides = own(source,'overrides',{});
+  const pairs = new Map<string,{light:Triple;dark:Triple}>();
+  const entries = record(rawOverrides,Object.keys(rawOverrides ?? {}),'overrides');
+  for (const [key,value] of Object.entries(entries)) {
+    const name = normalize(textValue(key,'overrides','INVALID_OPTIONS'));
+    if (pairs.has(name)) fail('INVALID_OPTIONS','Duplicate normalized override');
+    const pair = typeof value === 'string' ? {light:value,dark:value} : record(value,['light','dark'],'override');
+    pairs.set(name,{light:parseBrandHex(pair.light),dark:parseBrandHex(pair.dark)});
+  }
+  const rawPalette = own(source,'palette',[]);
+  if (!Array.isArray(rawPalette) || (Object.hasOwn(source,'palette') && !rawPalette.length)) fail('INVALID_OPTIONS','Empty palette');
+  const ids = new Set<string>();
+  const palette = rawPalette.map(value => {
+    const entry = record(value,['id','light','dark'],'palette');
+    const id = textValue(entry.id,'palette.id','INVALID_OPTIONS');
+    if (ids.has(id)) fail('INVALID_OPTIONS','Duplicate palette ID');
+    ids.add(id);
+    const light = parseBrandHex(own(entry,'light',entry.dark)), dark = parseBrandHex(own(entry,'dark',entry.light));
+    const passing = [light,dark].every(rgb => contrast(rgb,selectForeground(rgb,targets.fill)) >= targets.fill);
+    return {id:new TextEncoder().encode(id),light,dark,passing};
+  });
+  const brand:ResolvedOptions['brand'] = (name,digest) => {
+    const pinned = pairs.get(name);
+    if (pinned) return {...pinned,source:'override'};
+    let best = '';
+    let winner: (typeof palette)[number] | undefined;
+    for (const entry of palette) {
+      const rank = sha256(new Uint8Array(digest.buffer,digest.byteOffset,digest.byteLength),entry.id);
+      const score = (entry.passing ? '1' : '0') + Array.from(new Uint8Array(rank.buffer),v=>v.toString(16).padStart(2,'0')).join('');
+      if (score > best) { best = score; winner = entry; }
+    }
+    return winner ? {light:winner.light,dark:winner.dark,source:'palette'} : undefined;
+  };
+  return { brand, selectForeground, hueDomain, normalize, targets, seed, namespace:normalize(namespace), backgrounds, contrastTarget, profiles };
 }
 
 /**
@@ -240,12 +295,23 @@ function optionsValue(options: unknown): ResolvedOptions {
  * colors.dark.fill.hex;  // '#255464'
  * ```
  */
-export function resolveTextColors(text: string, options: TextColorOptions = {}): ColorSet {
+export function resolveTextColors(text:string,options:TextColorOptions & {only:Only}):Projection;
+export function resolveTextColors(text:string,options?:TextColorOptions):ColorSet;
+export function resolveTextColors(text:string,options:TextColorOptions & {only?:Only} = {}):ColorSet|Projection {
   textValue(text, 'text', 'INVALID_TEXT');
+  if (options && Object.hasOwn(options,'only')) {
+    const {only,...settings} = options;
+    if (!only) fail('INVALID_OPTIONS','Invalid selection');
+    return createResolver(settings).project(text,only);
+  }
   return createResolver(options).resolve(text);
 }
 
 export type ColorRole = Exclude<keyof ThemeColors, 'contrast'>;
+type Slot = 'light'|'dark';
+type Format = keyof ThemeColors['background'];
+export type Only = {themes?: readonly Slot[]; roles?: readonly ColorRole[]; formats?: readonly Format[]};
+type Projection = Partial<Record<Slot,Partial<Record<ColorRole,Partial<ThemeColors['background']>>>>>;
 export type Selection = {theme: 'light'|'dark'; role: ColorRole};
 
 export function createResolver(options: TextColorOptions = {}) {
@@ -259,13 +325,17 @@ export function createResolver(options: TextColorOptions = {}) {
   header.setUint32(4, namespace.length);
   const bases = {light: formats(settings.backgrounds.light), dark: formats(settings.backgrounds.dark)};
   const digestOf = (text: string) => {
-    const input = encoder.encode(settings.normalize(textValue(text, 'text', 'INVALID_TEXT')));
+    const input = encoder.encode(text);
     return sha256(prefix, new Uint8Array(header.buffer), namespace, input);
   };
-  const resolve = (text:string) => render(settings,bases,digestOf(text));
+  const resolve = (text:string) => {
+    const name = settings.normalize(textValue(text,'text','INVALID_TEXT'));
+    return render(settings,bases,digestOf(name),name);
+  };
   const assign = (texts:readonly string[], {pinned = {}}: {pinned?: Record<string,Placement>} = {}) =>
     assignCollection(texts, pinned, text => settings.normalize(textValue(text, 'text', 'INVALID_TEXT')),digestOf,
-      (digest,placement) => render(settings,bases,digest,placement));
+      (digest,placement,name) => render(settings,bases,digest,name,placement),
+      (name,digest) => {const entry = settings.brand(name,digest); return entry ? fixedIdentity(entry.light).fraction : undefined;});
   const batch = (texts: readonly string[]) => {
     const seen = new Map<string,ColorSet>();
     return texts.map(text => {
@@ -276,16 +346,55 @@ export function createResolver(options: TextColorOptions = {}) {
       return result;
     });
   };
-  const color = (text: string, select: Selection) => resolve(text)[select.theme][select.role];
-  const hex = (text: string, select: Selection) => color(text, select).hex;
-  return {resolve,batch,color,hex,assign};
+  const project = (text:string,only:Only) => {
+    const name = settings.normalize(textValue(text,'text','INVALID_TEXT'));
+    return render(settings,bases,digestOf(name),name,undefined,only);
+  };
+  const color = (text: string, {theme,role}:Selection) => {
+    const selected = project(text,{themes:[theme],roles:[role]})[theme]?.[role];
+    if (!selected) fail('INVALID_OPTIONS','Unknown role');
+    return selected as ThemeColors['background'];
+  };
+  const hex = (text: string, {theme,role}:Selection) => {
+    const selected = project(text,{themes:[theme],roles:[role],formats:['hex']})[theme]?.[role]?.hex;
+    if (!selected) fail('INVALID_OPTIONS','Unknown role');
+    return selected;
+  };
+  return {resolve,batch,color,hex,assign,project};
 }
 
 export function resolveTextColor(text: string, select: Selection, options: TextColorOptions = {}) {
   return createResolver(options).color(text,select);
 }
 
-function render(settings: ResolvedOptions, bases: Record<'light'|'dark',ThemeColors['background']>, digest: DataView, placement?: Placement): ColorSet {
+function fixedIdentity(rgb:Triple) {
+  const hue = (Math.round(formats(rgb).oklch.h * 1024) / 1024) % 360;
+  const angle = hue < Number(anchors[0]) ? hue+360 : hue;
+  const i = anchors.findIndex(anchor => anchor > angle) - 1;
+  const fraction = (i + (angle-Number(anchors[i])) / (Number(anchors[i+1])-Number(anchors[i]))) / 12;
+  return {hue,fraction};
+}
+
+type Bases = Record<Slot,ThemeColors['background']>;
+// Role dependencies share their computed color within one theme and identity.
+function once<T>(compute: () => T): () => T {
+  let cached: T | undefined;
+  return () => (cached ??= compute());
+}
+
+function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string,placement?:Placement):ColorSet;
+function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string,placement:Placement|undefined,only:Only):Projection;
+function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string,placement?:Placement,only?:Only):ColorSet|Projection {
+  const output:Projection = {};
+  const roleNames = ['background','subtle','muted','fill','onFill','fillHover','fillActive','border','text','strong'] as const;
+  const formatNames = ['hex','rgb','hsl','oklch'] as const;
+  if (only) {
+    record(only,['themes','roles','formats'],'only');
+    for (const [key,allowed] of [['themes',['light','dark']],['roles',roleNames],['formats',formatNames]] as const) {
+      const values = only[key];
+      if (Object.hasOwn(only,key) && (!Array.isArray(values) || !values.length || !values.every(v=>(allowed as readonly string[]).includes(v)))) fail('INVALID_OPTIONS','Invalid selection');
+    }
+  }
   // The first three big-endian 32-bit digest words become fractions in [0, 1) for hue, lightness, and chroma.
   const fractions = [0, 4, 8].map(offset => digest.getUint32(offset, false) / 4294967296) as Triple;
   const hueFraction = placement?.hueFraction ?? fractions[0];
@@ -293,9 +402,14 @@ function render(settings: ResolvedOptions, bases: Record<'light'|'dark',ThemeCol
   const offset = [0,0.08,-0.08,0.16,-0.16][ring] ?? 0;
   const position = hueFraction * 12;
   const index = Math.floor(position);
-  const hue = settings.hueDomain((Number(anchors[index]) + (Number(anchors[index+1]) - Number(anchors[index])) * (position-index)) % 360);
+  const naturalHue = settings.hueDomain((Number(anchors[index]) + (Number(anchors[index+1]) - Number(anchors[index])) * (position-index)) % 360);
+  const brand = settings.brand(name,digest);
+  const snappedHue = (rgb:Triple) => (Math.round(formats(rgb).oklch.h * 1024) / 1024) % 360;
+  if (brand) {fractions[1] = 0.5; fractions[2] = 0.5;}
   const themes = {} as Record<'light' | 'dark', ThemeColors>;
   for (const theme of ['light', 'dark'] as const) {
+    if (only?.themes && !only.themes.includes(theme)) continue;
+    const hue = brand ? snappedHue(brand[theme]) : naturalHue;
     const direction = theme === 'light' ? -1 : 1;
     const background = settings.backgrounds[theme];
     const base = bases[theme];
@@ -311,35 +425,69 @@ function render(settings: ResolvedOptions, bases: Record<'light'|'dark',ThemeCol
         scale: (profile.chromaScale[0] + (profile.chromaScale[1]-profile.chromaScale[0])*fractions[2]) * (ring < 3 ? 1 : 0.6), cap: profile.chromaCap };
     };
     const fillProfile = sample('fill'), textProfile = sample('text');
+    if (brand) {
+      const fixed = formats(brand[theme]);
+      fillProfile.l = Math.round(fixed.oklch.l * 4096) / 4096;
+      if (fixed.oklch.c === 0) {fillProfile.cap = 0; textProfile.cap = 0;}
+    }
     const tone = (l: number, profile: typeof fillProfile, backdrop: Triple | null, target: number, second?: Triple, secondTarget = target) => {
       const lightness = Math.max(0, Math.min(1, l));
       const chroma = cusp(lightness, hue) * profile.scale;
-      const result = chooseColor(lightness, Math.min(chroma, profile.cap), hue, backdrop, target, second, secondTarget);
+      const result = chooseColor(lightness, Math.min(chroma, profile.cap), hue, backdrop, target, second, secondTarget, settings.selectForeground);
       result.metadata.chromaCapped = chroma > profile.cap;
       return result;
     };
     const target = settings.contrastTarget, targets = settings.targets;
-    const subtle = tone(lb + direction*0.04, fillProfile, null, 1);
-    const muted = tone(lb + direction*0.10, fillProfile, null, 1);
-    const fill = tone(fillProfile.l, fillProfile, null, targets.fill);
-    const onFill = foreground(fill.rgb);
-    const hover = tone(fillProfile.l + direction*0.025, fillProfile, onFill, targets.fillHover);
-    const active = tone(fillProfile.l + direction*0.05, fillProfile, onFill, targets.fillActive);
-    const border = tone(lb + direction*0.39, fillProfile, background, targets.border);
-    const text = tone(textProfile.l, textProfile, background, targets.text, subtle.rgb, targets.textOnSubtle);
-    const strong = tone(textProfile.l + direction*0.10, textProfile, background, targets.strong);
+    const fill = once(() => {
+    const chosen = tone(fillProfile.l, fillProfile, null, targets.fill);
+    if (brand) chosen.rgb = brand[theme];
+
+    if (brand) {
+      const ratio = contrast(chosen.rgb,settings.selectForeground(chosen.rgb,targets.fill));
+      chosen.metadata = {ratio,meetsTarget:ratio >= targets.fill,lightnessAdjusted:false,chromaReduced:false,chromaCapped:false,
+        fallback:ratio < targets.fill ? 'palette-constraint' : null};
+    }
+      return chosen;
+    });
+    const onFill = once(() => settings.selectForeground(fill().rgb, targets.fill));
+    const subtle = once(() => tone(lb + direction*0.04, fillProfile, null, 1));
+    const muted = once(() => tone(lb + direction*0.10, fillProfile, null, 1));
+    const fillHover = once(() => tone(fillProfile.l + direction*0.025, fillProfile, onFill(), targets.fillHover));
+    const fillActive = once(() => tone(fillProfile.l + direction*0.05, fillProfile, onFill(), targets.fillActive));
+    const border = once(() => tone(lb + direction*0.39, fillProfile, background, targets.border));
+    const text = once(() => tone(textProfile.l, textProfile, background, targets.text, subtle().rgb, targets.textOnSubtle));
+    const strong = once(() => tone(textProfile.l + direction*0.10, textProfile, background, targets.strong));
     const relationship = (color: ChosenColor, backdrop: Triple, required: number) => {
       const ratio = contrast(color.rgb, backdrop);
       return {...color.metadata, ratio, meetsTarget: ratio >= required};
     };
-    themes[theme] = {background: structuredClone(base), subtle: formats(subtle.rgb), muted: formats(muted.rgb),
-      fill: formats(fill.rgb), onFill: formats(onFill), fillHover: formats(hover.rgb), fillActive: formats(active.rgb),
-      border: formats(border.rgb), text: formats(text.rgb), strong: formats(strong.rgb),
-      contrast: {target, fill: fill.metadata, fillHover: hover.metadata, fillActive: active.metadata, border: border.metadata,
-        text: relationship(text,background,targets.text), textOnSubtle: relationship(text,subtle.rgb,targets.textOnSubtle), strong: strong.metadata}};
+    if (only) {
+      const raw = {background: () => background, onFill, fill: () => fill().rgb, subtle: () => subtle().rgb, muted: () => muted().rgb, fillHover: () => fillHover().rgb, fillActive: () => fillActive().rgb, border: () => border().rgb, text: () => text().rgb, strong: () => strong().rgb};
+      const selected:Partial<Record<ColorRole,Partial<ThemeColors['background']>>> = {};
+      for (const role of only.roles ?? roleNames) {
+        const value:Partial<ThemeColors['background']> = {};
+        for (const format of only.formats ?? formatNames) {
+          switch(format) {
+            case 'hex': value.hex=hexFormat(raw[role]()); break;
+            case 'rgb': value.rgb=rgbFormat(raw[role]()); break;
+            case 'hsl': value.hsl=hslFormat(raw[role]()); break;
+            case 'oklch': value.oklch=oklchFormat(raw[role]()); break;
+          }
+        }
+        selected[role]=value;
+      }
+      output[theme]=selected;
+      continue;
+    }
+    themes[theme] = {background: structuredClone(base), subtle: formats(subtle().rgb), muted: formats(muted().rgb),
+      fill: formats(fill().rgb), onFill: formats(onFill()), fillHover: formats(fillHover().rgb), fillActive: formats(fillActive().rgb),
+      border: formats(border().rgb), text: formats(text().rgb), strong: formats(strong().rgb),
+      contrast: {target, fill: fill().metadata, fillHover: fillHover().metadata, fillActive: fillActive().metadata, border: border().metadata,
+        text: relationship(text(),background,targets.text), textOnSubtle: relationship(text(),subtle().rgb,targets.textOnSubtle), strong: strong().metadata}};
 
   }
-  return { version: VERSION, hueFraction, hue, light: themes.light, dark: themes.dark };
+  if (only) return output;
+  return { version: VERSION, source:brand?.source ?? (placement ? 'assigned' : 'hash'), hueFraction:brand ? fixedIdentity(brand.light).fraction : hueFraction, hue:brand ? snappedHue(brand.light) : naturalHue, light: themes.light, dark: themes.dark };
 }
 
 

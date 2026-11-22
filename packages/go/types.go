@@ -71,12 +71,16 @@ type NormalizeOptions struct {
 }
 
 type Options struct {
-	Preset          string             `json:"preset,omitempty"`
-	HueRange        *Range             `json:"hueRange,omitempty"`
-	ExcludeHues     []Range            `json:"excludeHues,omitempty"`
-	Normalize       *NormalizeOptions  `json:"normalize,omitempty"`
-	ContrastTargets map[string]float64 `json:"contrastTargets,omitempty"`
-	Seed            uint32             `json:"seed,omitempty"`
+	Overrides        map[string]Override `json:"overrides,omitempty"`
+	Palette          []PaletteEntry      `json:"palette,omitempty"`
+	Foregrounds      []string            `json:"foregrounds,omitempty"`
+	ForegroundPolicy string              `json:"foregroundPolicy,omitempty"`
+	Preset           string              `json:"preset,omitempty"`
+	HueRange         *Range              `json:"hueRange,omitempty"`
+	ExcludeHues      []Range             `json:"excludeHues,omitempty"`
+	Normalize        *NormalizeOptions   `json:"normalize,omitempty"`
+	ContrastTargets  map[string]float64  `json:"contrastTargets,omitempty"`
+	Seed             uint32              `json:"seed,omitempty"`
 	// Namespace is a domain separator mixed into the hash. It is exact
 	// Unicode text, not a secret, and must be valid UTF-8.
 	Namespace string `json:"namespace,omitempty"`
@@ -182,6 +186,7 @@ type ThemeColors struct {
 // ColorSet is the complete result of Resolve. Its JSON encoding uses the same
 // camelCase field names as the other TextHue libraries.
 type ColorSet struct {
+	Source      string  `json:"source"`
 	HueFraction float64 `json:"hueFraction"`
 	// Version is the algorithm identifier that produced this result.
 	Version string `json:"version"`

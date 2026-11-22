@@ -76,7 +76,11 @@ var profileShape = &jsonShape{fields: map[string]*jsonShape{"lightness": rangeSh
 var themeShape = &jsonShape{fields: map[string]*jsonShape{"fill": profileShape, "text": profileShape}}
 
 // optionsShape is the complete schema for the language-neutral options document.
+var pairShape = &jsonShape{fields: map[string]*jsonShape{"light": stringShape, "dark": stringShape}}
+var paletteEntryShape = &jsonShape{fields: map[string]*jsonShape{"light": stringShape, "dark": stringShape, "id": stringShape}}
 var optionsShape = &jsonShape{fields: map[string]*jsonShape{
+	"palette": {kind: "palette"}, "overrides": {kind: "overrides"},
+	"foregrounds": {kind: "strings"}, "foregroundPolicy": stringShape,
 	"namespace":      stringShape,
 	"seed":           numberShape,
 	"contrastTarget": numberShape,
@@ -99,6 +103,49 @@ func checkShape(value any, shape *jsonShape, path string) error {
 	case "number":
 		if _, ok := value.(float64); !ok {
 			return invalid(path)
+		}
+	case "palette":
+		entries, ok := value.([]any)
+		if !ok || len(entries) == 0 {
+			return invalid(path)
+		}
+		for _, entry := range entries {
+			if err := checkShape(entry, paletteEntryShape, path); err != nil {
+				return err
+			}
+			fields := entry.(map[string]any)
+			if _, exists := fields["id"]; !exists {
+				return invalid(path)
+			}
+			for _, key := range []string{"light", "dark"} {
+				if hex, ok := fields[key]; ok {
+					if _, err := background(hex.(string)); err != nil {
+						return invalid(path)
+					}
+				}
+			}
+		}
+	case "overrides":
+		entries, ok := value.(map[string]any)
+		if !ok {
+			return invalid(path)
+		}
+		for _, v := range entries {
+			if _, ok := v.(string); !ok {
+				if err := checkShape(v, pairShape, path); err != nil {
+					return err
+				}
+			}
+		}
+	case "strings":
+		values, ok := value.([]any)
+		if !ok {
+			return invalid(path)
+		}
+		for _, v := range values {
+			if err := checkShape(v, stringShape, path); err != nil {
+				return err
+			}
 		}
 	case "ranges":
 		values, ok := value.([]any)
@@ -172,10 +219,7 @@ func ParseOptions(data []byte) ([]Option, error) {
 	if err := json.Unmarshal(canonical, &options); err != nil {
 		return nil, invalid("JSON")
 	}
-	if _, _, _, err := resolveOptions(&options); err != nil {
-		return nil, err
-	}
-	if _, err := compileHueDomain(options.HueRange, options.ExcludeHues); err != nil {
+	if _, err := NewResolver(&options); err != nil {
 		return nil, err
 	}
 	return []Option{&options}, nil

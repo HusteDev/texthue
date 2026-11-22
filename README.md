@@ -92,6 +92,23 @@ console.log(next.colors.docs.light.fill.hex, next.report.minDistance);
 
 Python provides `Resolver.assign(texts, pinned=...)`. Go provides `NewResolver(WithNamespace("issues"))` and `resolver.Assign(texts, pinned)`. The report measures distance between rendered light fills in OKLab. Ring capacity describes the search space. Consumers can inspect the closest pair before relying on color to distinguish labels.
 
+## Brand colors and foregrounds
+
+Use `overrides` to pin a label to a hex fill for both themes, or supply distinct light and dark fills. A palette entry has a stable `id` and at least one theme color. A single supplied theme color applies to both. The resolver prefers palette entries meeting the fill target in both themes, then ranks them by the SHA-256 digest of the identity digest followed by the UTF-8 entry ID. Reordering entries preserves assignments.
+
+```typescript
+const resolver = createResolver({
+  overrides: { blocked: { light: '#981b32', dark: '#ee9aab' } },
+  palette: [{ id: 'ocean', light: '#267394' }, { id: 'sage', light: '#658b70' }],
+  foregrounds: ['#181818', '#ffffff'],
+  foregroundPolicy: 'first-passing',
+});
+const colors = resolver.resolve('blocked');
+console.log(colors.source, colors.light.fill.hex, colors.light.contrast.fill);
+```
+
+The default foreground policy chooses the highest contrast, with list order breaking ties. First-passing chooses the first candidate meeting the target and otherwise uses the highest contrast. A fixed fill that misses its target keeps its supplied bytes and reports `palette-constraint`.
+
 ## Algorithm
 
 The [full specification](SPECIFICATION.md) defines exact matrices, ordering, rounding, error handling, and portability rules. Each package includes a copy of it. The algorithm identifier is **`text-to-color-v1`**. It is part of the hashed payload and is independent of package versions: any change to the color mapping is released under a new identifier, so existing assignments never change silently.

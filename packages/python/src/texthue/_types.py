@@ -56,6 +56,10 @@ class TextColorOptions(TypedDict, total=False):
     """
 
     #: Domain separator mixed into the hash. Default ``""``. Exact Unicode text; not a secret.
+    overrides: dict[str, str | dict[str, str]]
+    palette: list[dict[str, str]]
+    foregrounds: list[str]
+    foregroundPolicy: str
     preset: str
     hueRange: Range
     excludeHues: list[Range]

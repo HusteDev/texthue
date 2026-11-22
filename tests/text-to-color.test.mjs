@@ -15,7 +15,7 @@ const rgb = color => [color.rgb.r, color.rgb.g, color.rgb.b];
 test('frozen v1 fixture file matches its pinned SHA-256 digest', async () => {
   const bytes = await readFile(new URL('../conformance/vectors.json', import.meta.url));
   assert.equal(createHash('sha256').update(bytes).digest('hex'),
-    '9ed248dc3b016c69aafc076fbc6e4d070305bd9e190c449315d9094e960109d2');
+    '53cd60a14cc970bf0cba0a54276f641a87ba957d986ca3af4782088410725513');
 });
 
 /** Independent HSL-to-RGB conversion used to confirm published HSL round-trips to the canonical bytes. */

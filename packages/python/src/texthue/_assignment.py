@@ -40,6 +40,10 @@ def assign_collection(texts, pinned, compiled):
         ):
             raise _core.TextColorError("INVALID_OPTIONS", "Invalid pinned placement")
         assignments[name] = p
+    for digest, name in entries:
+        _, brand = settings["brand"](name, digest)
+        if brand and name not in assignments:
+            assignments[name] = Assignment(_core.fixed_fraction(brand["light"]), 0, False)
     size = len(names.union(assignments))
     separation = min(1 / 12, max(1 / 24, 1 / max(size, 1)))
     colors = {}

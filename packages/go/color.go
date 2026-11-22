@@ -222,7 +222,7 @@ type surfaceConstraint struct {
 	target float64
 }
 
-func choose(l, c, h float64, background *rgb8, target float64, second ...surfaceConstraint) (rgb8, ContrastResult) {
+func chooseForeground(l, c, h float64, background *rgb8, target float64, selectColor func(rgb8, float64) rgb8, second ...surfaceConstraint) (rgb8, ContrastResult) {
 	measure := func(rgb rgb8) float64 {
 		if background != nil {
 			ratio := contrast(rgb, *background)
@@ -231,13 +231,13 @@ func choose(l, c, h float64, background *rgb8, target float64, second ...surface
 			}
 			return ratio
 		}
-		return contrast(rgb, foreground(rgb))
+		return contrast(rgb, selectColor(rgb, target))
 	}
 	chosen := fit(l, c, h)
 	ratio := measure(chosen.rgb)
 	var fallback *string
 	if ratio < target {
-		if background != nil && math.Max(measure(rgb8{}), measure(rgb8{255, 255, 255})) < target {
+		if math.Max(measure(rgb8{}), measure(rgb8{255, 255, 255})) < target {
 			rgb := rgb8{}
 			if measure(rgb8{255, 255, 255}) > measure(rgb) {
 				rgb = rgb8{255, 255, 255}

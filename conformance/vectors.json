@@ -29,6 +29,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.7669886276125908,
         "hue": 304.37919274620714,
         "light": {
@@ -532,6 +533,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.6230182843282819,
         "hue": 238.1065044037625,
         "light": {
@@ -1037,6 +1039,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.2764438090380281,
         "hue": 118.80209495305168,
         "light": {
@@ -1540,6 +1543,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.5864814629312605,
         "hue": 222.16598612901308,
         "light": {
@@ -2043,6 +2047,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.48623508657328784,
         "hue": 176.71582871321516,
         "light": {
@@ -2546,6 +2551,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.7927644327282906,
         "hue": 311.48623176689443,
         "light": {
@@ -3049,6 +3055,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.7660743528977036,
         "hue": 304.1271041675899,
         "light": {
@@ -3552,6 +3559,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.22667233063839376,
         "hue": 102.16350424766867,
         "light": {
@@ -4055,6 +4063,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.15435017575509846,
         "hue": 73.83508680592449,
         "light": {
@@ -4558,6 +4567,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.2587409298866987,
         "hue": 113.88429885517732,
         "light": {
@@ -5061,6 +5071,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.8594636414200068,
         "hue": 328.1257252443999,
         "light": {
@@ -5564,6 +5575,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.8085189242847264,
         "hue": 315.830142102191,
         "light": {
@@ -6067,6 +6079,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.14585102326236665,
         "hue": 70.78148070138684,
         "light": {
@@ -6570,6 +6583,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.3698152620345354,
         "hue": 143.12549777344913,
         "light": {
@@ -7073,6 +7087,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.039744496112689376,
         "hue": 28.276061399063746,
         "light": {
@@ -7578,6 +7593,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.5383526913356036,
         "hue": 199.4202358308875,
         "light": {
@@ -8083,6 +8099,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.37714833091013134,
         "hue": 144.8380040141048,
         "light": {
@@ -8588,6 +8605,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.1380553119815886,
         "hue": 67.98060948786829,
         "light": {
@@ -9093,6 +9111,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.42184092989191413,
         "hue": 155.75135797207506,
         "light": {
@@ -9598,6 +9617,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.25361752044409513,
         "hue": 112.46103415629604,
         "light": {
@@ -10103,6 +10123,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.34088860522024333,
         "hue": 136.37019775429386,
         "light": {
@@ -10611,6 +10632,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.23680865857750177,
         "hue": 106.2013185912747,
         "light": {
@@ -11118,6 +11140,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.23680865857750177,
         "hue": 106.2013185912747,
         "light": {
@@ -11632,6 +11655,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.560010195709765,
         "hue": 209.71066042624227,
         "light": {
@@ -12151,6 +12175,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.560010195709765,
         "hue": 209.71066042624227,
         "light": {
@@ -12660,6 +12685,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.21846842835657299,
         "hue": 98.89547321058353,
         "light": {
@@ -13165,6 +13191,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.2739022197201848,
         "hue": 118.09605059027635,
         "light": {
@@ -13670,6 +13697,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.2739022197201848,
         "hue": 118.09605059027635,
         "light": {
@@ -14185,6 +14213,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.5428053543437272,
         "hue": 201.5358901621542,
         "light": {
@@ -14703,6 +14732,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.5428053543437272,
         "hue": 201.5358901621542,
         "light": {
@@ -15237,6 +15267,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.8024284038692713,
         "hue": 314.1508321425356,
         "light": {
@@ -15759,6 +15790,7 @@
       ],
       "expected": {
         "version": "text-to-color-v1",
+        "source": "hash",
         "hueFraction": 0.02611928409896791,
         "hue": 22.01066025692848,
         "light": {

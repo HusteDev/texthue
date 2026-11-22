@@ -46,6 +46,10 @@ export interface NormalizeOptions {
   whitespace?: 'none'|'trim'|'collapse';
 }
 export interface TextColorOptions {
+  overrides?: Readonly<Record<string,string | {light:string;dark:string}>>;
+  palette?: readonly {id:string;light?:string;dark?:string}[];
+  foregrounds?: readonly string[];
+  foregroundPolicy?: 'best'|'first-passing';
   preset?: 'labels'|'controls'|'chart'|'subdued'|'mono';
   hueRange?: Range;
   excludeHues?: readonly Range[];
@@ -101,7 +105,7 @@ export interface ContrastResult {
   chromaReduced: boolean;
   chromaCapped: boolean;
   /** `'unattainable-contrast'` when no sRGB text can reach the target against the background; otherwise `null`. */
-  fallback: 'unattainable-contrast' | null;
+  fallback: 'unattainable-contrast' | 'palette-constraint' | null;
 }
 
 /** All colors and contrast measurements for one theme. */
@@ -126,6 +130,7 @@ export interface ThemeColors {
 
 /** Complete result of `resolveTextColors`. */
 export interface ColorSet {
+  source: 'hash'|'assigned'|'palette'|'override';
   /** Algorithm identifier that produced this result. */
   version: 'text-to-color-v1';
   /** Hash-derived identity hue in degrees, unrounded. Shared by all four roles before gamut fitting. */
@@ -157,6 +162,8 @@ export interface ResolvedProfile { lightness: Range; chromaCap: number; chromaSc
 
 /** Options after validation, with defaults applied and backgrounds parsed to RGB bytes. */
 export interface ResolvedOptions {
+  brand: (name:string,digest:DataView)=>{light:Triple;dark:Triple;source:'palette'|'override'}|undefined;
+  selectForeground: (rgb:Triple, target:number)=>Triple;
   hueDomain: (hue:number)=>number;
   normalize: (text:string)=>string;
   targets: Record<ContrastRole,number>;
