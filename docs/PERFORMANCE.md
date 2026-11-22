@@ -56,7 +56,7 @@ Go's count-mode coverage confirms the same operation counts in all five scenario
 
 Run `node tools/measure-separation.mjs` after building the JavaScript package to measure default collection assignment across 300 reproducible sets of ten decimal identifiers. The harness generates unsigned 32-bit values from seed 4217 and compares every pair of rendered fills within each theme using normal-vision OKLab distance.
 
-Of 13,500 pairs per theme, 20 light pairs and 115 dark pairs fell below 0.04. The minimum distances were 0.01161 and 0.01313 respectively. Default assignment currently misses the plan's zero-violation criterion on this corpus.
+Before placement repair, 20 light pairs and 115 dark pairs fell below 0.04. With repair, all 13,500 pairs in each theme met the threshold. The minimum distances were 0.040087 in light and 0.040069 in dark. JavaScript, Python, and Go produced identical placements and rendered fills for all 3,000 labels. Pass `--cases` to emit the identifiers, placements and fills used for comparison. The measurement exits unsuccessfully on a threshold violation.
 
 The shared assignment corpus includes two pairs from the original review. The table gives Euclidean OKLab distance between the two emitted sRGB fills for each pair in isolation, using default options. Larger values indicate more separation in this metric.
 
