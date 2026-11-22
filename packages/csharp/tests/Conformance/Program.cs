@@ -76,3 +76,16 @@ foreach (var role in vector.GetProperty("expected").GetProperty(theme).Enumerate
 }
 if (colorCount != 640) throw new InvalidDataException("Unexpected role count.");
 Console.WriteLine($"Passed {colorCount} shared role color formats.");
+
+using var fits = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "p3-fit-v1.json")));
+foreach (var row in fits.RootElement.EnumerateArray())
+{
+    var fit = Gamut.DisplayP3.Fit(row.GetProperty("l").GetDouble(), row.GetProperty("c").GetDouble(),
+                                  row.GetProperty("h").GetDouble());
+    var fallback = GamutFit.P3Fallback(fit.Bytes);
+    if (fit.Bytes != ReadRgb(row.GetProperty("rgb")) || fallback.Bytes != ReadRgb(row.GetProperty("fallback"))
+        || fallback.Clipped != row.GetProperty("clipped").GetBoolean())
+        throw new InvalidDataException($"Display-P3 fit or fallback mismatch for {row}");
+}
+if (fits.RootElement.GetArrayLength() != 108) throw new InvalidDataException("Unexpected fit corpus size.");
+Console.WriteLine("Passed 108 Display-P3 fits and sRGB fallbacks.");
