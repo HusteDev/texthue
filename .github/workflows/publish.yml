@@ -152,6 +152,14 @@ jobs:
           dotnet pack packages/csharp/src/TextHue --configuration Release --no-build --output artifacts
           python tools/check-nuget.py artifacts
           (cd artifacts && sha256sum "TextHue.${VERSION}.nupkg" >> SHA256SUMS)
+      - name: Stage the tested Rust crate
+        if: steps.bundle.outputs.state == 'absent'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          python tools/stage-rust.py artifacts
+          (cd artifacts && sha256sum "texthue-${VERSION}.crate" >> SHA256SUMS)
       - name: Write the release manifest (commit, versions, algorithm id, archive digests)
         if: steps.bundle.outputs.state == 'absent'
         env:

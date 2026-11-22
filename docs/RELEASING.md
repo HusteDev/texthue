@@ -18,8 +18,9 @@ For Rust distribution testing, run `python tools/stage-rust.py .cache/rust-stagi
 
 These local checks exercise the listed packages. Public registry delivery for these rows requires separate publishing integration.
 
-New draft bundles also contain the tested `TextHue.<version>.nupkg`. The build job
-installs the archive into an isolated consumer before recording its digest.
+New draft bundles also contain `TextHue.<version>.nupkg` and `texthue-<version>.crate`.
+The build job exercises the NuGet consumer and runs the unpacked crate's tests
+and example before recording the archive digests.
 Resuming an older bundle preserves its original archive set.
 
 ## Build and verify locally

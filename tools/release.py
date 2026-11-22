@@ -294,11 +294,11 @@ def _cmd_check_version(args: argparse.Namespace) -> int:
 def verify_bundle(version: str, commit: str, directory: Path) -> None:
     """Check the complete consumer archive set and both digest records."""
     names = {f"texthue-{version}{suffix}" for suffix in (".tgz", ".tar.gz", "-py3-none-any.whl")}
-    # Older staged releases predate NuGet. Both digest records still have to
+    # Older staged releases predate the native archives. Both digest records still have to
     # agree with the exact set of files present in either bundle.
-    nuget = f"TextHue.{version}.nupkg"
-    if (directory / nuget).exists():
-        names.add(nuget)
+    for archive in (f"TextHue.{version}.nupkg", f"texthue-{version}.crate"):
+        if (directory / archive).exists():
+            names.add(archive)
     entries = list(directory.iterdir())
     if any(p.is_symlink() or not p.is_file() for p in entries):
         raise ReleaseError("Release assets must be regular files.")
