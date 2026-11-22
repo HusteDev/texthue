@@ -33,6 +33,7 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -190,6 +191,41 @@ def pypi_target_state(
     if all(published[name] == digest for name, digest in local_digests.items()):
         return TargetState(MATCHING)
     return TargetState(CONFLICTING)
+
+
+def maven_target_state(version: str, archive: Path, *, fetch=None) -> TargetState:
+    """Compare every staged consumer artifact with its Maven Central bytes."""
+    version = validate_version(version)
+    if (
+        archive.name != f"texthue-{version}-maven.zip"
+        or archive.is_symlink()
+        or not archive.is_file()
+    ):
+        raise ReleaseError("Missing or invalid staged Maven bundle.")
+    stem = f"com/hustedev/texthue/{version}/texthue-{version}"
+    names = [
+        stem + suffix for suffix in (".jar", "-sources.jar", "-javadoc.jar", ".pom", ".module")
+    ]
+    missing = 0
+    with zipfile.ZipFile(archive) as bundle:
+        if sorted(bundle.namelist()) != sorted(names):
+            raise ReleaseError("Unexpected Maven bundle contents.")
+        for name in names:
+            local = bundle.read(name)
+            try:
+                remote = (fetch or _default_fetch)(f"https://repo.maven.apache.org/maven2/{name}")
+            except _NotFound:
+                missing += 1
+                continue
+            except Exception as error:
+                return TargetState(LOOKUP_FAILED, str(error))
+            if remote != local:
+                return TargetState(CONFLICTING, name)
+    if missing == len(names):
+        return TargetState(ABSENT)
+    if missing:
+        return TargetState(LOOKUP_FAILED, "Only part of the Maven version is visible.")
+    return TargetState(MATCHING)
 
 
 def dart_target_state(version: str, archive: Path, *, fetch=None) -> TargetState:
@@ -482,6 +518,15 @@ def main(argv: list[str] | None = None) -> int:
         "--tarball", required=True, help="Path to the locally built tarball"
     )
     npm_state_parser.set_defaults(func=_cmd_npm_state)
+
+    maven = subparsers.add_parser(
+        "maven-state", help="Compare staged Kotlin artifacts with Maven Central"
+    )
+    maven.add_argument("--version", required=True)
+    maven.add_argument("--archive", type=Path, required=True)
+    maven.set_defaults(
+        func=lambda a: _print_state_and_exit_code(maven_target_state(a.version, a.archive))
+    )
 
     dart = subparsers.add_parser("dart-state", help="Compare the staged Dart archive with pub.dev")
     dart.add_argument("--version", required=True)

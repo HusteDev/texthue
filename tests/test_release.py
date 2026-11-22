@@ -190,6 +190,38 @@ class PypiTargetStateTests(unittest.TestCase):
         self.assertEqual(state.state, release.CONFLICTING)
 
 
+class MavenTargetStateTests(unittest.TestCase):
+    def test_all_artifacts_and_partial_visibility(self):
+        import zipfile
+        from unittest.mock import Mock
+
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory) / "texthue-1.0.0-maven.zip"
+            names = [
+                "com/hustedev/texthue/1.0.0/texthue-1.0.0" + suffix
+                for suffix in (".jar", "-sources.jar", "-javadoc.jar", ".pom", ".module")
+            ]
+            contents = [name.encode() for name in names]
+            with zipfile.ZipFile(archive, "w") as bundle:
+                for name, data in zip(names, contents, strict=True):
+                    bundle.writestr(name, data)
+            for responses, expected in [
+                (contents, release.MATCHING),
+                ([release._NotFound()] * 5, release.ABSENT),
+                ([*contents[:-1], release._NotFound()], release.LOOKUP_FAILED),
+                ([release._NotFound(), TimeoutError()], release.LOOKUP_FAILED),
+                ([*contents[:-1], b"changed"], release.CONFLICTING),
+            ]:
+                fetch = Mock(side_effect=responses)
+                self.assertEqual(
+                    release.maven_target_state("1.0.0", archive, fetch=fetch).state, expected
+                )
+                self.assertEqual(
+                    [call.args[0] for call in fetch.call_args_list],
+                    ["https://repo.maven.apache.org/maven2/" + n for n in names[: len(responses)]],
+                )
+
+
 class DartTargetStateTests(unittest.TestCase):
     def test_version_record_and_transport_states(self):
         import hashlib
