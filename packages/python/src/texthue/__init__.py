@@ -96,7 +96,7 @@ class Resolver:
             result.append(cache[text])
         return result
 
-    def color(self, text: str, *, theme: str, role: str) -> Color:
+    def _selected_theme(self, text: str, theme: str, role: str) -> ThemeColors:
         if theme not in ("light", "dark") or role not in {
             "background",
             "subtle",
@@ -110,10 +110,31 @@ class Resolver:
             "strong",
         }:
             raise TextColorError("INVALID_OPTIONS", "Unknown theme or role")
-        return getattr(getattr(self.resolve(text), theme), role)
+        return getattr(self.resolve(text), theme)
 
-    def hex(self, text: str, *, theme: str, role: str) -> str:
-        return self.color(text, theme=theme, role=role).hex
+    def color(self, text: str, *, theme: str, role: str) -> Color:
+        return getattr(self._selected_theme(text, theme, role), role)
+
+    def hex(self, text: str, *, theme: str, role: str, strict: bool = False) -> str:
+        if not isinstance(strict, bool):
+            raise TextColorError("INVALID_OPTIONS", "strict must be boolean")
+        selected = self._selected_theme(text, theme, role)
+        if strict:
+            pairs = {
+                "fill": ("fill",),
+                "on_fill": ("fill",),
+                "text": ("text", "text_on_subtle"),
+                "border": ("border",),
+                "strong": ("strong",),
+                "fill_hover": ("fill_hover",),
+                "fill_active": ("fill_active",),
+            }
+            for pair in pairs.get(role, ()):
+                if not getattr(selected.contrast, pair).meets_target:
+                    raise TextColorError(
+                        "UNMET_CONSTRAINT", f"{theme}.{pair} contrast target was not met"
+                    )
+        return getattr(selected, role).hex
 
 
 def resolve_text_colors(

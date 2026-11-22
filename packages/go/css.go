@@ -66,7 +66,7 @@ func CSSVariables(colors ColorSet, theme, slug, prefix string) (map[string]strin
 	return result, nil
 }
 
-func (r *Resolver) Color(text, theme, role string) (Color, error) {
+func (r *Resolver) selectedColor(text, theme, role string, strict bool) (Color, error) {
 	colors, err := r.Resolve(text)
 	if err != nil {
 		return Color{}, err
@@ -79,8 +79,31 @@ func (r *Resolver) Color(text, theme, role string) (Color, error) {
 	if !ok {
 		return Color{}, invalid("role")
 	}
+	if strict {
+		pairs := map[string][]ContrastResult{
+			"fill": {t.Contrast.Fill}, "onFill": {t.Contrast.Fill},
+			"fillHover": {t.Contrast.FillHover}, "fillActive": {t.Contrast.FillActive},
+			"text":   {t.Contrast.Text, t.Contrast.TextOnSubtle},
+			"strong": {t.Contrast.Strong}, "border": {t.Contrast.Border},
+		}
+		for _, pair := range pairs[role] {
+			if !pair.MeetsTarget {
+				return Color{}, &Error{Code: "UNMET_CONSTRAINT", Message: theme + "." + role + " contrast target was not met"}
+			}
+		}
+	}
 	return c, nil
 }
+func (r *Resolver) Color(text, theme, role string) (Color, error) {
+	return r.selectedColor(text, theme, role, false)
+}
+
+// HexStrict returns an error when a contrast requirement for the selected role fails.
+func (r *Resolver) HexStrict(text, theme, role string) (string, error) {
+	c, err := r.selectedColor(text, theme, role, true)
+	return c.Hex, err
+}
+
 func (r *Resolver) Hex(text, theme, role string) (string, error) {
 	c, err := r.Color(text, theme, role)
 	return c.Hex, err

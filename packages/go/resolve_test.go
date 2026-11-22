@@ -253,3 +253,27 @@ func TestDefaultScaleRepairRate(t *testing.T) {
 		}
 	}
 }
+
+func TestStrictHexRelationships(t *testing.T) {
+	opts, err := ParseOptions([]byte(`{"overrides":{"sample":"#777777"},"foregrounds":["#777777"],"contrastTargets":{"text":1,"textOnSubtle":21}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolver, err := NewResolver(opts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, role := range []string{"fill", "onFill", "text"} {
+		if _, err := resolver.Hex("sample", "light", role); err != nil {
+			t.Fatal(err)
+		}
+		_, err := resolver.HexStrict("sample", "light", role)
+		var typed *Error
+		if !errors.As(err, &typed) || typed.Code != "UNMET_CONSTRAINT" {
+			t.Fatalf("%s: %v", role, err)
+		}
+	}
+	if _, err := resolver.HexStrict("sample", "light", "border"); err != nil {
+		t.Fatal(err)
+	}
+}

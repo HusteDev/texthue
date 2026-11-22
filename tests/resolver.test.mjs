@@ -60,3 +60,20 @@ test('selective output matches each full-result role and format', () => {
     }
   }
 });
+
+test('strict hex enforces only the selected role requirements', () => {
+  const resolver = createResolver({
+    overrides: {sample: '#777777'}, foregrounds: ['#777777'],
+    backgrounds: {light: '#ffffff'}, contrastTargets: {text: 1, textOnSubtle: 21}
+  });
+  const full = resolver.resolve('sample').light;
+  assert.equal(full.contrast.fill.meetsTarget, false);
+  assert.equal(full.contrast.text.meetsTarget, true);
+  assert.equal(full.contrast.textOnSubtle.meetsTarget, false);
+  for (const role of ['fill', 'onFill', 'text']) {
+    assert.equal(resolver.hex('sample', {theme:'light',role}), full[role].hex);
+    assert.throws(() => resolver.hex('sample', {theme:'light',role,strict:true}), {code:'UNMET_CONSTRAINT'});
+  }
+  assert.equal(resolver.hex('sample', {theme:'light',role:'border',strict:true}), full.border.hex);
+  assert.throws(() => resolver.hex('sample', {theme:'light',role:'text',strict:1}), {code:'INVALID_OPTIONS'});
+});

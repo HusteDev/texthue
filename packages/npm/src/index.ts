@@ -26,7 +26,7 @@ export type { Color, ColorProfile, ColorSet, ContrastResult, HSL, OKLCH, Range, 
 export const VERSION = 'text-to-color-v1';
 
 /**
- * Error thrown (as a promise rejection) for invalid text or options.
+ * Synchronous error for invalid inputs or an unmet strict contrast requirement.
  *
  * The `code` property is stable across the TextHue libraries:
  * `INVALID_TEXT` for a malformed `text` argument and `INVALID_OPTIONS` for
@@ -346,17 +346,18 @@ export function createResolver(options: TextColorOptions = {}) {
       return result;
     });
   };
-  const project = (text:string,only:Only) => {
+  const project = (text:string,only:Only, strict = false) => {
     const name = settings.normalize(textValue(text,'text','INVALID_TEXT'));
-    return render(settings,bases,digestOf(name),name,undefined,only);
+    return render(settings,bases,digestOf(name),name,undefined,only,strict);
   };
   const color = (text: string, {theme,role}:Selection) => {
     const selected = project(text,{themes:[theme],roles:[role]})[theme]?.[role];
     if (!selected) fail('INVALID_OPTIONS','Unknown role');
     return selected as ThemeColors['background'];
   };
-  const hex = (text: string, {theme,role}:Selection) => {
-    const selected = project(text,{themes:[theme],roles:[role],formats:['hex']})[theme]?.[role]?.hex;
+  const hex = (text: string, {theme,role,strict = false}:Selection & {strict?:boolean}) => {
+    if (typeof strict !== "boolean") fail("INVALID_OPTIONS", "strict must be boolean");
+    const selected = project(text,{themes:[theme],roles:[role],formats:['hex']},strict)[theme]?.[role]?.hex;
     if (!selected) fail('INVALID_OPTIONS','Unknown role');
     return selected;
   };
@@ -383,8 +384,8 @@ function once<T>(compute: () => T): () => T {
 }
 
 function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string,placement?:Placement):ColorSet;
-function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string,placement:Placement|undefined,only:Only):Projection;
-function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string,placement?:Placement,only?:Only):ColorSet|Projection {
+function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string,placement:Placement|undefined,only:Only, strict?:boolean):Projection;
+function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string,placement?:Placement,only?:Only, strict = false):ColorSet|Projection {
   const output:Projection = {};
   const roleNames = ['background','subtle','muted','fill','onFill','fillHover','fillActive','border','text','strong'] as const;
   const formatNames = ['hex','rgb','hsl','oklch'] as const;
@@ -465,6 +466,23 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
       const raw = {background: () => background, onFill, fill: () => fill().rgb, subtle: () => subtle().rgb, muted: () => muted().rgb, fillHover: () => fillHover().rgb, fillActive: () => fillActive().rgb, border: () => border().rgb, text: () => text().rgb, strong: () => strong().rgb};
       const selected:Partial<Record<ColorRole,Partial<ThemeColors['background']>>> = {};
       for (const role of only.roles ?? roleNames) {
+        if (strict) {
+          const requirePair = (name: string, passes: boolean) => {
+            if (!passes) fail('UNMET_CONSTRAINT', `${theme}.${name} contrast target was not met`);
+          };
+          switch (role) {
+            case 'fill':
+            case 'onFill': requirePair('fill', fill().metadata.meetsTarget); break;
+            case 'fillHover': requirePair(role, fillHover().metadata.meetsTarget); break;
+            case 'fillActive': requirePair(role, fillActive().metadata.meetsTarget); break;
+            case 'border': requirePair(role, border().metadata.meetsTarget); break;
+            case 'strong': requirePair(role, strong().metadata.meetsTarget); break;
+            case 'text':
+              requirePair(role, contrast(text().rgb, background) >= targets.text);
+              requirePair('textOnSubtle', contrast(text().rgb, subtle().rgb) >= targets.textOnSubtle);
+              break;
+          }
+        }
         const value:Partial<ThemeColors['background']> = {};
         for (const format of only.formats ?? formatNames) {
           switch(format) {

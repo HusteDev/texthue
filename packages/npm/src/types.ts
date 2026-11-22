@@ -141,7 +141,7 @@ export interface ColorSet {
 }
 
 /** Stable error codes carried by `TextColorError.code`. */
-export type TextColorErrorCode = 'INVALID_TEXT' | 'INVALID_OPTIONS';
+export type TextColorErrorCode = 'INVALID_TEXT' | 'INVALID_OPTIONS' | 'UNMET_CONSTRAINT';
 
 // Internal numerical types are not re-exported by the package entry point.
 

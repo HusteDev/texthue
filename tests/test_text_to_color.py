@@ -24,6 +24,23 @@ FIXTURE = json.loads((ROOT / "conformance" / "vectors.json").read_text(encoding=
 class ConformanceTests(unittest.TestCase):
     """Frozen-vector, runtime-error, and cross-language checks for the Python package."""
 
+    def test_strict_hex_relationships(self):
+        from texthue import Resolver
+
+        resolver = Resolver(
+            {
+                "overrides": {"sample": "#777777"},
+                "foregrounds": ["#777777"],
+                "contrastTargets": {"text": 1, "textOnSubtle": 21},
+            }
+        )
+        for role in ("fill", "on_fill", "text"):
+            self.assertTrue(resolver.hex("sample", theme="light", role=role))
+            with self.assertRaises(TextColorError) as caught:
+                resolver.hex("sample", theme="light", role=role, strict=True)
+            self.assertEqual(caught.exception.code, "UNMET_CONSTRAINT")
+        self.assertTrue(resolver.hex("sample", theme="light", role="border", strict=True))
+
     def compare(self, actual, expected, path="result"):
         """Recursively compare a result to a fixture.
 

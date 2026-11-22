@@ -109,6 +109,16 @@ console.log(colors.source, colors.light.fill.hex, colors.light.contrast.fill);
 
 The default foreground policy chooses the highest contrast, with list order breaking ties. First-passing chooses the first candidate meeting the target and otherwise uses the highest contrast. A fixed fill that misses its target keeps its supplied bytes and reports `palette-constraint`.
 
+Hex helpers return the selected fallback by default. To require a passing result, use
+`resolver.hex(id, {theme: 'light', role: 'text', strict: true})` in JavaScript,
+`resolver.hex(id, theme="light", role="text", strict=True)` in Python, or
+`resolver.HexStrict(id, "light", "text")` in Go. Each reports `UNMET_CONSTRAINT`
+if the selected role misses its target. Text must pass against both background
+and subtle. Fill and on-fill share the fill pair. Hover, active, border, and
+strong each use their own pair. Background, subtle, and muted have no independent
+target when requested as surfaces.
+
+
 ## Algorithm
 
 The [full specification](SPECIFICATION.md) defines exact matrices, ordering, rounding, error handling, and portability rules. Each package includes a copy of it. The algorithm identifier is **`text-to-color-v1`**. It is part of the hashed payload and is independent of package versions: any change to the color mapping is released under a new identifier, so existing assignments never change silently.
