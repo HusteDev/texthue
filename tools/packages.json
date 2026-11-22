@@ -14,7 +14,7 @@
       "conformanceReplay": true,
       "coverageFlag": "javascript",
       "archiveRequiredFiles": [
-        "assets/gallery.svg", "dist/index.js", "dist/index.d.ts", "src/index.ts", "README.md",
+        "assets/gallery.svg", "dist/index.js", "dist/index.d.ts", "dist/single.js", "dist/single.d.ts", "src/index.ts", "README.md",
         "SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md",
         "examples/browser.html", "examples/typescript.ts"
       ],

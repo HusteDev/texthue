@@ -129,15 +129,19 @@ def main():
             """import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolveTextColors, TextColorError } from 'texthue';
+import { resolveTextColor, resolveTextColors as single } from 'texthue/single';
 const fixture = JSON.parse(readFileSync(new URL('./vectors.json', import.meta.url), 'utf8'));
 for (const item of fixture.vectors) {
   const actual = resolveTextColors(item.text, item.options);
+  assert.deepEqual(single(item.text, item.options), actual);
   for (const theme of ['light', 'dark']) for (const role of ['background', 'fill', 'onFill', 'text']) {
+    assert.deepEqual(resolveTextColor(item.text, {theme, role}, item.options), actual[theme][role]);
     assert.equal(actual[theme][role].hex, item.expected[theme][role].hex);
     assert.deepEqual(actual[theme][role].rgb, item.expected[theme][role].rgb);
   }
 }
 for (const item of fixture.invalid) {
+  assert.throws(() => single(item.text, item.options), error => error instanceof TextColorError && error.code === item.code);
   assert.throws(() => resolveTextColors(item.text, item.options), error => error instanceof TextColorError && error.code === item.code);
 }
 console.log('Packed npm package passed all valid and invalid fixtures.');
@@ -147,6 +151,10 @@ console.log('Packed npm package passed all valid and invalid fixtures.');
         write(
             consumer / "check.ts",
             """import { resolveTextColors, type TextColorOptions, type ColorSet } from 'texthue';
+import { resolveTextColor, type Selection } from 'texthue/single';
+const selection: Selection = {theme: 'dark', role: 'text'};
+const hex: string = resolveTextColor('research', selection).hex;
+void hex;
 const options: TextColorOptions = { namespace: 'consumer', profiles: { light: { fill: { chromaScale: [0, 0] } } } };
 const result: ColorSet = resolveTextColors('research', options);
 console.log(result.light.fill.hex);
