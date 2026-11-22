@@ -253,6 +253,8 @@ jobs:
         working-directory: packages/swift
         run: |
           swift --version
+          (cd ../.. && npm run build && node tools/measure-separation.mjs --cases > "$RUNNER_TEMP/separation.json")
+          export TEXTHUE_SEPARATION_CORPUS="$RUNNER_TEMP/separation.json"
           swift test --package-path ../.. --force-resolved-versions
           python3 ../../tools/verify.py --port swift
           python3 ../../tools/check-swift-tag.py

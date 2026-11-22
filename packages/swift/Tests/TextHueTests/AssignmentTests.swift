@@ -44,4 +44,34 @@ final class AssignmentTests: XCTestCase {
         XCTAssertEqual(result.colors.count, 2)
         XCTAssertEqual(try renderer.assign(labels.reversed(), pinned: result.assignments).colors, result.colors)
     }
+
+    func testGeneratedSeparationCorpus() throws {
+        guard let path = ProcessInfo.processInfo.environment["TEXTHUE_SEPARATION_CORPUS"] else {
+            throw XCTSkip("Provide the generated JavaScript separation corpus")
+        }
+        struct Case: Decodable {
+            let labels: [String]
+            let assignments: [String: Placement]
+            let fills: [[String]]
+            let report: Row.Report
+        }
+        let cases = try JSONDecoder().decode([Case].self, from: Data(contentsOf: URL(fileURLWithPath: path)))
+        XCTAssertEqual(cases.count, 300)
+        let renderer = try Renderer()
+        for item in cases {
+            let result = try renderer.assign(item.labels)
+            XCTAssertEqual(result.assignments.count, item.assignments.count)
+            XCTAssertEqual(item.labels.count, item.fills.count)
+            for (label, fills) in zip(item.labels, item.fills) {
+                let key = Data(label.utf8)
+                XCTAssertEqual(result.assignments[key], item.assignments[label])
+                let palette = try XCTUnwrap(result.colors[key])
+                XCTAssertEqual([palette.light["fill"]!.hex, palette.dark["fill"]!.hex], fills)
+            }
+            XCTAssertEqual(result.report.closestPairs, item.report.closestPairs.map { $0.map { Data($0.utf8) } })
+            XCTAssertEqual(try XCTUnwrap(result.report.minDistance), try XCTUnwrap(item.report.minDistance), accuracy: 1e-12)
+            XCTAssertEqual(result.report.distinctFills, item.report.distinctFills)
+            XCTAssertEqual(result.report.withinRingCapacity, item.report.withinRingCapacity)
+        }
+    }
 }
