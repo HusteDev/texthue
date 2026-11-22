@@ -33,6 +33,28 @@ NORMALIZED_NAMESPACES = [
 NORMALIZATION_RULES = {"unicode": "NFKC", "case": "lower", "whitespace": "collapse"}
 
 
+def display_p3_cases():
+    for model in ("wcag2", "apca"):
+        for options in (
+            {},
+            {"preset": "chart"},
+            {"overrides": {"0": "#ff0000"}},
+            {"backgrounds": {"light": "#456789"}, "foregrounds": ["#777777", "#ffffff"]},
+            {
+                "palette": [
+                    {"id": "red", "light": "#ff0000"},
+                    {"id": "green", "dark": "#00ff00"},
+                ]
+            },
+            {"contrastTarget": 106 if model == "apca" else 21},
+        ):
+            for text in ("0", "sample"):
+                yield {
+                    "options": {"gamut": "display-p3", "contrastModel": model, **options},
+                    "text": text,
+                }
+
+
 def generated_cases():
     rng = random.Random(4217)
     alphabet = "abcdefghijklmnopqrstuvwxyz ABC0123456789\x00\n\u00e9\u0301\u7814\u7a76\U0001f308"
@@ -235,30 +257,17 @@ console.log(JSON.stringify([compareAssignments(side(old),side(next),texts)]));
 
         inputs = []
         expected = []
-        for model in ("wcag2", "apca"):
-            for options in (
-                {},
-                {"preset": "chart"},
-                {"overrides": {"0": "#ff0000"}},
-                {"backgrounds": {"light": "#456789"}, "foregrounds": ["#777777", "#ffffff"]},
-                {
-                    "palette": [
-                        {"id": "red", "light": "#ff0000"},
-                        {"id": "green", "dark": "#00ff00"},
-                    ]
-                },
-                {"contrastTarget": 106 if model == "apca" else 21},
-            ):
-                resolver = Resolver({"gamut": "display-p3", "contrastModel": model, **options})
-                snapshot = resolver.export_config()
-                restored = import_config(snapshot)
-                for text in ("0", "sample"):
-                    colors = resolver.resolve(text)
-                    self.assertEqual(colors, restored.resolve(text))
-                    self.assertEqual(colors, ColorSet.from_dict(colors.to_dict()))
-                    self.assertEqual(to_css(colors.light.fill, "p3"), colors.light.fill.css)
-                    inputs.append({"config": snapshot, "text": text})
-                    expected.append(colors.to_dict())
+        for case in display_p3_cases():
+            resolver = Resolver(case["options"])
+            snapshot = resolver.export_config()
+            restored = import_config(snapshot)
+            text = case["text"]
+            colors = resolver.resolve(text)
+            self.assertEqual(colors, restored.resolve(text))
+            self.assertEqual(colors, ColorSet.from_dict(colors.to_dict()))
+            self.assertEqual(to_css(colors.light.fill, "p3"), colors.light.fill.css)
+            inputs.append({"config": snapshot, "text": text})
+            expected.append(colors.to_dict())
         script = """
 import {importConfig} from './packages/npm/dist/index.js';
 import {readFileSync} from 'node:fs';
@@ -614,6 +623,10 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
         ]
         runners = {p["id"]: p for p in packages if p.get("conformanceRunner")}
         self.assertTrue({"npm", "python", "go"}.issubset(runners))
+        wide_cases = list(display_p3_cases())
+        wide_expected = [
+            Resolver(case["options"]).resolve(case["text"]).to_dict() for case in wide_cases
+        ]
         results = {}
         for name, package in runners.items():
             command = list(package["conformanceRunner"])
@@ -627,6 +640,9 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
                     self.skipTest(f"{name} toolchain unavailable")
                 continue
             inputs = cases + replay if package.get("conformanceReplay") else cases
+            wide_start = len(inputs)
+            if name in ("kotlin", "swift"):
+                inputs = inputs + wide_cases
             with self.subTest(runner=name):
                 if command[0] == "python":
                     command[0] = sys.executable
@@ -647,7 +663,9 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
                 self.assertEqual(len(output), len(inputs))
                 results[name] = output[: len(cases)]
                 if package.get("conformanceReplay"):
-                    self.assertEqual(results[name], output[len(cases) :])
+                    self.assertEqual(results[name], output[len(cases) : wide_start])
+                if len(inputs) > wide_start:
+                    self.compare(output[wide_start:], wide_expected)
         expected = results.pop("npm")
         for index, result in enumerate(expected):
             for name, output in results.items():
