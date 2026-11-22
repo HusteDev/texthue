@@ -7,6 +7,7 @@
 <form><label>Labels, one per line<textarea id="labels" rows="5">research
 design
 engineering</textarea></label><label>Resolver options or exported configuration (JSON)<textarea id="options" rows="5">{}</textarea></label>
+<label>Load configuration file<input id="config-file" type="file" accept=".json,application/json"></label>
 <fieldset><legend>Preset</legend><label>Role defaults<select id="preset"><option>labels</option><option>controls</option><option>chart</option><option>subdued</option><option>mono</option></select></label>
 <button type="button" id="apply-preset">Apply preset</button></fieldset>
 <fieldset><legend>Brand palette</legend><label>Palette ID<input id="brand-id"></label>
@@ -17,5 +18,5 @@ engineering</textarea></label><label>Resolver options or exported configuration 
 <label><span><input id="optimize-vision" type="checkbox"> Optimize new placements for normal vision and the selected profile</span></label>
 <label><span><input id="markers" type="checkbox"> Show identity shapes</span></label>
 <label>Minimum OKLab distance<input id="minimum-distance" type="number" min="0" step="any" value="0" required></label>
-<label>Saved registry (optional JSON)<textarea id="registry"></textarea></label><button type="submit">Inspect palette</button></form>
+<label>Saved registry (optional JSON)<textarea id="registry"></textarea></label><label>Load registry file<input id="registry-file" type="file" accept=".json,application/json"></label><button type="submit">Inspect palette</button></form>
 <p role="status"></p><section id="results"></section></main><script type="module" src="./app.mjs"></script></html>

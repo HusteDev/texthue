@@ -81,8 +81,19 @@ def exercise(page, url, clipboard):
         outputs[title] = Path(event.value.path()).read_text(encoding="utf-8")
     assert "fresh" in json.loads(outputs["registry"])["assignments"]
     assert "fresh" in list(ET.fromstring(outputs["swatch sheet"]).itertext())
-    page.locator("#options").fill(outputs["configuration"])
-    page.locator("#registry").fill(outputs["registry"])
+    for label, field, kind in (
+        ("Load configuration file", "#options", "configuration"),
+        ("Load registry file", "#registry", "registry"),
+    ):
+        page.get_by_label(label).set_input_files(
+            {
+                "name": f"{kind}.json",
+                "mimeType": "application/json",
+                "buffer": outputs[kind].encode(),
+            }
+        )
+        expect(page.locator(field)).to_have_value(outputs[kind])
+        expect(status).to_have_text("1 distinct labels")
     page.get_by_role("button", name="Inspect palette").press("Enter")
     expect(status).to_have_text("1 distinct labels")
     if not clipboard:

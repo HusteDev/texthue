@@ -120,5 +120,25 @@ function editBrand(remove) {
 }
 document.getElementById('save-entry').onclick = () => editBrand(false);
 document.getElementById('remove-entry').onclick = () => editBrand(true);
+for (const [picker, destination] of [['config-file', 'options'], ['registry-file', 'registry']]) {
+  const input = document.getElementById(picker);
+  const field = document.getElementById(destination);
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const previous = field.value;
+    try {
+      const content = await file.text();
+      if (input.files[0] !== file || field.value !== previous) return;
+      JSON.parse(content);
+      field.value = content;
+      run();
+    } catch (error) {
+      if (input.files[0] === file) status.textContent = error.message;
+    } finally {
+      if (input.files[0] === file) input.value = '';
+    }
+  };
+}
 form.onsubmit = event => { event.preventDefault(); run(); };
 run();
