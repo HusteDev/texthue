@@ -7,6 +7,7 @@ package must be available.
 
 import hashlib
 import json
+import os
 import math
 import random
 import shutil
@@ -602,6 +603,7 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
                     command,
                     cwd=ROOT,
                     input=json.dumps(inputs, ensure_ascii=True),
+                    env={**os.environ, "DOTNET_NOLOGO": "1"},
                     text=True,
                     encoding="utf-8",
                     capture_output=True,
