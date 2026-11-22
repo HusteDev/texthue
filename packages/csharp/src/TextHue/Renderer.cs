@@ -59,6 +59,23 @@ public sealed class Renderer
         this.darkBackground = new(darkBackground ?? new Rgb(18, 18, 18));
     }
 
+    public IReadOnlyList<RenderedPalette> Batch(IEnumerable<string> labels)
+    {
+        ArgumentNullException.ThrowIfNull(labels);
+        var cache = new Dictionary<string, RenderedPalette>(StringComparer.Ordinal);
+        var result = new List<RenderedPalette>();
+        foreach (var label in labels)
+        {
+            if (!cache.TryGetValue(label, out var palette))
+            {
+                palette = Resolve(label);
+                cache.Add(label, palette);
+            }
+            result.Add(palette);
+        }
+        return result.AsReadOnly();
+    }
+
     public RenderedPalette Resolve(string text)
     {
         var (uH, uL, uC) = Identity.Fractions(Identity.Digest(text, scope, seed));

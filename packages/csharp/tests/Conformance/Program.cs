@@ -160,3 +160,28 @@ foreach (var row in vectors.EnumerateArray())
 }
 if (rendered != 32) throw new InvalidDataException("Unexpected renderer corpus size.");
 Console.WriteLine($"Passed {rendered} two-theme renderer cases.");
+
+var batchRenderer = new Renderer("scope", 42);
+string[] labels = ["é", "", "e\u0301", "é", "\0", "e\u0301"];
+var batch = batchRenderer.Batch(labels.Where(_ => true));
+if (batch.Count != labels.Length || batchRenderer.Batch([]).Count != 0 ||
+    !ReferenceEquals(batch[0], batch[3]) || !ReferenceEquals(batch[2], batch[5]) || batch[0].Hue == batch[2].Hue)
+    throw new InvalidDataException("Batch identity or duplicate reuse mismatch.");
+for (int i = 0; i < labels.Length; i++)
+{
+    var single = batchRenderer.Resolve(labels[i]);
+    if (batch[i].Hue != single.Hue || batch[i].HueFraction != single.HueFraction)
+        throw new InvalidDataException($"Batch identity mismatch at {i}");
+    foreach (var (actual, expected) in new[] { (batch[i].Light, single.Light), (batch[i].Dark, single.Dark) })
+        foreach (var (role, color) in expected)
+            if (actual[role].Hex != color.Hex) throw new InvalidDataException($"Batch role mismatch at {i}: {role}");
+}
+try
+{
+    batchRenderer.Batch(["ok", "\ud800"]);
+    throw new InvalidDataException("Batch accepted malformed UTF-16.");
+}
+catch (EncoderFallbackException) { }
+if (batchRenderer.Batch(["ok"])[0].Hue != batchRenderer.Resolve("ok").Hue)
+    throw new InvalidDataException("Failed batch affected later resolution.");
+Console.WriteLine("Passed ordered batch, duplicate, Unicode and failure checks.");
