@@ -67,8 +67,40 @@ impl Preset {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct BrandColors {
+    pub light: [u8; 3],
+    pub dark: [u8; 3],
+}
+
+#[derive(Clone, Copy)]
+struct FixedTone {
+    rgb: [u8; 3],
+    lightness: f64,
+    hue: f64,
+    neutral: bool,
+}
+
+impl From<[u8; 3]> for FixedTone {
+    fn from(rgb: [u8; 3]) -> Self {
+        let coordinates = Color::from(rgb).oklch;
+        Self {
+            rgb,
+            lightness: (coordinates.l * 4096.0).round() / 4096.0,
+            hue: ((coordinates.h * 1024.0).round() / 1024.0) % 360.0,
+            neutral: coordinates.c == 0.0,
+        }
+    }
+}
+
+struct Prepared {
+    domain: HueDomain,
+    overrides: HashMap<String, BrandColors>,
+}
+
 pub struct Renderer {
     pub preset: Preset,
+    pub overrides: BTreeMap<String, BrandColors>,
     pub foregrounds: Vec<[u8; 3]>,
     pub foreground_policy: ForegroundPolicy,
     pub hue_range: (f64, f64),
@@ -89,6 +121,7 @@ impl Default for Renderer {
     fn default() -> Self {
         Self {
             preset: Preset::Labels,
+            overrides: Default::default(),
             namespace: String::new(),
             foregrounds: vec![[0; 3], [255; 3]],
             foreground_policy: ForegroundPolicy::Best,
@@ -109,11 +142,11 @@ impl Default for Renderer {
 
 impl Renderer {
     pub fn resolve(&self, text: &str) -> Result<RenderedPalette, &'static str> {
-        let domain = self.validate()?;
+        let prepared = self.validate()?;
         self.resolve_normalized(
             &self.normalization.apply(text),
             &self.normalization.apply(&self.namespace),
-            &domain,
+            &prepared,
         )
     }
 
@@ -122,7 +155,7 @@ impl Renderer {
         &self,
         labels: impl IntoIterator<Item = S>,
     ) -> Result<Vec<Arc<RenderedPalette>>, &'static str> {
-        let domain = self.validate()?;
+        let prepared = self.validate()?;
         let scope = self.normalization.apply(&self.namespace);
         let mut cache = HashMap::new();
         let mut result = Vec::new();
@@ -132,7 +165,7 @@ impl Renderer {
                 Entry::Occupied(entry) => Arc::clone(entry.get()),
                 Entry::Vacant(entry) => {
                     let palette =
-                        Arc::new(self.resolve_normalized(entry.key(), &scope, &domain)?);
+                        Arc::new(self.resolve_normalized(entry.key(), &scope, &prepared)?);
                     entry.insert(Arc::clone(&palette));
                     palette
                 }
@@ -142,7 +175,7 @@ impl Renderer {
         Ok(result)
     }
 
-    fn validate(&self) -> Result<HueDomain, &'static str> {
+    fn validate(&self) -> Result<Prepared, &'static str> {
         if self.foregrounds.is_empty() {
             return Err("At least one foreground is required");
         }
@@ -167,32 +200,61 @@ impl Renderer {
                 return Err("Invalid role profile");
             }
         }
-        HueDomain::new(self.hue_range, &self.exclude_hues)
+        let domain = HueDomain::new(self.hue_range, &self.exclude_hues)?;
+        let mut overrides = HashMap::with_capacity(self.overrides.len());
+        for (key, colors) in &self.overrides {
+            if overrides
+                .insert(self.normalization.apply(key), *colors)
+                .is_some()
+            {
+                return Err("Duplicate normalized override");
+            }
+        }
+        Ok(Prepared { domain, overrides })
     }
 
     fn resolve_normalized(
         &self,
         text: &str,
         scope: &str,
-        domain: &HueDomain,
+        prepared: &Prepared,
     ) -> Result<RenderedPalette, &'static str> {
+        if let Some(colors) = prepared.overrides.get(text) {
+            let light = FixedTone::from(colors.light);
+            let dark = FixedTone::from(colors.dark);
+            let angle = if light.hue < ANCHORS[0] {
+                light.hue + 360.0
+            } else {
+                light.hue
+            };
+            let i = ANCHORS.partition_point(|&a| a <= angle) - 1;
+            let fraction = (i as f64 + (angle - ANCHORS[i]) / (ANCHORS[i + 1] - ANCHORS[i])) / 12.0;
+            return Ok(RenderedPalette {
+                version: "text-to-color-v1",
+                source: "override",
+                hue_fraction: fraction,
+                hue: light.hue,
+                light: self.theme(false, light.hue, 0.5, 0.5, Some(light)),
+                dark: self.theme(true, dark.hue, 0.5, 0.5, Some(dark)),
+            });
+        }
         let digest = identity_digest(text, scope, self.seed).map_err(|_| "Namespace too long")?;
         let [u_h, u_l, u_c] = identity_fractions(&digest);
         let position = u_h * 12.0;
         let i = position as usize;
         let hue = (ANCHORS[i] + (ANCHORS[i + 1] - ANCHORS[i]) * (position - i as f64)) % 360.0;
-        let hue = domain.map(hue);
+        let hue = prepared.domain.map(hue);
         Ok(RenderedPalette {
             version: "text-to-color-v1",
             source: "hash",
             hue_fraction: u_h,
             hue,
-            light: self.theme(false, hue, u_l, u_c),
-            dark: self.theme(true, hue, u_l, u_c),
+            light: self.theme(false, hue, u_l, u_c, None),
+            dark: self.theme(true, hue, u_l, u_c, None),
         })
     }
 
-    fn theme(&self, dark: bool, hue: f64, u_l: f64, u_c: f64) -> Theme {
+    fn theme(&self, dark: bool, hue: f64, u_l: f64, u_c: f64, fixed: Option<FixedTone>) -> Theme {
         let bg = if dark {
             self.dark_background
         } else {
@@ -273,7 +335,11 @@ impl Renderer {
                 Gamut::Srgb
                     .repair(
                         l,
-                        c.min(role.chroma_cap.unwrap_or(if fill { 0.16 } else { 0.19 })),
+                        if fixed.is_some_and(|tone| tone.neutral) {
+                            0.0
+                        } else {
+                            c.min(role.chroma_cap.unwrap_or(if fill { 0.16 } else { 0.19 }))
+                        },
                         hue,
                         if target == 0.0 { secondary } else { target },
                         |rgb| {
@@ -293,10 +359,13 @@ impl Renderer {
                     .color
                     .bytes
             };
-        let lf = sample(true);
+        let lf = fixed.map_or_else(|| sample(true), |tone| tone.lightness);
         let lt = sample(false);
         let subtle = tone(lb + direction * 0.04, true, unconstrained, Candidates, None);
-        let fill = tone(lf, true, required("fill"), Candidates, None);
+        let fill = fixed.map_or_else(
+            || tone(lf, true, required("fill"), Candidates, None),
+            |tone| tone.rgb,
+        );
         let on_fill = foreground(fill, required("fill"));
         [
             ("background", bg),
@@ -363,6 +432,42 @@ mod tests {
     use super::*;
     use serde::Deserialize;
     use serde_json::Value;
+    #[test]
+    fn normalized_overrides() {
+        let colors = BrandColors {
+            light: [0xab, 0x12, 0x34],
+            dark: [0x77; 3],
+        };
+        let mut renderer = Renderer {
+            normalization: Normalization {
+                lowercase: true,
+                ..Default::default()
+            },
+            overrides: [("TEAM".into(), colors)].into(),
+            ..Default::default()
+        };
+        let batch = renderer.batch(["Team", "team", "other"]).unwrap();
+        let p = &batch[0];
+        assert!(Arc::ptr_eq(p, &batch[1]));
+        assert_eq!(p.source, "override");
+        assert_eq!(p.hue, 17.6767578125);
+        assert_eq!(p.hue_fraction, 0.01669445425766595);
+        assert_eq!(p.light["fill"].hex, "#ab1234");
+        assert_eq!(p.light["fillHover"].hex, "#8e313b");
+        assert_eq!(p.dark["fill"].hex, "#777777");
+        assert_eq!(p.dark["fillActive"].hex, "#868686");
+        assert_eq!(batch[2].source, "hash");
+        renderer.contrast_model = ContrastModel::Apca;
+        renderer.contrast_target = Some(106.0);
+        renderer.foregrounds = vec![[0x77; 3]];
+        assert_eq!(
+            renderer.resolve("team").unwrap().dark["fill"].rgb,
+            colors.dark
+        );
+        renderer.overrides.insert("team".into(), colors);
+        assert!(renderer.batch(std::iter::empty::<&str>()).is_err());
+    }
+
     #[test]
     fn shared_presets() {
         let rows: Vec<Value> =

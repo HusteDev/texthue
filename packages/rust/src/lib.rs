@@ -4,7 +4,7 @@ pub use composite::composite_over;
 mod renderer;
 mod tables;
 pub use renderer::{
-    ForegroundPolicy, Preset, RenderedPalette, Renderer, RoleProfile, ThemeProfile,
+    BrandColors, ForegroundPolicy, Preset, RenderedPalette, Renderer, RoleProfile, ThemeProfile,
 };
 mod color;
 pub use color::{Color, Hsl, Oklch};
