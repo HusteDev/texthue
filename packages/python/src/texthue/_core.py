@@ -178,9 +178,13 @@ def _foreground(rgb):
     return black if _contrast(rgb, black) >= _contrast(rgb, white) else white
 
 
-def _oklch(rgb, matrix):
+def _oklab(rgb, matrix):
     xyz = _multiply(matrix, [_decode(channel / 255) for channel in rgb])
-    lab = _multiply(_LMS_TO_LAB, [math.cbrt(value) for value in _multiply(_XYZ_TO_LMS, xyz)])
+    return _multiply(_LMS_TO_LAB, [math.cbrt(value) for value in _multiply(_XYZ_TO_LMS, xyz)])
+
+
+def _oklch(rgb, matrix):
+    lab = _oklab(rgb, matrix)
     neutral = rgb[0] == rgb[1] == rgb[2]
     chroma = 0 if neutral else math.sqrt(lab[1] * lab[1] + lab[2] * lab[2])
     ok_hue = 0 if neutral else ((math.atan2(lab[2], lab[1]) * 180 / math.pi) % 360 + 360) % 360

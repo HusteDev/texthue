@@ -23,7 +23,7 @@
       }
     },
     "report": {
-      "minDistance": 0.0659912412763756,
+      "minDistance": 0.06599095450708506,
       "closestPairs": [
         [
           "1",
@@ -81,7 +81,7 @@
       }
     },
     "report": {
-      "minDistance": 0.0659912412763756,
+      "minDistance": 0.06599095450708506,
       "closestPairs": [
         [
           "1",
@@ -178,7 +178,7 @@
       }
     },
     "report": {
-      "minDistance": 0.05427451095694076,
+      "minDistance": 0.05427440957080404,
       "closestPairs": [
         [
           "11",
@@ -389,7 +389,7 @@
       }
     },
     "report": {
-      "minDistance": 0.015671089800092387,
+      "minDistance": 0.015671035262535757,
       "closestPairs": [
         [
           "13",
@@ -463,7 +463,7 @@
       }
     },
     "report": {
-      "minDistance": 0.05397195589269971,
+      "minDistance": 0.05397194707193586,
       "closestPairs": [
         [
           "b",
@@ -512,7 +512,7 @@
       }
     },
     "report": {
-      "minDistance": 0.19128639220812338,
+      "minDistance": 0.1912860893704612,
       "closestPairs": [
         [
           "fixed-2",
@@ -580,7 +580,7 @@
       }
     },
     "report": {
-      "minDistance": 0.07727613812870468,
+      "minDistance": 0.07727635439073621,
       "closestPairs": [
         [
           "two",

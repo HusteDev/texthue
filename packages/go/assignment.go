@@ -105,9 +105,8 @@ func (r *Resolver) Assign(texts []string, pinned map[string]Assignment) (Collect
 		color := r.render(digest, &p, name)
 		result.Colors[name] = color
 		unique[color.Light.Fill.Hex] = true
-		tone := color.Light.Fill.OKLCH
-		angle := tone.H * math.Pi / 180
-		points[i] = triple{tone.L, tone.C * math.Cos(angle), tone.C * math.Sin(angle)}
+		rgb := color.Light.Fill.RGB
+		points[i] = encodedOKLab(encodedRGB{float64(rgb.R), float64(rgb.G), float64(rgb.B)}, rgbToXYZ)
 	}
 	for i, a := range points {
 		for j := i + 1; j < len(points); j++ {

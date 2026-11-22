@@ -1,5 +1,5 @@
-import {createResolver, cssVariables, importConfig} from '../packages/npm/dist/index.js';
 import {analyzePalette, simulateVision} from '../packages/npm/dist/diagnostics.js';
+import {createResolver, cssVariables, importConfig} from '../packages/npm/dist/index.js';
 
 export function inspect({labels, options, theme, vision, registry}) {
   const resolver = options && Object.hasOwn(options, 'schema') ? importConfig(options) : createResolver(options);

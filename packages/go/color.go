@@ -396,13 +396,17 @@ func p3APCAContrast(text, background encodedRGB) float64 {
 	return weightedAPCA(text, background, triple{0.2289829594805780, 0.6917492625852380, 0.0792677779341829})
 }
 
-func encodedOKLCH(rgb encodedRGB, matrixToXYZ matrix) OKLCH {
+func encodedOKLab(rgb encodedRGB, matrixToXYZ matrix) triple {
 	r, g, b := rgb[0]/255, rgb[1]/255, rgb[2]/255
 	lms := multiply(xyzToLMS, multiply(matrixToXYZ, triple{decode(r), decode(g), decode(b)}))
 	for i, value := range lms {
 		lms[i] = math.Cbrt(value)
 	}
-	lab := multiply(lmsToLab, lms)
+	return multiply(lmsToLab, lms)
+}
+
+func encodedOKLCH(rgb encodedRGB, matrixToXYZ matrix) OKLCH {
+	lab := encodedOKLab(rgb, matrixToXYZ)
 	chroma, okHue := 0.0, 0.0
 	if rgb[0] != rgb[1] || rgb[1] != rgb[2] {
 		chroma = math.Sqrt(float64(lab[1]*lab[1]) + float64(lab[2]*lab[2]))

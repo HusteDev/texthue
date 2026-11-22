@@ -53,9 +53,8 @@ def assign_collection(texts, pinned, compiled):
             natural = int.from_bytes(digest[:4], "big") / 4294967296
             assignments[name] = _place(natural, assignments.values(), separation)
         colors[name] = ColorSet.from_dict(_core.render(name, *compiled, assignments[name], digest))
-        tone = colors[name].light.fill.oklch
-        angle = tone.h * math.pi / 180
-        points.append((name, (tone.l, tone.c * math.cos(angle), tone.c * math.sin(angle))))
+        rgb = colors[name].light.fill.rgb
+        points.append((name, _core._oklab((rgb.r, rgb.g, rgb.b), _core._RGB_TO_XYZ)))
     minimum = None
     closest = []
     for (first, a), (second, b) in combinations(points, 2):
