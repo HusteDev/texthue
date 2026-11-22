@@ -402,3 +402,41 @@ foreach (var model in new[] { ContrastModel.Wcag2, ContrastModel.Apca })
         throw new InvalidDataException("Unconstrained background changed");
 }
 Console.WriteLine("Passed strict WCAG and APCA role selection.");
+
+using var rendererVectors = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "renderer-v1.json")));
+int checkedApcaReports = 0;
+foreach (var row in rendererVectors.RootElement.GetProperty("vectors").EnumerateArray())
+{
+    var options = row.GetProperty("options");
+    if (!options.TryGetProperty("contrastModel", out var model) || model.GetString() != "apca") continue;
+    Rgb ReadHexColor(JsonElement hex)
+    {
+        var bytes = Convert.FromHexString(hex.GetString()![1..]);
+        return new(bytes[0], bytes[1], bytes[2]);
+    }
+    var renderer = new Renderer(contrastModel: ContrastModel.Apca,
+        contrastTarget: options.GetProperty("contrastTarget").GetDouble(),
+        foregrounds: options.TryGetProperty("foregrounds", out var candidates)
+            ? candidates.EnumerateArray().Select(ReadHexColor) : null,
+        overrides: options.TryGetProperty("overrides", out var fixedColors)
+            ? fixedColors.EnumerateObject().ToDictionary(e => e.Name, e => new BrandColors(ReadHexColor(e.Value), ReadHexColor(e.Value))) : null);
+    var palette = renderer.Resolve(row.GetProperty("text").GetString()!);
+    var role = row.GetProperty("role").GetString()!;
+    foreach (var (theme, report) in new[] { ("light", palette.LightContrast), ("dark", palette.DarkContrast) })
+    {
+        var expected = row.GetProperty("themes").GetProperty(theme).GetProperty("contrast");
+        var actual = report[role];
+        if (actual.Model != ContrastModel.Apca ||
+            Math.Abs(actual.Value - expected.GetProperty("value").GetDouble()) > 1e-10 ||
+            Math.Abs(actual.Ratio - expected.GetProperty("ratio").GetDouble()) > 1e-10 ||
+            actual.MeetsTarget != expected.GetProperty("meetsTarget").GetBoolean() ||
+            actual.LightnessAdjusted != expected.GetProperty("lightnessAdjusted").GetBoolean() ||
+            actual.ChromaCapped != expected.GetProperty("chromaCapped").GetBoolean() ||
+            actual.ChromaReduced != expected.GetProperty("chromaReduced").GetBoolean() ||
+            actual.Fallback != expected.GetProperty("fallback").GetString())
+            throw new InvalidDataException($"APCA report mismatch for {theme} {role}: {actual} vs {expected}");
+        checkedApcaReports++;
+    }
+}
+if (checkedApcaReports < 10) throw new InvalidDataException("Missing APCA report fixtures");
+Console.WriteLine($"Passed {checkedApcaReports} frozen APCA relationship reports.");
