@@ -1,7 +1,28 @@
 import {createResolver, importConfig} from '../packages/npm/dist/index.js';
 
+// Replay records store effective values. Recover preset-dependent defaults before editing.
+function editableReplay(input) {
+  const options = importConfig(input).exportConfig().options;
+  const defaults = createResolver({preset:options.preset, contrastModel:options.contrastModel ?? 'wcag2'}).exportConfig().options;
+  const inheritedTargets = createResolver({
+    preset:options.preset, contrastModel:options.contrastModel ?? 'wcag2', contrastTarget:options.contrastTarget,
+  }).exportConfig().options.contrastTargets;
+  if (options.contrastTarget === defaults.contrastTarget) delete options.contrastTarget;
+  for (const role of Object.keys(options.contrastTargets)) {
+    if (options.contrastTargets[role] === inheritedTargets[role]) delete options.contrastTargets[role];
+  }
+  for (const theme of ['light','dark']) {
+    for (const role of ['fill','text']) {
+      const profile = options.profiles[theme][role];
+      const scale = defaults.profiles[theme][role].chromaScale;
+      if (profile.chromaScale.every((value,index) => value === scale[index])) delete profile.chromaScale;
+    }
+  }
+  return options;
+}
+
 export function editOptions(input, {preset, entry, remove}) {
-  const source = input && Object.hasOwn(input, 'schema') ? importConfig(input).exportConfig().options : input;
+  const source = input && Object.hasOwn(input, 'schema') ? editableReplay(input) : input;
   createResolver(source);
   const options = {...source};
   if (preset) options.preset = preset;

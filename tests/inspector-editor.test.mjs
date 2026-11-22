@@ -17,3 +17,14 @@ test('edit presets and palette IDs while preserving unrelated settings and valid
   assert.throws(() => editOptions({...config,fingerprint:'bad'},{entry}),/fingerprint/i);
   assert.deepEqual(source,{namespace:'team'});
 });
+
+test('changing a replayed preset updates inherited targets and chroma but retains custom settings', () => {
+  const input = {labels:['pear'],theme:'light',vision:'normal'};
+  const original = {namespace:'team',contrastTargets:{text:9},profiles:{dark:{text:{chromaScale:[0.3,0.4]}}}};
+  const replay = inspect({...input,options:original}).config;
+  for (const preset of ['controls','mono']) {
+    const edited = inspect({...input,options:editOptions(replay,{preset})});
+    const expected = inspect({...input,options:{...original,preset}});
+    assert.deepEqual(edited,expected);
+  }
+});
