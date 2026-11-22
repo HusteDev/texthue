@@ -1,10 +1,11 @@
 """Compile CSS in an isolated application using the packed TextHue packages."""
 
-import json
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+
+from adapter_archives import adapter_archives
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -13,14 +14,7 @@ def main():
     npm = shutil.which("npm.cmd") or shutil.which("npm")
     with tempfile.TemporaryDirectory() as tmp:
         app = Path(tmp)
-        archives = []
-        for package in ("npm", "tailwind"):
-            output = subprocess.check_output(
-                [npm, "pack", "--json", "--pack-destination", tmp],
-                cwd=ROOT / "packages" / package,
-                text=True,
-            )
-            archives.append(str(app / json.loads(output)[0]["filename"]))
+        archives = adapter_archives(npm, "tailwind", app)
         (app / "package.json").write_text('{"private":true,"type":"module"}', encoding="utf-8")
         subprocess.run(
             [

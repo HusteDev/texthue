@@ -18,6 +18,11 @@ For Rust distribution testing, run `python tools/stage-rust.py .cache/rust-stagi
 
 These local checks exercise the listed packages. Public registry delivery for these rows requires separate publishing integration.
 
+New drafts retain the React and Tailwind tarballs tested against the staged core
+tarball. To replay those consumer tests against a downloaded bundle, run
+`python tools/check-react-consumers.py --archives artifacts` and
+`python tools/check-tailwind-consumer.py --archives artifacts`.
+
 New draft bundles also contain `TextHue.<version>.nupkg` and `texthue-<version>.crate`.
 The build job exercises the NuGet consumer and runs the unpacked crate's tests
 and example before recording the archive digests.

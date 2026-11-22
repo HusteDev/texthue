@@ -273,16 +273,21 @@ class GoTargetStateTests(unittest.TestCase):
 
 
 class ReleaseManifestTests(unittest.TestCase):
-    def test_staged_native_archives_are_verified_on_resume(self):
+    def test_staged_additional_archives_are_verified_on_resume(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            additional = (
+                "TextHue.1.0.0.nupkg",
+                "texthue-1.0.0.crate",
+                "texthue-1.0.0-maven.zip",
+                "texthue-react-1.0.0.tgz",
+                "texthue-tailwind-1.0.0.tgz",
+            )
             for name in (
                 "texthue-1.0.0.tgz",
                 "texthue-1.0.0.tar.gz",
                 "texthue-1.0.0-py3-none-any.whl",
-                "TextHue.1.0.0.nupkg",
-                "texthue-1.0.0.crate",
-                "texthue-1.0.0-maven.zip",
+                *additional,
             ):
                 (root / name).write_bytes(name.encode())
             manifest = release.ReleaseManifest.from_artifacts(
@@ -293,7 +298,7 @@ class ReleaseManifestTests(unittest.TestCase):
                 "".join(f"{v}  {k}\n" for k, v in manifest.archives.items())
             )
             release.verify_bundle("1.0.0", "abc", root)
-            for name in ("TextHue.1.0.0.nupkg", "texthue-1.0.0.crate", "texthue-1.0.0-maven.zip"):
+            for name in additional:
                 with self.subTest(archive=name):
                     archive = root / name
                     archive.write_bytes(b"replacement")

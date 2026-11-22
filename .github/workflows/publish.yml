@@ -138,6 +138,16 @@ jobs:
         run: python tools/verify.py
       - if: steps.bundle.outputs.state == 'absent'
         run: python tools/build-packages.py
+      - name: Pack and verify React and Tailwind adapters
+        if: steps.bundle.outputs.state == 'absent'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          npm pack ./packages/react ./packages/tailwind --pack-destination artifacts
+          python tools/check-react-consumers.py --archives artifacts
+          python tools/check-tailwind-consumer.py --archives artifacts
+          (cd artifacts && sha256sum "texthue-react-${VERSION}.tgz" "texthue-tailwind-${VERSION}.tgz" >> SHA256SUMS)
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         if: steps.bundle.outputs.state == 'absent'
         with:
