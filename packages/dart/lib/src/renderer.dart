@@ -129,6 +129,14 @@ final class Renderer {
     }
   }
 
+  /// Resolves labels in input order and shares duplicate results within this call.
+  List<RenderedPalette> batch(Iterable<String> labels) {
+    final cache = <String, RenderedPalette>{};
+    return [
+      for (final label in labels) cache.putIfAbsent(label, () => resolve(label))
+    ];
+  }
+
   RenderedPalette resolve(String text) {
     final f = identityFractions(
         identityDigest(text, namespace: namespace, seed: seed));
