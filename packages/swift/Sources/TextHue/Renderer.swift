@@ -298,13 +298,16 @@ public struct Renderer {
     }
 
     private func resolveNormalized(_ name: String) throws -> RenderedPalette {
-        let mapped = try mapping(name)
+        try render(mapping(name))
+    }
+
+    private func render(_ mapped: Mapping) throws -> RenderedPalette {
         return try RenderedPalette(version: "text-to-color-v1", source: mapped.source, hueFraction: mapped.fraction,
                                    hue: mapped.hue, lightTheme: theme("light", mapped), darkTheme: theme("dark", mapped))
     }
 
     private typealias Mapping = (source: String, fraction: Double, hue: Double, l: Double, c: Double,
-                                 light: FixedTone?, dark: FixedTone?)
+                                 light: FixedTone?, dark: FixedTone?, ring: Int)
 
     public func color(_ text: String, dark: Bool = false, role: String = "fill") throws -> Color {
         let bytes = try selected(text, dark, role)
@@ -320,14 +323,14 @@ public struct Renderer {
         return try rawTheme(dark ? "dark" : "light", mapped, [role]).roles[role]!
     }
 
-    private func mapping(_ name: String) throws -> Mapping {
+    private func mapping(_ name: String, digest existing: [UInt8]? = nil) throws -> Mapping {
         func fixed(_ light: FixedTone, _ dark: FixedTone, source: String) -> Mapping {
-            (source, light.fraction, light.hue, 0.5, 0.5, light, dark)
+            (source, light.fraction, light.hue, 0.5, 0.5, light, dark, 0)
         }
         if let (light, dark) = fixedColors[Data(name.utf8)] {
             return fixed(light, dark, source: "override")
         }
-        let digest = try identityDigest(name, namespace: scope, seed: options.seed ?? 0)
+        let digest = try existing ?? identityDigest(name, namespace: scope, seed: options.seed ?? 0)
         var bestRank: [UInt8] = []
         var winner: RankedEntry?
         for entry in rankedEntries {
@@ -339,11 +342,14 @@ public struct Renderer {
         }
         if let winner { return fixed(winner.light, winner.dark, source: "palette") }
         let fractions = identityFractions(digest)
-        let position = fractions[0] * 12, slot = Int(position)
+        return ("hash", fractions[0], mappedHue(fractions[0]), fractions[1], fractions[2], nil, nil, 0)
+    }
+
+    private func mappedHue(_ fraction: Double) -> Double {
+        let position = fraction * 12, slot = Int(position)
         let naturalHue = (anchors[slot] + (anchors[slot + 1] - anchors[slot]) * (position - Double(slot)))
             .truncatingRemainder(dividingBy: 360)
-        let hue = hueDomain.map(naturalHue)
-        return ("hash", fractions[0], hue, fractions[1], fractions[2], nil, nil)
+        return hueDomain.map(naturalHue)
     }
 
     private typealias Flags = (adjusted: Bool, capped: Bool, reduced: Bool, fallback: String?)
@@ -370,8 +376,8 @@ public struct Renderer {
             let cap = fixed?.neutral == true ? 0 : profile?.chromaCap ?? (fill ? 0.16 : 0.19)
             let bias = biases[(dark ? 2 : 0) + (fill ? 0 : 1)], sector = Int(hue / 30)
             let offset = bias[sector] + (bias[(sector + 1) % 12] - bias[sector]) * (hue / 30 - Double(sector))
-            return (min(1, max(0, range[0] + (range[1] - range[0]) * uL + offset)),
-                    scale[0] + (scale[1] - scale[0]) * uC, cap)
+            return (min(1, max(0, range[0] + (range[1] - range[0]) * uL + offset + Placement.offsets[mapped.ring])),
+                    (scale[0] + (scale[1] - scale[0]) * uC) * (mapped.ring < 3 ? 1 : 0.6), cap)
         }
         let fillP = sampled("fill"), textP = sampled("text")
         func score(_ a: [UInt8], _ b: [UInt8]) -> Double {
@@ -460,5 +466,44 @@ public struct Renderer {
         }
         return ReportedTheme(colors: roles.mapValues { Color(rgb: RGB(r: $0[0], g: $0[1], b: $0[2])) },
                              contrast: ContrastReport(target: target, relationships: relationships))
+    }
+}
+
+extension Renderer {
+    /// Registry keys are normalized UTF-8 bytes to preserve distinctions lost by String equality.
+    public func assign(_ texts: [String], pinned: [Data: Placement] = [:]) throws -> Assignment {
+        func key(_ text: String) -> Data { Data(normalization.apply(text).utf8) }
+        let names = Set(texts.map(key))
+        var placements: [Data: Placement] = [:]
+        for (bytes, pin) in pinned {
+            guard let text = String(data: bytes, encoding: .utf8), (0..<1).contains(pin.hueFraction),
+                  (0...9007199254740991).contains(pin.ring),
+                  placements.updateValue(pin, forKey: key(text)) == nil else { throw RenderError.invalidOptions }
+        }
+        let size = names.union(placements.keys).count
+        let separation = 1 / Double(min(24, max(12, size)))
+        let entries = try names.map { bytes in
+            let name = String(decoding: bytes, as: UTF8.self)
+            let digest = try identityDigest(name, namespace: scope, seed: options.seed ?? 0)
+            return (bytes, digest, try mapping(name, digest: digest))
+        }.sorted { $0.1.lexicographicallyPrecedes($1.1) }
+        for (name, _, mapped) in entries where mapped.light != nil && placements[name] == nil {
+            placements[name] = Placement(hueFraction: mapped.fraction, ring: 0, moved: false)
+        }
+        var colors: [Data: RenderedPalette] = [:]
+        for (name, _, original) in entries {
+            var mapped = original
+            let p = placements[name] ?? Placement.choose(mapped.fraction, placements.values, separation)
+            placements[name] = p
+            mapped.ring = Int(p.ring % Int64(Placement.offsets.count))
+            if mapped.light == nil {
+                mapped.source = "assigned"
+                mapped.fraction = p.hueFraction
+                mapped.hue = mappedHue(p.hueFraction)
+            }
+            colors[name] = try render(mapped)
+        }
+        return Assignment(assignments: placements, colors: colors, report: AssignmentReport(
+            fills: entries.map { ($0.0, colors[$0.0]!.light["fill"]!) }, size: size, separation: separation))
     }
 }

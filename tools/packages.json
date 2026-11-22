@@ -85,6 +85,7 @@
         { "source": "root:conformance/presets-v1.json", "dest": "Tests/TextHueTests/Fixtures/presets-v1.json" },
         { "source": "root:conformance/renderer-v1.json", "dest": "Tests/TextHueTests/Fixtures/renderer-v1.json" },
         { "source": "root:conformance/tone-repair-v1.tsv", "dest": "Tests/TextHueTests/Fixtures/tone-repair-v1.tsv" },
+        { "source": "root:conformance/assign-vectors.json", "dest": "Tests/TextHueTests/Fixtures/assign-vectors.json" },
         { "source": "root:conformance/vectors.json", "dest": "Tests/TextHueTests/Fixtures/vectors.json" }
       ],
       "verifyCommands": [["swift", "test", "--force-resolved-versions"], ["python", "../../tools/check-swift-example.py"]],

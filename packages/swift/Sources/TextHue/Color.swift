@@ -51,6 +51,12 @@ public struct Color: Codable, Equatable {
         "#" + bytes.map { String(format: "%02x", $0) }.joined()
     }
 
+    static func lab(_ values: [Double]) -> [Double] {
+        let linear = values.map(linearChannel)
+        let xyz = multiply(Self.rgbToXYZ, linear)
+        return multiply(Self.lmsToLab, multiply(Self.xyzToLMS, xyz).map { cbrt($0) })
+    }
+
     public init(rgb: RGB) {
         func round6(_ value: Double) -> Double { floor(value * 1e6 + 0.5) / 1e6 }
         self.rgb = rgb
@@ -69,9 +75,7 @@ public struct Color: Codable, Equatable {
         }
         hsl = HSL(h: round6(60 * hue).truncatingRemainder(dividingBy: 360),
                   s: round6(saturation * 100), l: round6(light * 100))
-        let linear = values.map(linearChannel)
-        let xyz = multiply(Self.rgbToXYZ, linear)
-        let lab = multiply(Self.lmsToLab, multiply(Self.xyzToLMS, xyz).map { cbrt($0) })
+        let lab = Self.lab(values)
         let neutral = rgb.r == rgb.g && rgb.g == rgb.b
         let angle = atan2(lab[2], lab[1]) * 180 / .pi
         let degrees = (angle + 360).truncatingRemainder(dividingBy: 360)
