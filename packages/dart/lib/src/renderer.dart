@@ -146,12 +146,14 @@ final class Renderer {
   final HueDomain _hues;
   final _palette = <_RankedTone>[];
   final _overrides = <String, (_FixedTone, _FixedTone)>{};
-  final List<List<int>> _foregrounds;
+  final Gamut gamut;
+  final List<List<num>> _foregrounds;
   final _Background _light, _dark;
   Renderer(
       {this.namespace = '',
       this.normalization = const Normalization(),
       this.seed = 0,
+      this.gamut = Gamut.sRGB,
       this.lightProfile = const ThemeProfile(),
       this.darkProfile = const ThemeProfile(),
       this.contrastModel = ContrastModel.wcag2,
@@ -175,7 +177,9 @@ final class Renderer {
                     : 4.5),
         contrastTargets = Map.unmodifiable(contrastTargets),
         _hues = HueDomain(hueRange, excludeHues),
-        _foregrounds = foregrounds.map(_parseHex).toList(growable: false),
+        _foregrounds = foregrounds
+            .map((hex) => canonicalChannels(_parseHex(hex), gamut))
+            .toList(growable: false),
         _light = _Background(lightBackground),
         _dark = _Background(darkBackground) {
     for (final entry in overrides.entries) {
@@ -210,7 +214,9 @@ final class Renderer {
       final passing = <_RankedTone>[];
       final target = contrastTargets['fill'] ?? this.contrastTarget;
       bool passes(_FixedTone tone) => _foregrounds.any((color) =>
-          measureContrast(color, tone.bytes, model: contrastModel).abs() >=
+          measureContrast(color, canonicalChannels(tone.bytes, gamut),
+                  model: contrastModel, gamut: gamut)
+              .abs() >=
           target);
       for (final entry in palette) {
         validateUtf16(entry.id);
@@ -242,7 +248,7 @@ final class Renderer {
   RenderedPalette resolve(String text) =>
       _resolveNormalized(normalization.apply(text));
 
-  List<int> _selected(String text, bool dark, String role,
+  List<num> _selected(String text, bool dark, String role,
           {bool strict = false}) =>
       _theme(
           dark, _mapping(normalization.apply(text)), role, 0, strict)[role] ??
@@ -250,12 +256,22 @@ final class Renderer {
 
   String hex(String text,
           {bool dark = false, String role = 'fill', bool strict = false}) =>
-      rgbHex(_selected(text, dark, role, strict: strict));
+      _hex(_selected(text, dark, role, strict: strict));
 
   Color color(String text, {bool dark = false, String role = 'fill'}) {
     final bytes = _selected(text, dark, role);
-    return Color.fromRgb(bytes[0], bytes[1], bytes[2]);
+    return _display(bytes);
   }
+
+  Color _display(List<num> channels) => gamut == Gamut.displayP3
+      ? Color.fromDisplayP3(
+          channels[0] / 255, channels[1] / 255, channels[2] / 255)
+      : Color.fromRgb(
+          channels[0].toInt(), channels[1].toInt(), channels[2].toInt());
+
+  String _hex(List<num> channels) => rgbHex(gamut == Gamut.displayP3
+      ? p3Fallback(channels).bytes
+      : channels.cast<int>());
 
   RenderedPalette _resolveNormalized(String text) => _render(_mapping(text));
 
@@ -264,7 +280,7 @@ final class Renderer {
         darkReport = <String, ContrastRelationship>{};
     Map<String, Color> theme(bool dark) => Map.unmodifiable(_theme(
             dark, mapping, null, ring, false, dark ? darkReport : lightReport)
-        .map((role, v) => MapEntry(role, Color.fromRgb(v[0], v[1], v[2]))));
+        .map((role, v) => MapEntry(role, _display(v))));
     return (
       version: 'text-to-color-v1',
       source: mapping.source,
@@ -318,7 +334,7 @@ final class Renderer {
         .map((anchors[i] + (anchors[i + 1] - anchors[i]) * (pos - i)) % 360);
   }
 
-  Map<String, List<int>> _theme(bool dark, _Mapping mapping,
+  Map<String, List<num>> _theme(bool dark, _Mapping mapping,
       [String? selected,
       int ring = 0,
       bool strict = false,
@@ -326,6 +342,7 @@ final class Renderer {
     final fixed = dark ? mapping.fixed?.$2 : mapping.fixed?.$1;
     final hue = fixed?.hue ?? mapping.hue, uL = mapping.uL, uC = mapping.uC;
     final base = dark ? _dark : _light, direction = dark ? 1 : -1;
+    final bg = canonicalChannels(base.bytes, gamut);
     double target(String role) =>
         contrastTargets[role] ??
         (role == 'border' && contrastModel == ContrastModel.wcag2
@@ -349,10 +366,10 @@ final class Renderer {
           .clamp(0.0, 1.0);
     }
 
-    double score(List<int> text, List<int> bg) =>
-        measureContrast(text, bg, model: contrastModel).abs();
+    double score(List<num> text, List<num> bg) =>
+        measureContrast(text, bg, model: contrastModel, gamut: gamut).abs();
     final unconstrained = contrastModel == ContrastModel.apca ? 0.0 : 1.0;
-    List<int> foreground(List<int> rgb, double required) {
+    List<num> foreground(List<num> rgb, double required) {
       var best = _foregrounds.first;
       var bestScore = -1.0;
       for (final candidate in _foregrounds) {
@@ -368,19 +385,19 @@ final class Renderer {
     }
 
     final flags = report == null ? null : <String, _Adjustment>{};
-    List<int> tone(String name, double value, bool fill, double threshold,
-        {List<int>? background, List<int>? subtle, bool surface = false}) {
+    List<num> tone(String name, double value, bool fill, double threshold,
+        {List<num>? background, List<num>? subtle, bool surface = false}) {
       final l = value.clamp(0.0, 1.0);
       final role = fill ? profile.fill : profile.text;
       final scale = role?.chromaScale ?? (preset.low, preset.high);
       final cap = fixed?.neutral == true
           ? 0.0
           : role?.chromaCap ?? (fill ? 0.16 : 0.19);
-      final requested = Gamut.sRGB.cusp(l, hue) *
+      final requested = gamut.cusp(l, hue) *
           ((scale.$1 + (scale.$2 - scale.$1) * uC) * (ring % 5 < 3 ? 1 : 0.6));
       final c = math.min(cap, requested);
       final secondary = subtle == null ? 0.0 : target('textOnSubtle');
-      final repaired = Gamut.sRGB
+      final repaired = gamut
           .repair(l, c, hue, threshold == 0 ? secondary : threshold, (bytes) {
         final primary = background == null
             ? score(foreground(bytes, threshold), bytes)
@@ -407,11 +424,12 @@ final class Renderer {
         lt = sample(false);
     late final subtle =
         tone('subtle', lb + direction * 0.04, true, unconstrained);
-    late final fill = fixed?.bytes ?? tone('fill', lf, true, target('fill')),
+    late final fill = fixed != null
+            ? canonicalChannels(fixed.bytes, gamut)
+            : tone('fill', lf, true, target('fill')),
         onFill = foreground(fill, target('fill'));
     final colors = {
-      if (selected == null || selected == 'background')
-        'background': base.bytes,
+      if (selected == null || selected == 'background') 'background': bg,
       if (selected == null || selected == 'subtle') 'subtle': subtle,
       if (selected == null || selected == 'muted')
         'muted': tone('muted', lb + direction * 0.10, true, unconstrained),
@@ -427,17 +445,17 @@ final class Renderer {
             background: onFill, surface: true),
       if (selected == null || selected == 'border')
         'border': tone('border', lb + direction * 0.39, true, target('border'),
-            background: base.bytes),
+            background: bg),
       if (selected == null || selected == 'text')
         'text': tone('text', lt, false, target('text'),
-            background: base.bytes, subtle: subtle),
+            background: bg, subtle: subtle),
       if (selected == null || selected == 'strong')
         'strong': tone('strong', lt + direction * 0.10, false, target('strong'),
-            background: base.bytes)
+            background: bg)
     };
     if (strict && selected != null && colors.containsKey(selected)) {
       final value = colors[selected]!;
-      void require(String pair, List<int> front, List<int> back) {
+      void require(String pair, List<num> front, List<num> back) {
         if (score(front, back) < target(pair)) {
           throw StateError('Contrast target for $pair was not met');
         }
@@ -449,10 +467,10 @@ final class Renderer {
         case 'fill' || 'fillHover' || 'fillActive':
           require(selected, onFill, value);
         case 'text':
-          require('text', value, base.bytes);
+          require('text', value, bg);
           require('textOnSubtle', value, subtle);
         case 'strong' || 'border':
-          require(selected, value, base.bytes);
+          require(selected, value, bg);
       }
     }
     if (report != null) {
@@ -466,14 +484,14 @@ final class Renderer {
         ('border', 'border', 'background')
       ]) {
         final value = measureContrast(colors[front]!, colors[back]!,
-            model: contrastModel);
+            model: contrastModel, gamut: gamut);
         final passes = value.abs() >= target(pair);
         final adjustment = flags![pair == 'textOnSubtle' ? 'text' : pair];
         report[pair] = (
           ratio: contrastModel == ContrastModel.wcag2
               ? value
               : measureContrast(colors[front]!, colors[back]!,
-                  model: ContrastModel.wcag2),
+                  model: ContrastModel.wcag2, gamut: gamut),
           model: contrastModel,
           value: value,
           meetsTarget: passes,

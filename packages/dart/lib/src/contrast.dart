@@ -8,7 +8,7 @@ double linearChannel(double encoded) => encoded <= 0.04045
     ? encoded / 12.92
     : math.pow((encoded + 0.055) / 1.055, 2.4).toDouble();
 
-double measureContrast(List<int> text, List<int> background,
+double measureContrast(List<num> text, List<num> background,
     {ContrastModel model = ContrastModel.wcag2, Gamut gamut = Gamut.sRGB}) {
   final weights = switch ((gamut, model)) {
     (Gamut.sRGB, ContrastModel.wcag2) => const [0.2126, 0.7152, 0.0722],
@@ -24,13 +24,15 @@ double measureContrast(List<int> text, List<int> background,
         0.0792677779341829
       ],
   };
-  double luminance(List<int> rgb) {
+  double luminance(List<num> rgb) {
     if (rgb.length != 3)
       throw ArgumentError.value(rgb, 'rgb', 'Expected three channels');
     var sum = 0.0;
     for (var i = 0; i < 3; i++) {
-      final x =
-          RangeError.checkValueInInterval(rgb[i], 0, 255, 'channel') / 255;
+      final channel = rgb[i];
+      if (!(channel >= 0 && channel <= 255))
+        throw RangeError.range(channel, 0, 255, 'channel');
+      final x = channel / 255;
       sum += weights[i] *
           (model == ContrastModel.apca ? math.pow(x, 2.4) : linearChannel(x));
     }

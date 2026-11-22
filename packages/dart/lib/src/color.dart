@@ -2,11 +2,6 @@ import 'dart:math' as math;
 import 'contrast.dart';
 import 'gamut_fit.dart';
 
-const _rgbToXYZ = <List<double>>[
-  [506752 / 1228815, 87881 / 245763, 12673 / 70218],
-  [87098 / 409605, 175762 / 245763, 12673 / 175545],
-  [7918 / 409605, 87881 / 737289, 1001167 / 1053270],
-];
 const _xyzToLMS = <List<double>>[
   [0.819022437996703, 0.3619062600528904, -0.1288737815209879],
   [0.0329836539323885, 0.9292868615863434, 0.0361446663506424],
@@ -27,7 +22,7 @@ List<double> srgbToLab(double r, double g, double b) =>
     _lab(r, g, b, Gamut.sRGB);
 
 List<double> _lab(double r, double g, double b, Gamut gamut) {
-  final xyz = multiply(gamut == Gamut.sRGB ? _rgbToXYZ : p3ToXYZ,
+  final xyz = multiply(gamut == Gamut.sRGB ? rgbToXYZ : p3ToXYZ,
       [linearChannel(r), linearChannel(g), linearChannel(b)]);
   final lms = multiply(_xyzToLMS, xyz);
   return multiply(_lmsToLab,

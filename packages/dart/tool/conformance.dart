@@ -7,8 +7,13 @@ Renderer compile(Map o) {
   HueArc arc(dynamic pair) =>
       ((pair[0] as num).toDouble(), (pair[1] as num).toDouble());
   final n = o['normalize'];
-  if ((o['gamut'] ?? 'srgb') != 'srgb') throw UnsupportedError('Expected sRGB');
+
   return Renderer(
+      gamut: switch (o['gamut']) {
+        null || 'srgb' => Gamut.sRGB,
+        'display-p3' => Gamut.displayP3,
+        _ => throw ArgumentError('Unknown gamut')
+      },
       namespace: o['namespace'] ?? '',
       seed: o['seed'] ?? 0,
       normalization: Normalization(
@@ -51,6 +56,9 @@ Renderer compile(Map o) {
 
 Map color(Color c) => {
       'hex': c.hex,
+      if (c.p3 case final p?) 'p3': {'r': p.r, 'g': p.g, 'b': p.b},
+      if (c.css != null) 'css': c.css,
+      if (c.srgbClipped != null) 'srgbClipped': c.srgbClipped,
       'rgb': {'r': c.rgb.r, 'g': c.rgb.g, 'b': c.rgb.b},
       'hsl': {'h': c.hsl.h, 's': c.hsl.s, 'l': c.hsl.l},
       'oklch': {'l': c.oklch.l, 'c': c.oklch.c, 'h': c.oklch.h}

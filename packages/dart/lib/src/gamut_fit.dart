@@ -1,6 +1,11 @@
 import 'dart:math' as math;
 import 'contrast.dart';
 
+const rgbToXYZ = <List<double>>[
+  [506752 / 1228815, 87881 / 245763, 12673 / 70218],
+  [87098 / 409605, 175762 / 245763, 12673 / 175545],
+  [7918 / 409605, 87881 / 737289, 1001167 / 1053270],
+];
 const _labToLMS = <List<double>>[
   [1, 0.3963377773761749, 0.2158037573099136],
   [1, -0.1055613458156586, -0.0638541728258133],
@@ -30,11 +35,22 @@ const p3ToXYZ = <List<double>>[
 List<double> multiply(List<List<double>> matrix, List<double> v) =>
     [for (final row in matrix) (row[0] * v[0] + row[1] * v[1]) + row[2] * v[2]];
 
-int channelByte(double linear) {
+double encodedChannel(double linear) {
   final x = linear.clamp(0.0, 1.0);
   final encoded =
       x <= 0.0031308 ? x * 12.92 : 1.055 * math.pow(x, 1 / 2.4) - 0.055;
-  return (encoded * 255 + 0.5).floor();
+  return encoded.toDouble();
+}
+
+int channelByte(double linear) => (encodedChannel(linear) * 255 + 0.5).floor();
+
+List<num> canonicalChannels(List<int> srgb, Gamut gamut) {
+  if (gamut == Gamut.sRGB) return srgb;
+  final xyz =
+      multiply(rgbToXYZ, [for (final byte in srgb) linearChannel(byte / 255)]);
+  return [
+    for (final channel in multiply(_xyzToP3, xyz)) encodedChannel(channel) * 255
+  ];
 }
 
 bool _inside(List<double> channels) =>
