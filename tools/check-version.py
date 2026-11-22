@@ -54,16 +54,18 @@ def versions():
 
 def main():
     """Compare every manifest version, and the optional expected version, then print it."""
+    from release import ReleaseError, check_version
+
+    if len(sys.argv) > 2:
+        raise SystemExit("Usage: python tools/check-version.py [EXPECTED]")
     found = versions()
     if not found:
         raise SystemExit("No versionFiles declared in tools/packages.json")
-    distinct = set(found.values())
-    if len(distinct) != 1:
-        lines = "\n".join(f"  {label}: {version}" for label, version in found.items())
-        raise SystemExit("Package versions differ:\n" + lines)
-    version = distinct.pop()
-    if len(sys.argv) > 1 and sys.argv[1].lstrip("v") != version:
-        raise SystemExit(f"Manifests declare {version}, expected {sys.argv[1]}")
+    requested = sys.argv[1] if len(sys.argv) == 2 else next(iter(found.values()))
+    try:
+        version = check_version(requested, found)
+    except ReleaseError as error:
+        raise SystemExit(str(error)) from error
     print(version)
 
 
