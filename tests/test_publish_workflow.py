@@ -39,6 +39,17 @@ class PublishWorkflowTests(unittest.TestCase):
             "inputs.github_release && !inputs.dry_run && !failure() && !cancelled()",
         )
 
+    def test_root_release_requires_swift_package_and_versioned_consumer(self):
+        job = self.jobs["verify-swift-release"]
+        self.assertEqual(job["if"], "inputs.github_release")
+        self.assertEqual(job["needs"], "build")
+        self.assertIn("verify-swift-release", self.jobs["github-release"]["needs"])
+        commands = [step["run"] for step in job["steps"] if "run" in step]
+        self.assertEqual(commands, [
+            "swift test --force-resolved-versions",
+            "python3 tools/check-swift-tag.py",
+        ])
+
     def test_checkout_precedes_archive_download(self):
         for registry in ("npm", "adapters", "pypi", "rust", "nuget"):
             actions = [

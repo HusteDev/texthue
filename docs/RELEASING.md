@@ -57,7 +57,10 @@ staging it. Maven Central signing and publication remain separate steps.
 Run `python tools/check-swift-tag.py` with Swift 6 and Git to verify version
 resolution before releasing. It tags the current commit in a disposable local
 clone, resolves the exact version from an independent SwiftPM application,
-checks the resolved commit and runs the example.
+checks the resolved commit and runs the example. Selecting GitHub release
+promotion also runs the root package tests and tagged consumer on macOS.
+Promotion publishes the root version tag used by SwiftPM. A dry run with
+GitHub release selected exercises this gate before any promotion.
 
 ## Build and verify locally
 

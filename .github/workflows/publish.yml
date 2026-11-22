@@ -571,10 +571,22 @@ jobs:
         if: steps.state.outputs.state == 'matching'
         run: echo "packages/go/v${{ needs.build.outputs.version }} already tags this commit; skipping."
 
+  verify-swift-release:
+    name: Verify the SwiftPM version before publishing its root tag
+    if: inputs.github_release
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: swift test --force-resolved-versions
+      - run: python3 tools/check-swift-tag.py
+
   github-release:
     name: Promote the draft GitHub release
     if: inputs.github_release && !inputs.dry_run && !failure() && !cancelled()
-    needs: [build, publish-npm, publish-adapters, publish-nuget, publish-rust, publish-wasm, publish-pypi, publish-go]
+    needs: [build, publish-npm, publish-adapters, publish-nuget, publish-rust, publish-wasm, publish-pypi, publish-go, verify-swift-release]
     runs-on: ubuntu-latest
     permissions:
       contents: write
