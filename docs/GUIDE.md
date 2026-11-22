@@ -56,3 +56,9 @@ console.log(next.colors.question.light.fill.hex, Object.keys(next.assignments).l
 For component rendering, see the [React adapter](../packages/react/README.md). For build-time color utilities and runtime CSS variables, see the [Tailwind adapter](../packages/tailwind/README.md).
 
 In JavaScript, pass `{vision:['normal','deutan']}` as the second argument to `resolver.assign` to rank candidate placements under both profiles. For each new identity the resolver considers up to 24 hue positions on the selected ring and maximizes the smallest rendered OKLab distance across the requested profiles, both themes, and earlier placements. Simulations use full severity. Fixed brand colors and pinned registry entries participate in scoring and retain their placements. This bounded search adds rendering cost and can still produce close pairs.
+
+## Browser rendering evidence
+
+On Windows, Chrome passed the linear-sRGB composite fixtures, fallback selection, Display P3 CSS selection, and exact native P3 canvas byte check. Playwright Firefox 148.0.2 and WebKit 26.4 passed the composites and both CSS selection checks, then failed native P3 readback. Both returned RGB bytes `104,174,255` for expected P3 bytes `120,172,255`; neither reported an ImageData color space. The test retains the exact-byte requirement and reports the observed values. Physical display output has separate verification requirements.
+
+After building the npm package, install the Playwright test engines with `python -m playwright install firefox webkit`. Run `python tools/check-browser.py firefox` and `python tools/check-browser.py webkit` to repeat those checks.

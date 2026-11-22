@@ -42,7 +42,9 @@ try {
   wide.fillStyle = selected;
   wide.fillRect(0,0,1,1);
   const native = wide.getImageData(0,0,1,1,{colorSpace:'display-p3'}).data;
-  check(Object.values(fill.p3).every((v,i) => native[i] === Math.round(v*255)), 'P3 raster bytes');
+  const expectedBytes = Object.values(fill.p3).map(v => Math.round(v*255));
+  check(expectedBytes.every((v,i) => native[i] === v),
+    `P3 raster bytes: expected ${expectedBytes}, observed ${Array.from(native)}, readback space ${wide.getImageData(0,0,1,1,{colorSpace:'display-p3'}).colorSpace}`);
   output.textContent = 'PASS';
 } catch (error) {
   output.textContent = String(error);
