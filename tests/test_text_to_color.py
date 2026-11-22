@@ -77,6 +77,19 @@ console.log(JSON.stringify([compareAssignments(side(old),side(next),texts)]));
             )
             self.compare(json.loads(result.stdout)[0], report)
 
+    def test_display_p3_fit(self):
+        from texthue import to_css
+        from texthue._core import _XYZ_TO_P3, _cusp, _fit, _p3_fallback
+
+        rows = json.loads((ROOT / "conformance/p3-fit-v1.json").read_text())
+        for row in rows:
+            fit = _fit(row["l"], row["c"], row["h"], _XYZ_TO_P3)
+            self.assertEqual(fit["rgb"], row["rgb"])
+            self.assertEqual(_p3_fallback(fit["rgb"]), (row["fallback"], row["clipped"]))
+        red = resolve_text_colors("red", backgrounds={"light": "#ff0000"}).light.background
+        self.assertEqual(to_css(red, "p3"), "color(display-p3 0.917488 0.200287 0.138561)")
+        self.assertGreater(_cusp(0.7, 145, _XYZ_TO_P3), _cusp(0.7, 145))
+
     def test_apca_reference(self):
         from texthue._core import _apca_contrast
 

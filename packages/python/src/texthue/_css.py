@@ -4,6 +4,7 @@ import hashlib
 import re
 from dataclasses import fields
 
+from ._core import _srgb_to_p3
 from ._models import Color, ColorSet
 
 
@@ -16,6 +17,9 @@ def to_css(color: Color, format: str = "hex") -> str:
         return color.hex
     if format == "rgb":
         return f"rgb({color.rgb.r} {color.rgb.g} {color.rgb.b})"
+    if format == "p3":
+        channels = _srgb_to_p3((color.rgb.r, color.rgb.g, color.rgb.b))
+        return "color(display-p3 " + " ".join(map(_decimal, channels)) + ")"
     if format == "hsl":
         c = color.hsl
         return f"hsl({_decimal(c.h)} {_decimal(c.s)}% {_decimal(c.l)}%)"

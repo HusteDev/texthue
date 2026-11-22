@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -17,6 +18,13 @@ func ToCSS(c Color, format string) (string, error) {
 		return c.Hex, nil
 	case "rgb":
 		return fmt.Sprintf("rgb(%d %d %d)", c.RGB.R, c.RGB.G, c.RGB.B), nil
+	case "p3":
+		linear := triple{decode(float64(c.RGB.R) / 255), decode(float64(c.RGB.G) / 255), decode(float64(c.RGB.B) / 255)}
+		p3 := multiply(xyzToP3, multiply(rgbToXYZ, linear))
+		for i, v := range p3 {
+			p3[i] = round6(encode(math.Max(0, math.Min(1, v))))
+		}
+		return fmt.Sprintf("color(display-p3 %s %s %s)", decimal(p3[0]), decimal(p3[1]), decimal(p3[2])), nil
 	case "hsl":
 		return fmt.Sprintf("hsl(%s %s%% %s%%)", decimal(c.HSL.H), decimal(c.HSL.S), decimal(c.HSL.L)), nil
 	case "oklch":

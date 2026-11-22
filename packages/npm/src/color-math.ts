@@ -27,6 +27,16 @@ const XYZ_TO_RGB: Matrix = [
   [-851781 / 878810, 1648619 / 878810, 36519 / 878810],
   [705 / 12673, -2585 / 12673, 705 / 667],
 ];
+export const XYZ_TO_P3: Matrix = [
+    [446124 / 178915, -333277 / 357830, -72051 / 178915],
+    [-14852 / 17905, 63121 / 35810, 423 / 17905],
+    [11844 / 330415, -50337 / 660830, 316169 / 330415],
+];
+const P3_TO_XYZ: Matrix = [
+    [608311 / 1250200, 189793 / 714400, 198249 / 1000160],
+    [35783 / 156275, 247089 / 357200, 198249 / 2500400],
+    [0 / 1, 32229 / 714400, 5220557 / 5000800],
+];
 /** Linear sRGB to XYZ D65 (M4). */
 const RGB_TO_XYZ: Matrix = [
   [506752 / 1228815, 87881 / 245763, 12673 / 70218],
@@ -72,11 +82,11 @@ const encode = (x: number) => x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4
  * @param hue - OKLCH hue in degrees.
  * @returns Linear sRGB channels.
  */
-export function oklchToLinear(lightness: number, chroma: number, hue: number): Triple {
+export function oklchToLinear(lightness: number, chroma: number, hue: number, target:Matrix = XYZ_TO_RGB): Triple {
   const angle = hue * Math.PI / 180;
   const lab: Triple = [lightness, chroma * Math.cos(angle), chroma * Math.sin(angle)];
   const lms = multiply(LAB_TO_LMS, lab).map(x => x * x * x) as Triple;
-  return multiply(XYZ_TO_RGB, multiply(LMS_TO_XYZ, lms));
+  return multiply(target, multiply(LMS_TO_XYZ, lms));
 }
 
 /**
@@ -92,33 +102,33 @@ export function oklchToLinear(lightness: number, chroma: number, hue: number): T
  * @param hue - OKLCH hue in degrees.
  * @returns Final RGB bytes plus the retained chroma and the input lightness.
  */
-export function cusp(lightness: number, hue: number): number {
+export function cusp(lightness: number, hue: number, target:Matrix = XYZ_TO_RGB): number {
   if (lightness === 0 || lightness === 1) return 0;
   let low = 0, high = 0.4;
   for (let i = 0; i < 20; i++) {
     const mid = (low + high) / 2;
-    if (inside(oklchToLinear(lightness, mid, hue))) low = mid;
+    if (inside(oklchToLinear(lightness, mid, hue,target))) low = mid;
     else high = mid;
   }
   return low;
 }
 
-export function fitColor(lightness: number, chroma: number, hue: number): FittedColor {
+export function fitColor(lightness: number, chroma: number, hue: number, target:Matrix = XYZ_TO_RGB): FittedColor {
   if (lightness === 0 || lightness === 1) {
     return { rgb: [lightness * 255, lightness * 255, lightness * 255], chroma: 0, lightness };
   }
   let retained = chroma;
-  let linear = oklchToLinear(lightness, retained, hue);
+  let linear = oklchToLinear(lightness, retained, hue,target);
   if (!inside(linear)) {
     let low = 0;
     let high = chroma;
     for (let i = 0; i < 24; i++) {
       const mid = (low + high) / 2;
-      if (inside(oklchToLinear(lightness, mid, hue))) low = mid;
+      if (inside(oklchToLinear(lightness, mid, hue,target))) low = mid;
       else high = mid;
     }
     retained = low;
-    linear = oklchToLinear(lightness, retained, hue);
+    linear = oklchToLinear(lightness, retained, hue,target);
   }
   return {
     rgb: linear.map(x => Math.floor(encode(clamp(x)) * 255 + 0.5)) as Triple,
@@ -304,4 +314,16 @@ export function apcaContrast(text:Triple, background:Triple):number {
   const raw = 1.14*(bg**(positive?0.56:0.65) - fg**(positive?0.57:0.62));
   if (Math.abs(raw)<0.1) return 0;
   return 100*(raw-(positive?0.027:-0.027));
+}
+
+/** Clip a quantized Display-P3 rendition into sRGB for its fallback. */
+export function p3Fallback(rgb:Triple) {
+  const xyz = multiply(P3_TO_XYZ,rgb.map(v=>decode(v/255)) as Triple);
+  const linear = multiply(XYZ_TO_RGB,xyz);
+  return {rgb:linear.map(v=>Math.round(255*encode(clamp(v)))) as Triple,srgbClipped:!inside(linear)};
+}
+
+export function srgbToP3(rgb:Triple):Triple {
+  const xyz = multiply(RGB_TO_XYZ,rgb.map(v=>decode(v/255)) as Triple);
+  return multiply(XYZ_TO_P3,xyz).map(v=>round6(encode(clamp(v)))) as Triple;
 }

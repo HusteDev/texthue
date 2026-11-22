@@ -90,7 +90,19 @@ def _round6(value):
     return math.floor(value * 1e6 + 0.5) / 1e6
 
 
-def _linear(lightness, chroma, hue):
+_XYZ_TO_P3 = [
+    [446124 / 178915, -333277 / 357830, -72051 / 178915],
+    [-14852 / 17905, 63121 / 35810, 423 / 17905],
+    [11844 / 330415, -50337 / 660830, 316169 / 330415],
+]
+_P3_TO_XYZ = [
+    [608311 / 1250200, 189793 / 714400, 198249 / 1000160],
+    [35783 / 156275, 247089 / 357200, 198249 / 2500400],
+    [0 / 1, 32229 / 714400, 5220557 / 5000800],
+]
+
+
+def _linear(lightness, chroma, hue, target=_XYZ_TO_RGB):
     """Convert OKLCH to linear sRGB without clamping.
 
     Channels outside ``[0, 1]`` indicate a color outside the sRGB gamut.
@@ -98,7 +110,7 @@ def _linear(lightness, chroma, hue):
     angle = hue * math.pi / 180
     lab = [lightness, chroma * math.cos(angle), chroma * math.sin(angle)]
     lms = [value * value * value for value in _multiply(_LAB_TO_LMS, lab)]
-    return _multiply(_XYZ_TO_RGB, _multiply(_LMS_TO_XYZ, lms))
+    return _multiply(target, _multiply(_LMS_TO_XYZ, lms))
 
 
 def _inside(rgb):
@@ -106,20 +118,20 @@ def _inside(rgb):
     return all(-1e-12 <= value <= 1 + 1e-12 for value in rgb)
 
 
-def _cusp(lightness, hue):
+def _cusp(lightness, hue, target=_XYZ_TO_RGB):
     if lightness in (0, 1):
         return 0
     low, high = 0, 0.4
     for _ in range(20):
         mid = (low + high) / 2
-        if _inside(_linear(lightness, mid, hue)):
+        if _inside(_linear(lightness, mid, hue, target)):
             low = mid
         else:
             high = mid
     return low
 
 
-def _fit(lightness, chroma, hue):
+def _fit(lightness, chroma, hue, target=_XYZ_TO_RGB):
     """Fit an OKLCH color into the sRGB gamut and quantize it to RGB bytes.
 
     Lightness and hue are preserved. Out-of-gamut chroma is reduced with
@@ -133,17 +145,17 @@ def _fit(lightness, chroma, hue):
     if lightness == 0 or lightness == 1:
         return {"rgb": [int(lightness * 255)] * 3, "chroma": 0, "lightness": lightness}
     retained = chroma
-    linear = _linear(lightness, retained, hue)
+    linear = _linear(lightness, retained, hue, target)
     if not _inside(linear):
         low, high = 0, chroma
         for _ in range(24):
             mid = (low + high) / 2
-            if _inside(_linear(lightness, mid, hue)):
+            if _inside(_linear(lightness, mid, hue, target)):
                 low = mid
             else:
                 high = mid
         retained = low
-        linear = _linear(lightness, retained, hue)
+        linear = _linear(lightness, retained, hue, target)
     rgb = [math.floor(_encode(max(0, min(1, value))) * 255 + 0.5) for value in linear]
     return {"rgb": rgb, "chroma": retained, "lightness": lightness}
 
@@ -843,3 +855,14 @@ def _apca_contrast(text, background):
     if abs(raw) < 0.1:
         return 0.0
     return 100 * (raw - (0.027 if positive else -0.027))
+
+
+def _p3_fallback(rgb):
+    xyz = _multiply(_P3_TO_XYZ, [_decode(v / 255) for v in rgb])
+    linear = _multiply(_XYZ_TO_RGB, xyz)
+    return [math.floor(255 * _encode(max(0, min(1, v))) + 0.5) for v in linear], not _inside(linear)
+
+
+def _srgb_to_p3(rgb):
+    xyz = _multiply(_RGB_TO_XYZ, [_decode(v / 255) for v in rgb])
+    return [_round6(_encode(max(0, min(1, v)))) for v in _multiply(_XYZ_TO_P3, xyz)]

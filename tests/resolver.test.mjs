@@ -192,3 +192,18 @@ test('APCA approved palette and foreground preference use Lc thresholds', () => 
   assert.ok(theme.contrast.fill.value>=60);
   assert.equal(theme.contrast.fill.meetsTarget,true);
 });
+
+test('Display-P3 fits and clipped sRGB fallbacks match Color.js', async () => {
+  const {fitColor,XYZ_TO_P3,p3Fallback,cusp} = await import('../packages/npm/dist/color-math.js');
+  const {readFile} = await import('node:fs/promises');
+  const rows=JSON.parse(await readFile(new URL('../conformance/p3-fit-v1.json',import.meta.url),'utf8'));
+  for(const row of rows) {
+    const fit=fitColor(row.l,row.c,row.h,XYZ_TO_P3);
+    assert.deepEqual(fit.rgb,row.rgb);
+    assert.deepEqual(p3Fallback(fit.rgb),{rgb:row.fallback,srgbClipped:row.clipped});
+  }
+  const {toCss} = await import('../packages/npm/dist/index.js');
+  const red = resolveTextColors('red',{backgrounds:{light:'#ff0000'}}).light.background;
+  assert.equal(toCss(red,'p3'),'color(display-p3 0.917488 0.200287 0.138561)');
+  assert.ok(cusp(.7,145,XYZ_TO_P3)>cusp(.7,145));
+});

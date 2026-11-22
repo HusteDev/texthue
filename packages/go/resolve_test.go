@@ -451,3 +451,32 @@ func TestContrastModelJSON(t *testing.T) {
 		}
 	}
 }
+
+func TestDisplayP3Fit(t *testing.T) {
+	data, err := os.ReadFile("../../conformance/p3-fit-v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []struct {
+		L, C, H       float64
+		RGB, Fallback rgb8
+		Clipped       bool
+	}
+	if err := json.Unmarshal(data, &rows); err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range rows {
+		fit := fitIn(row.L, row.C, row.H, xyzToP3)
+		fallback, clipped := p3Fallback(fit.rgb)
+		if fit.rgb != row.RGB || fallback != row.Fallback || clipped != row.Clipped {
+			t.Fatalf("OKLCH %g %g %g: RGB %v fallback %v clipped %t", row.L, row.C, row.H, fit.rgb, fallback, clipped)
+		}
+	}
+	red, err := ToCSS(formats(rgb8{255, 0, 0}), "p3")
+	if err != nil || red != "color(display-p3 0.917488 0.200287 0.138561)" {
+		t.Fatalf("red CSS: %s %v", red, err)
+	}
+	if cuspIn(.7, 145, xyzToP3) <= cusp(.7, 145) {
+		t.Fatal("expected wider green gamut")
+	}
+}

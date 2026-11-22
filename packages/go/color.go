@@ -28,6 +28,16 @@ type rgb8 [3]int
 var labToLMS = matrix{{1, .3963377773761749, .2158037573099136}, {1, -.1055613458156586, -.0638541728258133}, {1, -.0894841775298119, -1.2914855480194092}}
 var lmsToXYZ = matrix{{1.2268798758459243, -.5578149944602171, .2813910456659647}, {-.0405757452148008, 1.112286803280317, -.0717110580655164}, {-.0763729366746601, -.4214933324022432, 1.5869240198367816}}
 var xyzToRGB = matrix{{12831.0 / 3959, -329.0 / 214, -1974.0 / 3959}, {-851781.0 / 878810, 1648619.0 / 878810, 36519.0 / 878810}, {705.0 / 12673, -2585.0 / 12673, 705.0 / 667}}
+var xyzToP3 = matrix{
+	{446124.0 / 178915, -333277.0 / 357830, -72051.0 / 178915},
+	{-14852.0 / 17905, 63121.0 / 35810, 423.0 / 17905},
+	{11844.0 / 330415, -50337.0 / 660830, 316169.0 / 330415},
+}
+var p3ToXYZ = matrix{
+	{608311.0 / 1250200, 189793.0 / 714400, 198249.0 / 1000160},
+	{35783.0 / 156275, 247089.0 / 357200, 198249.0 / 2500400},
+	{0.0 / 1, 32229.0 / 714400, 5220557.0 / 5000800},
+}
 var rgbToXYZ = matrix{{506752.0 / 1228815, 87881.0 / 245763, 12673.0 / 70218}, {87098.0 / 409605, 175762.0 / 245763, 12673.0 / 175545}, {7918.0 / 409605, 87881.0 / 737289, 1001167.0 / 1053270}}
 var xyzToLMS = matrix{{.819022437996703, .3619062600528904, -.1288737815209879}, {.0329836539323885, .9292868615863434, .0361446663506424}, {.0481771893596242, .2642395317527308, .6335478284694309}}
 var lmsToLab = matrix{{.210454268309314, .7936177747023054, -.0040720430116193}, {1.9779985324311684, -2.42859224204858, .450593709617411}, {.0259040424655478, .7827717124575296, -.8086757549230774}}
@@ -42,13 +52,13 @@ func multiply(m matrix, v triple) (result triple) {
 
 // linear converts OKLCH to linear sRGB without clamping. Channels outside
 // [0, 1] indicate a color outside the sRGB gamut.
-func linear(l, c, h float64) triple {
+func linearIn(l, c, h float64, target matrix) triple {
 	angle := float64(h*float64(math.Pi)) / 180
 	lms := multiply(labToLMS, triple{l, c * math.Cos(angle), c * math.Sin(angle)})
 	for i, x := range lms {
 		lms[i] = float64(float64(x*x) * x)
 	}
-	return multiply(xyzToRGB, multiply(lmsToXYZ, lms))
+	return multiply(target, multiply(lmsToXYZ, lms))
 }
 
 // inside reports whether every linear channel lies within the sRGB gamut,
@@ -91,14 +101,15 @@ type fitted struct {
 // Lightness and hue are preserved. Out-of-gamut chroma is reduced with
 // exactly 24 binary-search iterations. Lightness 0 and 1 short-circuit to
 // black and white. Channels are gamma-encoded, clamped, and rounded half up.
-func cusp(l, h float64) float64 {
+func cusp(l, h float64) float64 { return cuspIn(l, h, xyzToRGB) }
+func cuspIn(l, h float64, target matrix) float64 {
 	if l == 0 || l == 1 {
 		return 0
 	}
 	low, high := 0.0, 0.4
 	for i := 0; i < 20; i++ {
 		mid := (low + high) / 2
-		if inside(linear(l, mid, h)) {
+		if inside(linearIn(l, mid, h, target)) {
 			low = mid
 		} else {
 			high = mid
@@ -107,25 +118,26 @@ func cusp(l, h float64) float64 {
 	return low
 }
 
-func fit(l, c, h float64) fitted {
+func fit(l, c, h float64) fitted { return fitIn(l, c, h, xyzToRGB) }
+func fitIn(l, c, h float64, target matrix) fitted {
 	if l == 0 || l == 1 {
 		channel := int(l * 255)
 		return fitted{rgb8{channel, channel, channel}, l, 0}
 	}
 	retained := c
-	v := linear(l, c, h)
+	v := linearIn(l, c, h, target)
 	if !inside(v) {
 		low, high := 0.0, c
 		for i := 0; i < 24; i++ {
 			mid := (low + high) / 2
-			if inside(linear(l, mid, h)) {
+			if inside(linearIn(l, mid, h, target)) {
 				low = mid
 			} else {
 				high = mid
 			}
 		}
 		retained = low
-		v = linear(l, retained, h)
+		v = linearIn(l, retained, h, target)
 	}
 	var rgb rgb8
 	for i, x := range v {
@@ -359,4 +371,17 @@ func MeasureAPCA(text, background Color) (float64, error) {
 		}
 	}
 	return apcaContrast(fg, bg), nil
+}
+
+func p3Fallback(rgb rgb8) (rgb8, bool) {
+	var decoded triple
+	for i, c := range rgb {
+		decoded[i] = decode(float64(c) / 255)
+	}
+	linear := multiply(xyzToRGB, multiply(p3ToXYZ, decoded))
+	var fallback rgb8
+	for i, c := range linear {
+		fallback[i] = int(math.Floor(255*encode(math.Max(0, math.Min(1, c))) + 0.5))
+	}
+	return fallback, !inside(linear)
 }

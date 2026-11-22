@@ -119,6 +119,11 @@ Positive Lc indicates darker foreground text. The separate `ratio` field
 records the WCAG 2 ratio for the same final pair. A text color can pass on the
 theme background and fail on the subtle surface, so check both relationships.
 
+The CSS helper accepts `p3` in JavaScript, Python, and Go. It converts the
+resolved sRGB color to Display-P3 coordinates and emits a CSS string with up
+to six fractional digits per channel. For example, sRGB red serializes as
+`color(display-p3 0.917488 0.200287 0.138561)`.
+
 For a translucent surface over a known opaque backdrop, use
 `compositeOver(source, alpha, backdrop)` in JavaScript,
 `composite_over(source, alpha, backdrop)` in Python, or `CompositeOver` in Go.

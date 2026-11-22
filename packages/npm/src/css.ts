@@ -1,11 +1,13 @@
+import { srgbToP3 } from './color-math.js';
 import { sha256 } from './sha256.js';
 import type { Color, ColorSet } from './types.js';
 
-export function toCss(color: Color, format: 'hex'|'rgb'|'hsl'|'oklch' = 'hex'): string {
+export function toCss(color: Color, format: 'hex'|'rgb'|'hsl'|'oklch'|'p3' = 'hex'): string {
   const {rgb,hsl,oklch} = color;
   switch(format) {
     case 'hex': return color.hex;
     case 'rgb': return `rgb(${rgb.r} ${rgb.g} ${rgb.b})`;
+    case 'p3': return `color(display-p3 ${srgbToP3([rgb.r,rgb.g,rgb.b]).join(' ')})`;
     case 'hsl': return `hsl(${hsl.h} ${hsl.s}% ${hsl.l}%)`;
     case 'oklch': return `oklch(${oklch.l} ${oklch.c} ${oklch.h})`;
     default: throw new TypeError('Unknown CSS format');
