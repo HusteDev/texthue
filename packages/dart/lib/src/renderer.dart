@@ -15,16 +15,22 @@ typedef RenderedPalette = ({
   Map<String, Color> dark
 });
 
+List<int> _parseHex(String hex) {
+  if (!RegExp(r'^#[0-9a-fA-F]{6}$').hasMatch(hex))
+    throw FormatException('Expected six-digit hex color', hex);
+  return [
+    for (final i in [1, 3, 5]) int.parse(hex.substring(i, i + 2), radix: 16)
+  ];
+}
+
+enum ForegroundPolicy { best, firstPassing }
+
 final class _Background {
   final List<int> bytes;
   final double lightness;
   _Background._(this.bytes, this.lightness);
   factory _Background(String hex) {
-    if (!RegExp(r'^#[0-9a-fA-F]{6}$').hasMatch(hex))
-      throw FormatException('Invalid background', hex);
-    final bytes = [
-      for (final i in [1, 3, 5]) int.parse(hex.substring(i, i + 2), radix: 16)
-    ];
+    final bytes = _parseHex(hex);
     final l = Color.fromRgb(bytes[0], bytes[1], bytes[2]).oklch.l;
     return _Background._(bytes, (l * 4096).round() / 4096);
   }
@@ -71,6 +77,8 @@ final class Renderer {
   final int seed;
   final double contrastTarget;
   final Map<String, double> contrastTargets;
+  final ForegroundPolicy foregroundPolicy;
+  final List<List<int>> _foregrounds;
   final _Background _light, _dark;
   Renderer(
       {this.namespace = '',
@@ -78,6 +86,8 @@ final class Renderer {
       this.lightProfile = const ThemeProfile(),
       this.darkProfile = const ThemeProfile(),
       this.contrastModel = ContrastModel.wcag2,
+      this.foregroundPolicy = ForegroundPolicy.best,
+      List<String> foregrounds = const ["#000000", "#ffffff"],
       this.preset = Preset.labels,
       double? contrastTarget,
       Map<String, double> contrastTargets = const {},
@@ -90,8 +100,11 @@ final class Renderer {
                     ? 7
                     : 4.5),
         contrastTargets = Map.unmodifiable(contrastTargets),
+        _foregrounds = foregrounds.map(_parseHex).toList(growable: false),
         _light = _Background(lightBackground),
         _dark = _Background(darkBackground) {
+    if (_foregrounds.isEmpty)
+      throw ArgumentError("Expected at least one foreground");
     RangeError.checkValueInInterval(seed, 0, 0xffffffff, 'seed');
     const roles = {
       'fill',
@@ -150,9 +163,21 @@ final class Renderer {
     double score(List<int> text, List<int> bg) =>
         measureContrast(text, bg, model: contrastModel).abs();
     final unconstrained = contrastModel == ContrastModel.apca ? 0.0 : 1.0;
-    const black = [0, 0, 0], white = [255, 255, 255];
-    List<int> foreground(List<int> rgb) =>
-        score(black, rgb) >= score(white, rgb) ? black : white;
+    List<int> foreground(List<int> rgb, double required) {
+      var best = _foregrounds.first;
+      var bestScore = -1.0;
+      for (final candidate in _foregrounds) {
+        final value = score(candidate, rgb);
+        if (foregroundPolicy == ForegroundPolicy.firstPassing &&
+            value >= required) return candidate;
+        if (value > bestScore) {
+          bestScore = value;
+          best = candidate;
+        }
+      }
+      return best;
+    }
+
     List<int> tone(double value, bool fill, double threshold,
         {List<int>? background, List<int>? subtle, bool surface = false}) {
       final l = value.clamp(0.0, 1.0);
@@ -164,7 +189,7 @@ final class Renderer {
       return Gamut.sRGB
           .repair(l, c, hue, threshold == 0 ? secondary : threshold, (bytes) {
             final primary = background == null
-                ? score(foreground(bytes), bytes)
+                ? score(foreground(bytes, threshold), bytes)
                 : surface
                     ? score(background, bytes)
                     : score(bytes, background);
@@ -180,7 +205,8 @@ final class Renderer {
 
     final lb = base.lightness, lf = sample(true), lt = sample(false);
     final subtle = tone(lb + direction * 0.04, true, unconstrained);
-    final fill = tone(lf, true, target('fill')), onFill = foreground(fill);
+    final fill = tone(lf, true, target('fill')),
+        onFill = foreground(fill, target('fill'));
     final roles = {
       'background': base.bytes,
       'subtle': subtle,
