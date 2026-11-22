@@ -5,6 +5,7 @@ const form = document.querySelector('form');
 const results = document.querySelector('#results');
 const status = document.querySelector('[role=status]');
 let worker;
+let baseline;
 function append(parent, tag, value) {
   const element = document.createElement(tag);
   if (value !== undefined) element.textContent = value;
@@ -35,7 +36,7 @@ function run() {
   worker = undefined;
   const field = id => document.getElementById(id).value;
   try {
-    const input = {labels:field('labels').split(/\r?\n/).filter(Boolean), options:JSON.parse(field('options')),
+    const input = {baseline, labels:field('labels').split(/\r?\n/).filter(Boolean), options:JSON.parse(field('options')),
       theme:field('theme'), vision:field('vision'), optimizeVision:document.getElementById('optimize-vision').checked,
       minimumDistance:document.getElementById('minimum-distance').valueAsNumber, markers:document.getElementById('markers').checked, registry:field('registry') && JSON.parse(field('registry'))};
     const active = new Worker('./worker.mjs', {type:'module'});
@@ -46,9 +47,23 @@ function run() {
       if (worker !== active) return;
       active.terminate();
       if (data.error) { status.textContent = data.error; return; }
-      const {rows, diagnostics, findings, config, registry} = data.result;
+      const {rows, diagnostics, findings, config, registry, migration} = data.result;
       status.textContent = rows.length + ' distinct labels';
       results.replaceChildren();
+      if (migration) details(results,'Changes from comparison baseline',migration);
+      const compare = append(results,'button',baseline ? 'Clear comparison baseline' : 'Use this palette as comparison baseline');
+      compare.type = 'button';
+      compare.onclick = () => {
+        if (baseline) {
+          baseline = undefined;
+          run();
+        } else {
+          baseline = {config,registry};
+          compare.textContent = 'Clear comparison baseline';
+          status.textContent = 'Baseline saved. Inspect another configuration to compare the current labels.';
+          if (worker && worker !== active) run();
+        }
+      };
       const table = append(results, 'table');
       const head = append(table, 'tr');
       for (const title of ['Label','Hash','Assigned','Registry','Registry fill / background (sRGB)']) append(head,'th',title);

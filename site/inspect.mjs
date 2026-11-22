@@ -1,6 +1,6 @@
 import {contrast, p3Contrast} from '../packages/npm/dist/color-math.js';
 import {analyzePalette, simulateVision} from '../packages/npm/dist/diagnostics.js';
-import {createResolver, cssVariables, importConfig} from '../packages/npm/dist/index.js';
+import {compareAssignments, createResolver, cssVariables, importConfig} from '../packages/npm/dist/index.js';
 
 function surfaceContrast({fill, background}) {
   const bytes = ({r,g,b}) => [r,g,b];
@@ -13,7 +13,7 @@ function surfaceContrast({fill, background}) {
   return result;
 }
 
-export function inspect({labels, options, theme, vision, registry, optimizeVision = false, markers = false, minimumDistance = 0}) {
+export function inspect({labels, options, theme, vision, registry, baseline, optimizeVision = false, markers = false, minimumDistance = 0}) {
   const resolver = options && Object.hasOwn(options, 'schema') ? importConfig(options) : createResolver(options);
   if (!Number.isFinite(minimumDistance) || minimumDistance < 0) throw new RangeError('Minimum distance must be nonnegative');
   const identities = new Map();
@@ -56,5 +56,9 @@ export function inspect({labels, options, theme, vision, registry, optimizeVisio
     belowMinimum:diagnostics.pairs.filter(pair => pair.distance < minimumDistance)
       .map(({first,second,distance}) => ({labels:names(first,second),distance})),
   };
-  return {rows, diagnostics, findings, config:resolver.exportConfig(), registry:resolver.exportRegistry(persistent.assignments)};
+  const savedRegistry = resolver.exportRegistry(persistent.assignments);
+  const migration = baseline && compareAssignments(
+    {resolver:importConfig(baseline.config),registry:baseline.registry},
+    {resolver,registry:savedRegistry},labels);
+  return {rows, diagnostics, findings, config:resolver.exportConfig(), registry:savedRegistry, ...(migration && {migration})};
 }

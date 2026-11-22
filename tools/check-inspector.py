@@ -56,6 +56,7 @@ def exercise(page, url, clipboard):
     expect(
         page.get_by_role("columnheader", name="Registry fill / background (Display-P3)")
     ).to_have_count(0)
+    page.get_by_role("button", name="Use this palette as comparison baseline").click()
     page.locator("#options").fill('{"gamut":"display-p3","backgrounds":{"dark":"#000000"}}')
     page.get_by_role("button", name="Inspect palette").click()
     expect(
@@ -65,6 +66,11 @@ def exercise(page, url, clipboard):
     expect(page.get_by_role("cell", name="3.21:1", exact=True)).to_be_visible()
     chips = page.locator("#results td span[title^='color(display-p3']")
     expect(chips).to_have_count(3)
+    comparison = page.get_by_text("Changes from comparison baseline", exact=True)
+    comparison.click()
+    report = json.loads(comparison.locator("..").locator("pre").inner_text())
+    change = next(c for c in report["colors"] if c["theme"] == "dark" and c["role"] == "fill")
+    assert change["before"] == "#ffffff" and change["afterP3"] == chips.last.get_attribute("title")
     for chip in chips.all():
         assert chip.evaluate("""el => {
             const probe = document.createElement('span');
@@ -86,6 +92,8 @@ def exercise(page, url, clipboard):
             sheet.remove();
             return actual === el.title;
         }""")
+    page.get_by_role("button", name="Clear comparison baseline").click()
+    expect(comparison).to_have_count(0)
     page.goto(url)
     expect(status).to_have_text("3 distinct labels")
     check_markers(page)
