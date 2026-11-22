@@ -72,6 +72,16 @@
       "versionFiles": [],
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
       "conformanceRunner": null
+    },
+    {
+      "id": "dart",
+      "language": "dart",
+      "dir": "packages/dart",
+      "versionFiles": [
+        { "path": "packages/dart/pubspec.yaml", "kind": "pyRegex", "pattern": "^version: ([^\\s]+)$" }
+      ],
+      "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+      "conformanceRunner": null
     }
   ]
 }

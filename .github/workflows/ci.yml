@@ -17,6 +17,27 @@ env:
   GOTOOLCHAIN: local
 
 jobs:
+  dart:
+    name: Dart conformance
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/dart
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1
+        with:
+          sdk: '3.8.1'
+      - run: dart pub get --enforce-lockfile
+      - run: dart analyze --fatal-infos
+      - name: Run shared fixture checks
+        run: |
+          for suite in tool/check_*.dart; do
+            dart run "$suite" || exit 1
+          done
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

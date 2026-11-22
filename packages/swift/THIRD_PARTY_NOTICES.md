@@ -4,7 +4,7 @@
 
 This software and document include material copied from or derived from [CSS Color Module Level 4, 1 September 2026](https://www.w3.org/TR/2026/CRD-css-color-4-20260901/), especially the sRGB, HSL, OKLab, and OKLCH conversion equations and matrices. Copyright © 2026 World Wide Web Consortium. [W3C Software and Document License — 2023](https://www.w3.org/copyright/software-license-2023/).
 
-Changes in this project: the conversions were reorganized into TypeScript/JavaScript, Python, Go, Kotlin, and Swift libraries; their arithmetic order is fixed; grayscale and final rounding conventions are explicit; a deterministic chroma-reduction and contrast-selection algorithm is added. Neither this algorithm nor the project is endorsed by W3C.
+Changes in this project: the conversions were reorganized into TypeScript/JavaScript, Python, Go, Kotlin, Swift, and Dart libraries; their arithmetic order is fixed; grayscale and final rounding conventions are explicit; a deterministic chroma-reduction and contrast-selection algorithm is added. Neither this algorithm nor the project is endorsed by W3C.
 
 Package metadata identifies this notice with the SPDX identifier [`W3C-20150513`](https://spdx.org/licenses/W3C-20150513.html), which SPDX applies to the 2023 wording of the license.
 
