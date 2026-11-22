@@ -83,7 +83,7 @@ def main():
         root = Path(temp)
         bundle = root / f"texthue-{version}-maven.zip"
         with zipfile.ZipFile(bundle, "w") as archive:
-            for suffix in (".jar", "-sources.jar", ".pom", ".module"):
+            for suffix in (".jar", "-sources.jar", "-javadoc.jar", ".pom", ".module"):
                 member = coordinate / version / f"texthue-{version}{suffix}"
                 archive.write(repository / member, member.as_posix())
         extracted = root / "repository"

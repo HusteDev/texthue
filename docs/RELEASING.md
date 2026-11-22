@@ -49,7 +49,8 @@ and example before recording the archive digests.
 Resuming an older bundle preserves its original archive set.
 
 The Kotlin draft asset, `texthue-<version>-maven.zip`, contains the binary JAR,
-sources JAR, POM and Gradle module metadata under their Maven coordinates.
+sources JAR, documentation JAR, POM and Gradle module metadata under their Maven coordinates.
+The documentation artifact includes the Kotlin guide and algorithm specification.
 The build tests a separate Kotlin consumer against the extracted ZIP before
 staging it. Maven Central signing and publication remain separate steps.
 
