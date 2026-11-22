@@ -1,3 +1,5 @@
+mod gamut;
+pub use gamut::{p3_fallback, FittedColor};
 mod contrast;
 pub use contrast::{ContrastModel, Gamut};
 
