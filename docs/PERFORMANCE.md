@@ -35,6 +35,8 @@ The resolver benchmarks also exercise APCA at a target of 75 Lc on white and Dis
 
 The Kotlin P3 measurement used the 100-label corpus on the Windows JVM after commit `dcdc463`.
 
+On Windows x64, optimized Rust measured 35.70 µs median and 50.10 µs p95 for Display-P3. The default sRGB scenario measured 23.95 µs and 24.80 µs respectively. The .NET 9 Release benchmark measured 215.85 µs median and 318.30 µs p95 for Display-P3, and 194.25 µs and 333.90 µs for default sRGB. Both harnesses timed complete two-theme palettes after 20 warm-up labels and checked native P3 fills outside the timer. These are single-run observations.
+
 On Windows x64, Dart JIT measured 840 µs median and 2,486 µs p95 for Display-P3. The default sRGB scenario in the same run measured 1,237 µs median and 2,428 µs p95. Each scenario warmed up on 20 labels and timed 100. The P3 scenario checked native fill channels in both themes after each timed resolution. Scenario order was fixed, so these observations do not isolate the cost of switching gamuts.
 
 Swift 6.1.3 in the Linux x86-64 container measured 233 µs median and 399 µs p95 for the same P3 workload in a release build. The default sRGB workload in that run measured 203 µs median and 260 µs p95. Each P3 iteration checked for native channels in both themes after stopping its timer.

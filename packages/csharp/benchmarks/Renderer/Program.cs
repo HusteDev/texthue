@@ -4,11 +4,12 @@ using TextHue;
 
 foreach (var (scenario, target, gray) in new[] {
     ("default", 4.5, false), ("aaa", 7, false), ("maximum", 21, false),
-    ("gray", 4.5, true), ("impossible", 21, true), ("apca", 75, false)
+    ("gray", 4.5, true), ("impossible", 21, true), ("apca", 75, false), ("p3", 4.5, false)
 })
 {
     byte channel = gray ? (byte)119 : (byte)255;
     var renderer = new Renderer(contrastModel: scenario == "apca" ? ContrastModel.Apca : ContrastModel.Wcag2,
+        gamut: scenario == "p3" ? Gamut.DisplayP3 : Gamut.SRgb,
         contrastTarget: target, lightBackground: new Rgb(channel, channel, channel));
     var samples = new double[100];
     for (int i = -20; i < samples.Length; i++)
@@ -17,6 +18,8 @@ foreach (var (scenario, target, gray) in new[] {
         long start = Stopwatch.GetTimestamp();
         var palette = renderer.Resolve(label);
         double microseconds = Stopwatch.GetElapsedTime(start).TotalMicroseconds;
+        if (scenario == "p3" && (palette.Light["fill"].P3 is null || palette.Dark["fill"].P3 is null))
+            throw new InvalidOperationException("Missing native Display-P3 fill");
         GC.KeepAlive(palette);
         if (i >= 0) samples[i] = microseconds;
     }

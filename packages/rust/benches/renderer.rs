@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use std::hint::black_box;
 use std::time::Instant;
-use texthue::{ContrastModel, Renderer};
+use texthue::{ContrastModel, Gamut, Renderer};
 
 fn render(c: &mut Criterion) {
     let mut singles = c.benchmark_group("resolve");
@@ -12,8 +12,14 @@ fn render(c: &mut Criterion) {
         ("gray", 4.5, [119; 3]),
         ("unattainable_on_gray", 21.0, [119; 3]),
         ("apca", 75.0, [255; 3]),
+        ("p3", 4.5, [255; 3]),
     ] {
         let options = Renderer {
+            gamut: if name == "p3" {
+                Gamut::DisplayP3
+            } else {
+                Gamut::Srgb
+            },
             contrast_model: if name == "apca" {
                 ContrastModel::Apca
             } else {
@@ -31,6 +37,9 @@ fn render(c: &mut Criterion) {
             let start = Instant::now();
             let result = renderer.resolve(black_box(&label)).unwrap();
             let micros = start.elapsed().as_secs_f64() * 1e6;
+            if name == "p3" {
+                assert!(result.light["fill"].p3.is_some() && result.dark["fill"].p3.is_some());
+            }
             black_box(result);
             if index >= 0 {
                 samples.push(micros);
