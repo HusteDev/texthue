@@ -84,6 +84,7 @@ var optionsShape = &jsonShape{fields: map[string]*jsonShape{
 	"namespace":      stringShape,
 	"seed":           numberShape,
 	"contrastTarget": numberShape,
+	"gamut":          {kind: "gamut"},
 	"contrastModel":  {kind: "contrastModel"},
 	"preset":         stringShape, "hueRange": rangeShape, "excludeHues": {kind: "ranges"},
 	"normalize":       {fields: map[string]*jsonShape{"unicode": stringShape, "case": stringShape, "whitespace": stringShape}},
@@ -97,6 +98,10 @@ var optionsShape = &jsonShape{fields: map[string]*jsonShape{
 // position in the returned error.
 func checkShape(value any, shape *jsonShape, path string) error {
 	switch shape.kind {
+	case "gamut":
+		if value != "srgb" && value != "display-p3" {
+			return invalid(path)
+		}
 	case "contrastModel":
 		if value != "apca" && value != "wcag2" {
 			return invalid(path)

@@ -19,6 +19,9 @@ func ToCSS(c Color, format string) (string, error) {
 	case "rgb":
 		return fmt.Sprintf("rgb(%d %d %d)", c.RGB.R, c.RGB.G, c.RGB.B), nil
 	case "p3":
+		if c.P3 != nil {
+			return c.CSS, nil
+		}
 		linear := triple{decode(float64(c.RGB.R) / 255), decode(float64(c.RGB.G) / 255), decode(float64(c.RGB.B) / 255)}
 		p3 := multiply(xyzToP3, multiply(rgbToXYZ, linear))
 		for i, v := range p3 {

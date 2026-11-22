@@ -3,6 +3,7 @@ package texthue
 import (
 	"fmt"
 	"math"
+	"strconv"
 )
 
 // Color conversion, gamut fitting, contrast measurement, and output formatting.
@@ -20,8 +21,8 @@ type triple [3]float64
 // matrix is a 3x3 row-major conversion matrix.
 type matrix [3]triple
 
-// rgb8 holds sRGB channels as integers in 0..255.
-type rgb8 [3]int
+// encodedRGB uses a 0..255 scale. Generated tones are quantized; converted inputs retain precision.
+type encodedRGB [3]float64
 
 // Specification matrices M1 through M6. Rational entries are evaluated as
 // float64 divisions.
@@ -91,7 +92,7 @@ func decode(x float64) float64 {
 // fitted is a gamut-fitted color: final RGB bytes plus the pre-quantization
 // lightness and retained chroma.
 type fitted struct {
-	rgb rgb8
+	rgb encodedRGB
 	l   float64
 	c   float64
 }
@@ -121,8 +122,8 @@ func cuspIn(l, h float64, target matrix) float64 {
 func fit(l, c, h float64) fitted { return fitIn(l, c, h, xyzToRGB) }
 func fitIn(l, c, h float64, target matrix) fitted {
 	if l == 0 || l == 1 {
-		channel := int(l * 255)
-		return fitted{rgb8{channel, channel, channel}, l, 0}
+		channel := l * 255
+		return fitted{encodedRGB{channel, channel, channel}, l, 0}
 	}
 	retained := c
 	v := linearIn(l, c, h, target)
@@ -139,23 +140,23 @@ func fitIn(l, c, h float64, target matrix) fitted {
 		retained = low
 		v = linearIn(l, retained, h, target)
 	}
-	var rgb rgb8
+	var rgb encodedRGB
 	for i, x := range v {
 		x = math.Max(0, math.Min(1, x))
-		rgb[i] = int(math.Floor(float64(encode(x)*255) + .5))
+		rgb[i] = math.Floor(float64(encode(x)*255) + .5)
 	}
 	return fitted{rgb, l, retained}
 }
 
 // luminance computes WCAG relative luminance from RGB bytes.
-func luminance(rgb rgb8) float64 { return weightedLuminance(rgb, triple{.2126, .7152, .0722}) }
-func weightedLuminance(rgb rgb8, weights triple) float64 {
+func luminance(rgb encodedRGB) float64 { return weightedLuminance(rgb, triple{.2126, .7152, .0722}) }
+func weightedLuminance(rgb encodedRGB, weights triple) float64 {
 	r, g, b := decode(float64(rgb[0])/255), decode(float64(rgb[1])/255), decode(float64(rgb[2])/255)
 	return float64(float64(float64(weights[0]*r)+float64(weights[1]*g)) + float64(weights[2]*b))
 }
 
 // contrast computes the WCAG contrast ratio between two colors, in 1..21.
-func contrast(a, b rgb8) float64 {
+func contrast(a, b encodedRGB) float64 {
 	return luminanceRatio(luminance(a), luminance(b))
 }
 func luminanceRatio(x, y float64) float64 {
@@ -164,8 +165,8 @@ func luminanceRatio(x, y float64) float64 {
 
 // foreground returns black or white, whichever contrasts more with rgb. An
 // exact tie selects black.
-func foreground(rgb rgb8) rgb8 {
-	black, white := rgb8{0, 0, 0}, rgb8{255, 255, 255}
+func foreground(rgb encodedRGB) encodedRGB {
+	black, white := encodedRGB{0, 0, 0}, encodedRGB{255, 255, 255}
 	if contrast(rgb, black) >= contrast(rgb, white) {
 		return black
 	}
@@ -178,7 +179,7 @@ func round6(x float64) float64 { return math.Floor(float64(x*1e6)+.5) / 1e6 }
 // formats derives every output representation from canonical RGB bytes.
 // HSL and OKLCH are rounded to six decimal places, and achromatic colors
 // report zero hue and zero chroma.
-func formats(rgb rgb8) Color {
+func formats(rgb encodedRGB) Color {
 	r, g, b := float64(rgb[0])/255, float64(rgb[1])/255, float64(rgb[2])/255
 	maximum, minimum := math.Max(r, math.Max(g, b)), math.Min(r, math.Min(g, b))
 	delta, light := maximum-minimum, (maximum+minimum)/2
@@ -199,22 +200,12 @@ func formats(rgb rgb8) Color {
 		}
 		hue *= 60
 	}
-	lms := multiply(xyzToLMS, multiply(rgbToXYZ, triple{decode(r), decode(g), decode(b)}))
-	for i, value := range lms {
-		lms[i] = math.Cbrt(value)
-	}
-	lab := multiply(lmsToLab, lms)
-	chroma, okHue := 0.0, 0.0
-	if rgb[0] != rgb[1] || rgb[1] != rgb[2] {
-		chroma = math.Sqrt(float64(lab[1]*lab[1]) + float64(lab[2]*lab[2]))
-		okHue = math.Mod(math.Mod(float64(math.Atan2(lab[2], lab[1])*180)/float64(math.Pi), 360)+360, 360)
-	}
 	// A rounded 360 wraps to 0 so hue stays within [0, 360).
 	return Color{
-		Hex:   fmt.Sprintf("#%02x%02x%02x", rgb[0], rgb[1], rgb[2]),
-		RGB:   RGB{rgb[0], rgb[1], rgb[2]},
+		Hex:   fmt.Sprintf("#%02x%02x%02x", int(rgb[0]), int(rgb[1]), int(rgb[2])),
+		RGB:   RGB{int(rgb[0]), int(rgb[1]), int(rgb[2])},
 		HSL:   HSL{math.Mod(round6(hue), 360), round6(saturation * 100), round6(light * 100)},
-		OKLCH: OKLCH{round6(lab[0]), round6(chroma), math.Mod(round6(okHue), 360)},
+		OKLCH: encodedOKLCH(rgb, rgbToXYZ),
 	}
 }
 
@@ -233,18 +224,23 @@ func formats(rgb rgb8) Color {
 // choose panics if no candidate passes for a fill; the black and white
 // endpoints guarantee this cannot happen for a valid target.
 type surfaceConstraint struct {
-	rgb    rgb8
+	rgb    encodedRGB
 	target float64
 }
 
-func chooseForeground(l, c, h float64, background *rgb8, target float64, selectColor func(rgb8, float64) rgb8, apca, surface bool, second ...surfaceConstraint) (rgb8, ContrastResult) {
+func chooseForeground(l, c, h float64, background *encodedRGB, target float64, selectColor func(encodedRGB, float64) encodedRGB, apca, surface, wide bool, second ...surfaceConstraint) (encodedRGB, ContrastResult) {
+	m := xyzToRGB
+	if wide {
+		m = xyzToP3
+	}
+	metric := contrastMetric(apca, wide)
 	primaryTarget := target
 	if apca && target == 0 && len(second) > 0 {
 		target = second[0].target
 	}
-	measure := func(rgb rgb8) float64 {
-		if apca {
-			var back rgb8
+	measure := func(rgb encodedRGB) float64 {
+		if apca || wide {
+			var back encodedRGB
 			if background != nil {
 				back = *background
 			} else {
@@ -254,11 +250,11 @@ func chooseForeground(l, c, h float64, background *rgb8, target float64, selectC
 			if surface {
 				front, back = back, front
 			}
-			primary := math.Abs(apcaContrast(front, back))
+			primary := math.Abs(metric(front, back))
 			if len(second) == 0 || second[0].target == 0 {
 				return primary
 			}
-			secondary := math.Abs(apcaContrast(rgb, second[0].rgb))
+			secondary := math.Abs(metric(rgb, second[0].rgb))
 			if primaryTarget == 0 {
 				return secondary
 			}
@@ -273,14 +269,14 @@ func chooseForeground(l, c, h float64, background *rgb8, target float64, selectC
 		}
 		return contrast(rgb, selectColor(rgb, target))
 	}
-	chosen := fit(l, c, h)
+	chosen := fitIn(l, c, h, m)
 	ratio := measure(chosen.rgb)
 	var fallback *string
 	if ratio < target {
-		if math.Max(measure(rgb8{}), measure(rgb8{255, 255, 255})) < target {
-			rgb := rgb8{}
-			if measure(rgb8{255, 255, 255}) > measure(rgb) {
-				rgb = rgb8{255, 255, 255}
+		if math.Max(measure(encodedRGB{}), measure(encodedRGB{255, 255, 255})) < target {
+			rgb := encodedRGB{}
+			if measure(encodedRGB{255, 255, 255}) > measure(rgb) {
+				rgb = encodedRGB{255, 255, 255}
 			}
 			chosen = fitted{rgb, float64(rgb[0]) / 255, 0}
 			ratio = measure(rgb)
@@ -293,14 +289,14 @@ func chooseForeground(l, c, h float64, background *rgb8, target float64, selectC
 				if endpoint != 0 {
 					fail = int(math.Floor(l * 4096))
 				}
-				candidate := fit(float64(pass)/4096, c, h)
+				candidate := fitIn(float64(pass)/4096, c, h, m)
 				score := measure(candidate.rgb)
 				if score < target {
 					continue
 				}
 				for pass-fail > 1 || fail-pass > 1 {
 					mid := (pass + fail) / 2
-					probe := fit(float64(mid)/4096, c, h)
+					probe := fitIn(float64(mid)/4096, c, h, m)
 					measured := measure(probe.rgb)
 					if measured >= target {
 						pass, candidate, score = mid, probe, measured
@@ -327,25 +323,25 @@ func CompositeOver(source Color, alpha float64, backdrop Color) (Color, error) {
 	if math.IsNaN(alpha) || alpha < 0 || alpha > 1 {
 		return Color{}, invalid("alpha")
 	}
-	front := rgb8{source.RGB.R, source.RGB.G, source.RGB.B}
-	back := rgb8{backdrop.RGB.R, backdrop.RGB.G, backdrop.RGB.B}
-	var result rgb8
+	front := encodedRGB{float64(source.RGB.R), float64(source.RGB.G), float64(source.RGB.B)}
+	back := encodedRGB{float64(backdrop.RGB.R), float64(backdrop.RGB.G), float64(backdrop.RGB.B)}
+	var result encodedRGB
 	for i, channel := range front {
 		if channel < 0 || channel > 255 || back[i] < 0 || back[i] > 255 {
 			return Color{}, invalid("sRGB bytes")
 		}
 		linear := alpha*decode(float64(channel)/255) + (1-alpha)*decode(float64(back[i])/255)
-		result[i] = int(math.Floor(255*encode(linear) + 0.5))
+		result[i] = math.Floor(255*encode(linear) + 0.5)
 	}
 	return formats(result), nil
 }
 
 // apcaContrast measures signed APCA-W3 0.1.9 Lc for opaque sRGB, text first.
-func apcaContrast(text, background rgb8) float64 {
+func apcaContrast(text, background encodedRGB) float64 {
 	return weightedAPCA(text, background, triple{.2126729, .7151522, .0721750})
 }
-func weightedAPCA(text, background rgb8, weights triple) float64 {
-	luminance := func(rgb rgb8) float64 {
+func weightedAPCA(text, background encodedRGB, weights triple) float64 {
+	luminance := func(rgb encodedRGB) float64 {
 		y := weights[0]*math.Pow(float64(rgb[0])/255, 2.4) + weights[1]*math.Pow(float64(rgb[1])/255, 2.4) + weights[2]*math.Pow(float64(rgb[2])/255, 2.4)
 		if y < .022 {
 			y += math.Pow(.022-y, 1.414)
@@ -369,8 +365,8 @@ func weightedAPCA(text, background rgb8, weights triple) float64 {
 
 // MeasureAPCA returns signed APCA Lc for opaque sRGB colors, text first.
 func MeasureAPCA(text, background Color) (float64, error) {
-	fg := rgb8{text.RGB.R, text.RGB.G, text.RGB.B}
-	bg := rgb8{background.RGB.R, background.RGB.G, background.RGB.B}
+	fg := encodedRGB{float64(text.RGB.R), float64(text.RGB.G), float64(text.RGB.B)}
+	bg := encodedRGB{float64(background.RGB.R), float64(background.RGB.G), float64(background.RGB.B)}
 	for i := range fg {
 		if fg[i] < 0 || fg[i] > 255 || bg[i] < 0 || bg[i] > 255 {
 			return 0, invalid("sRGB bytes")
@@ -379,23 +375,77 @@ func MeasureAPCA(text, background Color) (float64, error) {
 	return apcaContrast(fg, bg), nil
 }
 
-func p3Fallback(rgb rgb8) (rgb8, bool) {
+func p3Fallback(rgb encodedRGB) (encodedRGB, bool) {
 	var decoded triple
 	for i, c := range rgb {
 		decoded[i] = decode(float64(c) / 255)
 	}
 	linear := multiply(xyzToRGB, multiply(p3ToXYZ, decoded))
-	var fallback rgb8
+	var fallback encodedRGB
 	for i, c := range linear {
-		fallback[i] = int(math.Floor(255*encode(math.Max(0, math.Min(1, c))) + 0.5))
+		fallback[i] = math.Floor(255*encode(math.Max(0, math.Min(1, c))) + 0.5)
 	}
 	return fallback, !inside(linear)
 }
 
-func p3Contrast(text, background rgb8) float64 {
+func p3Contrast(text, background encodedRGB) float64 {
 	return luminanceRatio(weightedLuminance(text, p3ToXYZ[1]), weightedLuminance(background, p3ToXYZ[1]))
 }
 
-func p3APCAContrast(text, background rgb8) float64 {
+func p3APCAContrast(text, background encodedRGB) float64 {
 	return weightedAPCA(text, background, triple{0.2289829594805780, 0.6917492625852380, 0.0792677779341829})
+}
+
+func encodedOKLCH(rgb encodedRGB, matrixToXYZ matrix) OKLCH {
+	r, g, b := rgb[0]/255, rgb[1]/255, rgb[2]/255
+	lms := multiply(xyzToLMS, multiply(matrixToXYZ, triple{decode(r), decode(g), decode(b)}))
+	for i, value := range lms {
+		lms[i] = math.Cbrt(value)
+	}
+	lab := multiply(lmsToLab, lms)
+	chroma, okHue := 0.0, 0.0
+	if rgb[0] != rgb[1] || rgb[1] != rgb[2] {
+		chroma = math.Sqrt(float64(lab[1]*lab[1]) + float64(lab[2]*lab[2]))
+		okHue = math.Mod(math.Mod(float64(math.Atan2(lab[2], lab[1])*180)/float64(math.Pi), 360)+360, 360)
+	}
+	return OKLCH{round6(lab[0]), round6(chroma), math.Mod(round6(okHue), 360)}
+}
+
+func contrastMetric(apca, wide bool) func(encodedRGB, encodedRGB) float64 {
+	if apca {
+		if wide {
+			return p3APCAContrast
+		}
+		return apcaContrast
+	}
+	if wide {
+		return p3Contrast
+	}
+	return contrast
+}
+
+func canonicalRGB(rgb encodedRGB, wide bool) encodedRGB {
+	if !wide {
+		return rgb
+	}
+	xyz := multiply(rgbToXYZ, triple{decode(rgb[0] / 255), decode(rgb[1] / 255), decode(rgb[2] / 255)})
+	native := multiply(xyzToP3, xyz)
+	for i, v := range native {
+		rgb[i] = 255 * encode(math.Max(0, math.Min(1, v)))
+	}
+	return rgb
+}
+
+func rendition(rgb encodedRGB, wide bool) Color {
+	if !wide {
+		return formats(rgb)
+	}
+	fallback, clipped := p3Fallback(rgb)
+	color := formats(fallback)
+	p3 := P3{round6(rgb[0] / 255), round6(rgb[1] / 255), round6(rgb[2] / 255)}
+	color.P3 = &p3
+	color.SRGBClipped = &clipped
+	color.OKLCH = encodedOKLCH(rgb, p3ToXYZ)
+	color.CSS = fmt.Sprintf("color(display-p3 %s %s %s)", strconv.FormatFloat(p3.R, 'f', -1, 64), strconv.FormatFloat(p3.G, 'f', -1, 64), strconv.FormatFloat(p3.B, 'f', -1, 64))
+	return color
 }

@@ -119,8 +119,8 @@ Positive Lc indicates darker foreground text. The separate `ratio` field
 records the WCAG 2 ratio for the same final pair. A text color can pass on the
 theme background and fail on the subtle surface, so check both relationships.
 
-JavaScript’s `createResolver({gamut: 'display-p3'})` and Python’s
-`Resolver(gamut="display-p3")` fit generated tones in Display-P3. Use the returned `css` string for that rendition and `hex` for the
+Select Display-P3 with JavaScript’s `createResolver({gamut: 'display-p3'})`,
+Python’s `Resolver(gamut="display-p3")`, or Go’s `NewResolver(WithGamut("display-p3"))`. Use the returned `css` string for that rendition and `hex` for the
 sRGB fallback. A true `srgbClipped` flag means at least one fallback channel
 reached the sRGB boundary through clipping. Contrast is measured on the
 Display-P3 rendition using its luminance coefficients. A fallback used in an

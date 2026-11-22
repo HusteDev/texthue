@@ -207,10 +207,10 @@ func TestDefaultRangeSweep(t *testing.T) {
 					rgb := fit(lightness, chroma, hue).rgb
 					pair := foreground(rgb)
 					if i == 2 {
-						pair = rgb8{255, 255, 255}
+						pair = encodedRGB{255, 255, 255}
 					}
 					if i == 3 {
-						pair = rgb8{18, 18, 18}
+						pair = encodedRGB{18, 18, 18}
 					}
 					if contrast(rgb, pair) < 4.5 {
 						t.Fatalf("unreadable default: %v", rgb)
@@ -436,8 +436,8 @@ func TestAPCAReference(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i, row := range rows {
-		fg := rgb8{int(row[0]), int(row[1]), int(row[2])}
-		bg := rgb8{int(row[3]), int(row[4]), int(row[5])}
+		fg := encodedRGB{row[0], row[1], row[2]}
+		bg := encodedRGB{row[3], row[4], row[5]}
 		if got := apcaContrast(fg, bg); math.Abs(got-row[6]) >= 1e-10 {
 			t.Fatalf("pair %d: got %g, want %g", i, got, row[6])
 		}
@@ -459,7 +459,7 @@ func TestDisplayP3Fit(t *testing.T) {
 	}
 	var rows []struct {
 		L, C, H       float64
-		RGB, Fallback rgb8
+		RGB, Fallback encodedRGB
 		Clipped       bool
 	}
 	if err := json.Unmarshal(data, &rows); err != nil {
@@ -472,7 +472,7 @@ func TestDisplayP3Fit(t *testing.T) {
 			t.Fatalf("OKLCH %g %g %g: RGB %v fallback %v clipped %t", row.L, row.C, row.H, fit.rgb, fallback, clipped)
 		}
 	}
-	red, err := ToCSS(formats(rgb8{255, 0, 0}), "p3")
+	red, err := ToCSS(formats(encodedRGB{255, 0, 0}), "p3")
 	if err != nil || red != "color(display-p3 0.917488 0.200287 0.138561)" {
 		t.Fatalf("red CSS: %s %v", red, err)
 	}
@@ -487,7 +487,7 @@ func TestDisplayP3Contrast(t *testing.T) {
 		t.Fatal(err)
 	}
 	var rows []struct {
-		Text, Background rgb8
+		Text, Background encodedRGB
 		Ratio, Lc        float64
 	}
 	if err = json.Unmarshal(data, &rows); err != nil {
@@ -498,5 +498,26 @@ func TestDisplayP3Contrast(t *testing.T) {
 			math.Abs(p3APCAContrast(row.Text, row.Background)-row.Lc) > 1e-10 {
 			t.Fatalf("P3 pair %v %v", row.Text, row.Background)
 		}
+	}
+}
+
+func TestDisplayP3BatchIsolation(t *testing.T) {
+	r, err := NewResolver(WithGamut("display-p3"), WithContrastModel("apca"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	results, err := r.Batch([]string{"sample", "sample"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	original := results[1].Light.Fill.P3.R
+	results[0].Light.Fill.P3.R = -1
+	*results[0].Light.Contrast.Fill.Value = 999
+	if results[1].Light.Fill.P3.R != original || *results[1].Light.Contrast.Fill.Value == 999 {
+		t.Fatal("shared mutable batch results")
+	}
+	css, err := ToCSS(results[1].Light.Fill, "p3")
+	if err != nil || css != results[1].Light.Fill.CSS {
+		t.Fatal("native P3 CSS was lost")
 	}
 }

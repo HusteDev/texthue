@@ -37,18 +37,18 @@ func (o *Override) UnmarshalJSON(data []byte) error {
 
 type brandEntry struct {
 	id      string
-	colors  [2]rgb8
+	colors  [2]encodedRGB
 	passing bool
 }
 type brandConfig struct {
-	overrides map[string][2]rgb8
+	overrides map[string][2]encodedRGB
 	palette   []brandEntry
 }
 
-func compileBrand(raw Options, normal NormalizeOptions, target float64, selectFg func(rgb8, float64) rgb8) (brandConfig, error) {
-	config := brandConfig{overrides: map[string][2]rgb8{}}
-	parse := func(pair BrandPair) ([2]rgb8, error) {
-		var colors [2]rgb8
+func compileBrand(raw Options, normal NormalizeOptions, target float64, selectFg func(encodedRGB, float64) encodedRGB) (brandConfig, error) {
+	config := brandConfig{overrides: map[string][2]encodedRGB{}}
+	parse := func(pair BrandPair) ([2]encodedRGB, error) {
+		var colors [2]encodedRGB
 		for i, hex := range []string{pair.Light, pair.Dark} {
 			rgb, err := background(hex)
 			if err != nil {
@@ -94,7 +94,8 @@ func compileBrand(raw Options, normal NormalizeOptions, target float64, selectFg
 		}
 		passing := true
 		for _, c := range colors {
-			if raw.score(selectFg(c, target), c) < target {
+			native := canonicalRGB(c, raw.Gamut == "display-p3")
+			if raw.score(selectFg(native, target), native) < target {
 				passing = false
 			}
 		}
@@ -103,7 +104,7 @@ func compileBrand(raw Options, normal NormalizeOptions, target float64, selectFg
 	return config, nil
 }
 
-func (config brandConfig) selectBrand(name string, digest []byte) (string, *[2]rgb8) {
+func (config brandConfig) selectBrand(name string, digest []byte) (string, *[2]encodedRGB) {
 	if fixed, ok := config.overrides[name]; ok {
 		return "override", &fixed
 	}
@@ -125,11 +126,11 @@ func (config brandConfig) selectBrand(name string, digest []byte) (string, *[2]r
 	return "", nil
 }
 
-func snappedHue(rgb rgb8) float64 {
+func snappedHue(rgb encodedRGB) float64 {
 	return math.Mod(math.Floor(formats(rgb).OKLCH.H*1024+.5)/1024, 360)
 }
 
-func fixedFraction(rgb rgb8) float64 {
+func fixedFraction(rgb encodedRGB) float64 {
 	angle := snappedHue(rgb)
 	if angle < anchors[0] {
 		angle += 360

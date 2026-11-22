@@ -86,6 +86,9 @@ func (r *Resolver) expandedOptions() map[string]any {
 		"backgrounds": backgrounds, "contrastTarget": r.target, "contrastTargets": targets,
 		"normalize": NormalizeOptions{Unicode: defaultString(r.normalize.Unicode, "none"),
 			Case: defaultString(r.normalize.Case, "none"), Whitespace: defaultString(r.normalize.Whitespace, "none")}}
+	if r.wide {
+		result["gamut"] = "display-p3"
+	}
 	if r.apca {
 		result["contrastModel"] = "apca"
 	}

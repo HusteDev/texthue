@@ -21,7 +21,7 @@ type resolvedProfile struct {
 
 // resolvedTheme holds one theme's parsed background and both role profiles.
 type resolvedTheme struct {
-	background rgb8
+	background encodedRGB
 	fill, text resolvedProfile
 }
 
@@ -32,15 +32,15 @@ func validRange(value Range, maximum float64) bool {
 }
 
 // background parses an opaque #RRGGBB string, accepting either hex case.
-func background(value string) (rgb8, error) {
+func background(value string) (encodedRGB, error) {
 	if len(value) != 7 || value[0] != '#' {
-		return rgb8{}, invalid("backgrounds")
+		return encodedRGB{}, invalid("backgrounds")
 	}
 	bytes, err := hex.DecodeString(value[1:])
 	if err != nil {
-		return rgb8{}, invalid("backgrounds")
+		return encodedRGB{}, invalid("backgrounds")
 	}
-	return rgb8{int(bytes[0]), int(bytes[1]), int(bytes[2])}, nil
+	return encodedRGB{float64(bytes[0]), float64(bytes[1]), float64(bytes[2])}, nil
 }
 
 // applyProfile overwrites result's ranges with any non-nil, valid ranges in
@@ -93,8 +93,8 @@ func resolveOptions(options *Options) (string, float64, [2]resolvedTheme, error)
 		}
 	}
 	themes := [2]resolvedTheme{
-		{rgb8{255, 255, 255}, resolvedProfile{Range{.72, .82}, common, .16}, resolvedProfile{Range{.43, .53}, common, .19}},
-		{rgb8{18, 18, 18}, resolvedProfile{Range{.4, .5}, common, .16}, resolvedProfile{Range{.72, .82}, common, .19}},
+		{encodedRGB{255, 255, 255}, resolvedProfile{Range{.72, .82}, common, .16}, resolvedProfile{Range{.43, .53}, common, .19}},
+		{encodedRGB{18, 18, 18}, resolvedProfile{Range{.4, .5}, common, .16}, resolvedProfile{Range{.72, .82}, common, .19}},
 	}
 	if options == nil {
 		return "", 4.5, themes, nil
@@ -205,6 +205,7 @@ func (src *Options) apply(dst *Options) {
 func WithNamespace(value string) Option { return optionFunc(func(o *Options) { o.Namespace = value }) }
 func WithPreset(value string) Option    { return optionFunc(func(o *Options) { o.Preset = value }) }
 func WithSeed(value uint32) Option      { return optionFunc(func(o *Options) { o.Seed = value }) }
+func WithGamut(gamut string) Option     { return optionFunc(func(o *Options) { o.Gamut = gamut }) }
 func WithContrastModel(model string) Option {
 	return optionFunc(func(o *Options) { o.ContrastModel = model })
 }
@@ -240,7 +241,7 @@ func (n NormalizeOptions) transform(text string) string {
 	return text
 }
 
-func compileForegrounds(options Options) (func(rgb8, float64) rgb8, error) {
+func compileForegrounds(options Options) (func(encodedRGB, float64) encodedRGB, error) {
 	values := options.Foregrounds
 	if values == nil {
 		values = []string{"#000000", "#ffffff"}
@@ -248,16 +249,16 @@ func compileForegrounds(options Options) (func(rgb8, float64) rgb8, error) {
 	if len(values) == 0 || (options.ForegroundPolicy != "" && options.ForegroundPolicy != "best" && options.ForegroundPolicy != "first-passing") {
 		return nil, invalid("foregrounds")
 	}
-	colors := make([]rgb8, len(values))
+	colors := make([]encodedRGB, len(values))
 	for i, hex := range values {
 		color, err := background(hex)
 		if err != nil {
 			return nil, invalid("foregrounds")
 		}
-		colors[i] = color
+		colors[i] = canonicalRGB(color, options.Gamut == "display-p3")
 	}
 	first := options.ForegroundPolicy == "first-passing"
-	return func(rgb rgb8, target float64) rgb8 {
+	return func(rgb encodedRGB, target float64) encodedRGB {
 		selected, best := colors[0], -1.0
 		for _, candidate := range colors {
 			ratio := options.score(candidate, rgb)
@@ -273,10 +274,11 @@ func compileForegrounds(options Options) (func(rgb8, float64) rgb8, error) {
 }
 
 type Resolver struct {
+	wide             bool
 	apca             bool
 	replay           replayInputs
 	brand            brandConfig
-	selectForeground func(rgb8, float64) rgb8
+	selectForeground func(encodedRGB, float64) encodedRGB
 	domain           hueDomain
 	normalize        NormalizeOptions
 	prefix           []byte
@@ -297,6 +299,10 @@ func NewResolver(options ...Option) (*Resolver, error) {
 	if err != nil {
 		return nil, err
 	}
+	if raw.Gamut != "" && raw.Gamut != "srgb" && raw.Gamut != "display-p3" {
+		return nil, invalid("gamut")
+	}
+	wide := raw.Gamut == "display-p3"
 	selectForeground, err := compileForegrounds(raw)
 	if err != nil {
 		return nil, err
@@ -325,8 +331,8 @@ func NewResolver(options ...Option) (*Resolver, error) {
 	prefix = binary.BigEndian.AppendUint32(prefix, raw.Seed)
 	prefix = binary.BigEndian.AppendUint32(prefix, uint32(len(namespace)))
 	prefix = append(prefix, namespace...)
-	return &Resolver{apca: raw.ContrastModel == "apca", replay: replayFrom(raw), brand: brand, selectForeground: selectForeground, domain: domain, normalize: normalization, prefix: prefix, target: target, targets: maps.Clone(raw.ContrastTargets), profiles: profiles,
-		bases: [2]Color{formats(profiles[0].background), formats(profiles[1].background)}}, nil
+	return &Resolver{wide: wide, apca: raw.ContrastModel == "apca", replay: replayFrom(raw), brand: brand, selectForeground: selectForeground, domain: domain, normalize: normalization, prefix: prefix, target: target, targets: maps.Clone(raw.ContrastTargets), profiles: profiles,
+		bases: [2]Color{rendition(canonicalRGB(profiles[0].background, wide), wide), rendition(canonicalRGB(profiles[1].background, wide), wide)}}, nil
 }
 
 func (r *Resolver) Batch(texts []string) ([]ColorSet, error) {
@@ -341,6 +347,8 @@ func (r *Resolver) Batch(texts []string) ([]ColorSet, error) {
 				return nil, err
 			}
 			seen[text] = value
+		} else {
+			value = value.detached()
 		}
 		result[i] = value
 	}
@@ -429,10 +437,18 @@ func (r *Resolver) render(digest []byte, placement *Assignment, name string) Col
 				theme.text.cap = 0
 			}
 		}
-		tone := func(l, scale, cap float64, backdrop *rgb8, required float64, surface bool, second ...surfaceConstraint) (rgb8, ContrastResult) {
+		theme.background = canonicalRGB(theme.background, r.wide)
+		m := xyzToRGB
+		if r.wide {
+			m = xyzToP3
+		}
+		ratioMetric := contrastMetric(false, r.wide)
+		metric := contrastMetric(r.apca, r.wide)
+		display := func(rgb encodedRGB) Color { return rendition(rgb, r.wide) }
+		tone := func(l, scale, cap float64, backdrop *encodedRGB, required float64, surface bool, second ...surfaceConstraint) (encodedRGB, ContrastResult) {
 			l = math.Max(0, math.Min(1, l))
-			c := cusp(l, hue) * scale
-			rgb, meta := chooseForeground(l, math.Min(c, cap), hue, backdrop, required, r.selectForeground, r.apca, surface, second...)
+			c := cuspIn(l, hue, m) * scale
+			rgb, meta := chooseForeground(l, math.Min(c, cap), hue, backdrop, required, r.selectForeground, r.apca, surface, r.wide, second...)
 			meta.ChromaCapped = c > cap
 			return rgb, meta
 		}
@@ -441,6 +457,9 @@ func (r *Resolver) render(digest []byte, placement *Assignment, name string) Col
 			direction = 1
 		}
 		base := r.bases[i]
+		if r.wide {
+			base = display(theme.background)
+		}
 		lb := math.Round(base.OKLCH.L*4096) / 4096
 		unconstrained := 1.0
 		if r.apca {
@@ -450,13 +469,13 @@ func (r *Resolver) render(digest []byte, placement *Assignment, name string) Col
 		muted, _ := tone(lb+direction*.10, fillC, theme.fill.cap, nil, unconstrained, true)
 		fill, fillMeta := tone(fillL, fillC, theme.fill.cap, nil, required("fill"), true)
 		if brand != nil {
-			fill = brand[i]
+			fill = canonicalRGB(brand[i], r.wide)
 		}
 		onFill := r.selectForeground(fill, required("fill"))
 		if brand != nil {
-			ratio := contrast(fill, onFill)
+			ratio := ratioMetric(fill, onFill)
 			if r.apca {
-				ratio = math.Abs(apcaContrast(onFill, fill))
+				ratio = math.Abs(metric(onFill, fill))
 			}
 			fillMeta = ContrastResult{Ratio: ratio, MeetsTarget: ratio >= required("fill")}
 			if !fillMeta.MeetsTarget {
@@ -469,16 +488,16 @@ func (r *Resolver) render(digest []byte, placement *Assignment, name string) Col
 		text, textMeta := tone(textL, textC, theme.text.cap, &theme.background, required("text"), false, surfaceConstraint{subtle, required("textOnSubtle")})
 		strong, strongMeta := tone(textL+direction*.10, textC, theme.text.cap, &theme.background, required("strong"), false)
 		subtleMeta := textMeta
-		textMeta.Ratio = contrast(text, theme.background)
+		textMeta.Ratio = ratioMetric(text, theme.background)
 		textMeta.MeetsTarget = textMeta.Ratio >= required("text")
-		subtleMeta.Ratio = contrast(text, subtle)
+		subtleMeta.Ratio = ratioMetric(text, subtle)
 		subtleMeta.MeetsTarget = subtleMeta.Ratio >= required("textOnSubtle")
 		if r.apca {
-			record := func(meta *ContrastResult, role string, front, back rgb8) {
-				value := apcaContrast(front, back)
+			record := func(meta *ContrastResult, role string, front, back encodedRGB) {
+				value := metric(front, back)
 				meta.Model = "apca"
 				meta.Value = &value
-				meta.Ratio = contrast(front, back)
+				meta.Ratio = ratioMetric(front, back)
 				meta.MeetsTarget = math.Abs(value) >= required(role)
 			}
 			record(&fillMeta, "fill", onFill, fill)
@@ -489,8 +508,8 @@ func (r *Resolver) render(digest []byte, placement *Assignment, name string) Col
 			record(&borderMeta, "border", border, theme.background)
 			record(&strongMeta, "strong", strong, theme.background)
 		}
-		themes[i] = ThemeColors{Background: base, Subtle: formats(subtle), Muted: formats(muted), Fill: formats(fill),
-			OnFill: formats(onFill), FillHover: formats(hover), FillActive: formats(active), Border: formats(border), Text: formats(text), Strong: formats(strong),
+		themes[i] = ThemeColors{Background: base, Subtle: display(subtle), Muted: display(muted), Fill: display(fill),
+			OnFill: display(onFill), FillHover: display(hover), FillActive: display(active), Border: display(border), Text: display(text), Strong: display(strong),
 			Contrast: ThemeContrast{Target: target, Fill: fillMeta, FillHover: hoverMeta, FillActive: activeMeta, Border: borderMeta, Text: textMeta, TextOnSubtle: subtleMeta, Strong: strongMeta}}
 
 	}
@@ -504,9 +523,6 @@ func (r *Resolver) render(digest []byte, placement *Assignment, name string) Col
 // WithColorBackgrounds uses the hex renditions of two opaque colors as theme backgrounds.
 func WithColorBackgrounds(light, dark Color) Option { return WithBackgrounds(light.Hex, dark.Hex) }
 
-func (o Options) score(text, bg rgb8) float64 {
-	if o.ContrastModel == "apca" {
-		return math.Abs(apcaContrast(text, bg))
-	}
-	return contrast(text, bg)
+func (o Options) score(text, bg encodedRGB) float64 {
+	return math.Abs(contrastMetric(o.ContrastModel == "apca", o.Gamut == "display-p3")(text, bg))
 }

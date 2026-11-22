@@ -125,16 +125,20 @@ import {readFileSync} from 'node:fs';
 console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
   ({config,text})=>importConfig(config).resolve(text))));
 """
-        run = subprocess.run(
+        for command in (
             ["node", "--input-type=module", "-e", script],
-            cwd=ROOT,
-            input=json.dumps(inputs),
-            text=True,
-            capture_output=True,
-            check=True,
-            timeout=60,
-        )
-        self.compare(expected, json.loads(run.stdout))
+            ["go", "-C", "packages/go", "run", "./cmd/conformance"],
+        ):
+            run = subprocess.run(
+                command,
+                cwd=ROOT,
+                input=json.dumps(inputs),
+                text=True,
+                capture_output=True,
+                timeout=60,
+            )
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.compare(expected, json.loads(run.stdout))
 
     def test_display_p3_contrast(self):
         from texthue._core import _p3_apca_contrast, _p3_contrast

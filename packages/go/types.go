@@ -71,6 +71,7 @@ type NormalizeOptions struct {
 }
 
 type Options struct {
+	Gamut            string              `json:"gamut,omitempty"`
 	ContrastModel    string              `json:"contrastModel,omitempty"`
 	Overrides        map[string]Override `json:"overrides,omitempty"`
 	Palette          []PaletteEntry      `json:"palette,omitempty"`
@@ -121,9 +122,18 @@ type OKLCH struct {
 	H float64 `json:"h"`
 }
 
-// Color is one opaque sRGB color in four equivalent representations. The RGB
-// bytes are canonical; Hex, HSL, and OKLCH are derived from them.
+// P3 holds encoded Display-P3 components in [0,1].
+type P3 struct {
+	R float64 `json:"r"`
+	G float64 `json:"g"`
+	B float64 `json:"b"`
+}
+
+// Color holds an opaque rendition. In Display-P3 mode Hex, RGB and HSL describe the sRGB fallback.
 type Color struct {
+	P3          *P3    `json:"p3,omitempty"`
+	CSS         string `json:"css,omitempty"`
+	SRGBClipped *bool  `json:"srgbClipped,omitempty"`
 	// Hex is lowercase six-digit #rrggbb.
 	Hex   string `json:"hex"`
 	RGB   RGB    `json:"rgb"`
@@ -217,4 +227,28 @@ func (e *Error) Error() string { return fmt.Sprintf("%s: %s", e.Code, e.Message)
 // invalid builds an INVALID_OPTIONS error naming the offending option path.
 func invalid(path string) error {
 	return &Error{Code: "INVALID_OPTIONS", Message: "invalid option: " + path}
+}
+
+// detached copies pointer-backed optional values before returning a repeated batch entry.
+func (c ColorSet) detached() ColorSet {
+	for _, theme := range []*ThemeColors{&c.Light, &c.Dark} {
+		for _, color := range []*Color{&theme.Background, &theme.Fill, &theme.OnFill, &theme.Subtle, &theme.Muted, &theme.FillHover, &theme.FillActive, &theme.Border, &theme.Text, &theme.Strong} {
+			if color.P3 != nil {
+				color.P3 = Ptr(*color.P3)
+			}
+			if color.SRGBClipped != nil {
+				color.SRGBClipped = Ptr(*color.SRGBClipped)
+			}
+		}
+		meta := &theme.Contrast
+		for _, pair := range []*ContrastResult{&meta.Fill, &meta.FillHover, &meta.FillActive, &meta.Text, &meta.TextOnSubtle, &meta.Border, &meta.Strong} {
+			if pair.Value != nil {
+				pair.Value = Ptr(*pair.Value)
+			}
+			if pair.Fallback != nil {
+				pair.Fallback = Ptr(*pair.Fallback)
+			}
+		}
+	}
+	return c
 }
