@@ -25,8 +25,14 @@ def main():
             ("identity", "IdentityTestKt"),
             ("gamut", "ColorMathTestKt"),
             ("contrast", "ContrastTestKt"),
+            ("repair", "ToneRepairTestKt"),
         ):
-            rows = subprocess.check_output([sys.executable, ROOT / f"tools/{corpus}-vectors.py"])
+            generator = (
+                ["node", ROOT / "tools/repair-vectors.mjs"]
+                if corpus == "repair"
+                else [sys.executable, ROOT / f"tools/{corpus}-vectors.py"]
+            )
+            rows = subprocess.check_output(generator)
             subprocess.run(
                 [args.java, "-cp", jar, f"com.hustedev.texthue.{entry}"], input=rows, check=True
             )
