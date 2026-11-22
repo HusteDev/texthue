@@ -7,6 +7,7 @@ publishes or uploads anything.
 """
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -138,6 +139,12 @@ def main():
     run("TypeScript compilation", [npm, "run", "build"], env=env)
     run("swatch gallery", ["node", "tools/render-gallery.mjs", "--check"], env=env)
     run("assignment vectors", ["node", "tools/build-assign-vectors.mjs", "--check"], env=env)
+    fixtures = ROOT / "conformance"
+    for line in (fixtures / "DIGESTS").read_text(encoding="ascii").splitlines():
+        expected, filename = line.split()
+        canonical = (fixtures / filename).read_text(encoding="utf-8").encode("utf-8")
+        if hashlib.sha256(canonical).hexdigest() != expected:
+            raise SystemExit(f"Frozen fixture digest mismatch: {filename}")
     run(
         "normalization vectors",
         ["node", "tools/build-normalization-vectors.mjs", "--check"],
