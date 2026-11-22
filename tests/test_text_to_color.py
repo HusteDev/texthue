@@ -9,6 +9,7 @@ import hashlib
 import json
 import math
 import random
+import shutil
 import subprocess
 import sys
 import unittest
@@ -586,6 +587,12 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
         self.assertTrue({"npm", "python", "go"}.issubset(runners))
         results = {}
         for name, package in runners.items():
+            if package.get("optionalToolchain") and not shutil.which(
+                package["conformanceRunner"][0]
+            ):
+                with self.subTest(runner=name):
+                    self.skipTest(f"{name} toolchain unavailable")
+                continue
             inputs = cases + replay if package.get("conformanceReplay") else cases
             with self.subTest(runner=name):
                 command = list(package["conformanceRunner"])
@@ -598,7 +605,7 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
                     text=True,
                     encoding="utf-8",
                     capture_output=True,
-                    timeout=60,
+                    timeout=1200 if package.get("optionalToolchain") else 60,
                 )
                 self.assertEqual(run.returncode, 0, run.stderr)
                 output = json.loads(run.stdout)
