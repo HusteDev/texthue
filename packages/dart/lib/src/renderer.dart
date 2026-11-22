@@ -52,7 +52,20 @@ final class ThemeProfile {
   const ThemeProfile({this.fill, this.text});
 }
 
+enum Preset {
+  labels(0.6, 0.8),
+  controls(0.6, 0.8),
+  chart(0.8, 1),
+  subdued(0.2, 0.4),
+  mono(0, 0);
+
+  final double low, high;
+  const Preset(this.low, this.high);
+}
+
 final class Renderer {
+  final ContrastModel contrastModel;
+  final Preset preset;
   final ThemeProfile lightProfile, darkProfile;
   final String namespace;
   final int seed;
@@ -64,11 +77,19 @@ final class Renderer {
       this.seed = 0,
       this.lightProfile = const ThemeProfile(),
       this.darkProfile = const ThemeProfile(),
-      this.contrastTarget = 4.5,
+      this.contrastModel = ContrastModel.wcag2,
+      this.preset = Preset.labels,
+      double? contrastTarget,
       Map<String, double> contrastTargets = const {},
       String lightBackground = '#ffffff',
       String darkBackground = '#121212'})
-      : contrastTargets = Map.unmodifiable(contrastTargets),
+      : contrastTarget = contrastTarget ??
+            (contrastModel == ContrastModel.apca
+                ? 60
+                : preset == Preset.controls
+                    ? 7
+                    : 4.5),
+        contrastTargets = Map.unmodifiable(contrastTargets),
         _light = _Background(lightBackground),
         _dark = _Background(darkBackground) {
     RangeError.checkValueInInterval(seed, 0, 0xffffffff, 'seed');
@@ -82,9 +103,11 @@ final class Renderer {
       'strong'
     };
     if (!contrastTargets.keys.every(roles.contains) ||
-        ![contrastTarget, ...contrastTargets.values]
-            .every((x) => x >= 1 && x <= 21)) {
-      throw ArgumentError('Invalid WCAG contrast targets');
+        ![this.contrastTarget, ...contrastTargets.values].every((x) =>
+            contrastModel == ContrastModel.apca
+                ? x >= 0 && x <= 106
+                : x >= 1 && x <= 21)) {
+      throw ArgumentError('Invalid contrast targets');
     }
   }
 
@@ -107,7 +130,9 @@ final class Renderer {
     final base = dark ? _dark : _light, direction = dark ? 1 : -1;
     double target(String role) =>
         contrastTargets[role] ??
-        (role == 'border' ? math.min(3.0, contrastTarget) : contrastTarget);
+        (role == 'border' && contrastModel == ContrastModel.wcag2
+            ? math.min(3.0, contrastTarget)
+            : contrastTarget);
     final profile = dark ? darkProfile : lightProfile;
     double sample(bool fill) {
       final range = (fill ? profile.fill : profile.text)?.lightness;
@@ -122,46 +147,50 @@ final class Renderer {
       return (start + (end - start) * uL + offset).clamp(0.0, 1.0);
     }
 
+    double score(List<int> text, List<int> bg) =>
+        measureContrast(text, bg, model: contrastModel).abs();
+    final unconstrained = contrastModel == ContrastModel.apca ? 0.0 : 1.0;
     const black = [0, 0, 0], white = [255, 255, 255];
     List<int> foreground(List<int> rgb) =>
-        measureContrast(black, rgb) >= measureContrast(white, rgb)
-            ? black
-            : white;
+        score(black, rgb) >= score(white, rgb) ? black : white;
     List<int> tone(double value, bool fill, double threshold,
-        {List<int>? background, List<int>? subtle}) {
+        {List<int>? background, List<int>? subtle, bool surface = false}) {
       final l = value.clamp(0.0, 1.0);
       final role = fill ? profile.fill : profile.text;
-      final scale = role?.chromaScale ?? (0.6, 0.8);
+      final scale = role?.chromaScale ?? (preset.low, preset.high);
       final c = math.min(role?.chromaCap ?? (fill ? 0.16 : 0.19),
           Gamut.sRGB.cusp(l, hue) * (scale.$1 + (scale.$2 - scale.$1) * uC));
+      final secondary = subtle == null ? 0.0 : target('textOnSubtle');
       return Gamut.sRGB
-          .repair(l, c, hue, threshold, (bytes) {
-            final primary =
-                measureContrast(bytes, background ?? foreground(bytes));
-            return subtle == null
-                ? primary
-                : math.min(
-                    primary,
-                    measureContrast(bytes, subtle) *
-                        (threshold / target('textOnSubtle')));
+          .repair(l, c, hue, threshold == 0 ? secondary : threshold, (bytes) {
+            final primary = background == null
+                ? score(foreground(bytes), bytes)
+                : surface
+                    ? score(background, bytes)
+                    : score(bytes, background);
+            if (subtle == null || secondary == 0) return primary;
+            final other = score(bytes, subtle);
+            return threshold == 0
+                ? other
+                : math.min(primary, other * (threshold / secondary));
           })
           .color
           .bytes;
     }
 
     final lb = base.lightness, lf = sample(true), lt = sample(false);
-    final subtle = tone(lb + direction * 0.04, true, 1);
+    final subtle = tone(lb + direction * 0.04, true, unconstrained);
     final fill = tone(lf, true, target('fill')), onFill = foreground(fill);
     final roles = {
       'background': base.bytes,
       'subtle': subtle,
-      'muted': tone(lb + direction * 0.10, true, 1),
+      'muted': tone(lb + direction * 0.10, true, unconstrained),
       'fill': fill,
       'onFill': onFill,
       'fillHover': tone(lf + direction * 0.025, true, target('fillHover'),
-          background: onFill),
+          background: onFill, surface: true),
       'fillActive': tone(lf + direction * 0.05, true, target('fillActive'),
-          background: onFill),
+          background: onFill, surface: true),
       'border': tone(lb + direction * 0.39, true, target('border'),
           background: base.bytes),
       'text': tone(lt, false, target('text'),
