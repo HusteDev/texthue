@@ -93,7 +93,10 @@ impl From<[u8; 3]> for FixedTone {
     }
 }
 
-struct Prepared<'a> {
+/// Validated options and normalized namespace shared across repeated calls.
+pub struct CompiledRenderer<'a> {
+    renderer: &'a Renderer,
+    scope: String,
     palette: Vec<(&'a str, BrandColors)>,
     domain: HueDomain,
     overrides: HashMap<String, BrandColors>,
@@ -144,14 +147,10 @@ impl Default for Renderer {
     }
 }
 
-impl Renderer {
+impl CompiledRenderer<'_> {
     pub fn resolve(&self, text: &str) -> Result<RenderedPalette, &'static str> {
-        let prepared = self.validate()?;
-        self.resolve_normalized(
-            &self.normalization.apply(text),
-            &self.normalization.apply(&self.namespace),
-            &prepared,
-        )
+        let normalized = self.renderer.normalization.apply(text);
+        self.renderer.resolve_normalized(&normalized, self)
     }
 
     /// Resolve in input order, sharing normalized duplicates only within this call.
@@ -159,17 +158,14 @@ impl Renderer {
         &self,
         labels: impl IntoIterator<Item = S>,
     ) -> Result<Vec<Arc<RenderedPalette>>, &'static str> {
-        let prepared = self.validate()?;
-        let scope = self.normalization.apply(&self.namespace);
         let mut cache = HashMap::new();
         let mut result = Vec::new();
         for label in labels {
-            let key = self.normalization.apply(label.as_ref());
+            let key = self.renderer.normalization.apply(label.as_ref());
             let palette = match cache.entry(key) {
                 Entry::Occupied(entry) => Arc::clone(entry.get()),
                 Entry::Vacant(entry) => {
-                    let palette =
-                        Arc::new(self.resolve_normalized(entry.key(), &scope, &prepared)?);
+                    let palette = Arc::new(self.renderer.resolve_normalized(entry.key(), self)?);
                     entry.insert(Arc::clone(&palette));
                     palette
                 }
@@ -177,6 +173,19 @@ impl Renderer {
             result.push(palette);
         }
         Ok(result)
+    }
+}
+
+impl Renderer {
+    pub fn resolve(&self, text: &str) -> Result<RenderedPalette, &'static str> {
+        self.compile()?.resolve(text)
+    }
+
+    pub fn batch<S: AsRef<str>>(
+        &self,
+        labels: impl IntoIterator<Item = S>,
+    ) -> Result<Vec<Arc<RenderedPalette>>, &'static str> {
+        self.compile()?.batch(labels)
     }
 
     fn default_target(&self) -> f64 {
@@ -188,7 +197,8 @@ impl Renderer {
             })
     }
 
-    fn validate(&self) -> Result<Prepared<'_>, &'static str> {
+    /// Validate once and reuse the hue domain, palette filter and normalized overrides.
+    pub fn compile(&self) -> Result<CompiledRenderer<'_>, &'static str> {
         if self.foregrounds.is_empty() {
             return Err("At least one foreground is required");
         }
@@ -248,7 +258,9 @@ impl Renderer {
                 palette.extend(entries.iter().map(|(id, c)| (id.as_str(), *c)));
             }
         }
-        Ok(Prepared {
+        Ok(CompiledRenderer {
+            renderer: self,
+            scope: self.normalization.apply(&self.namespace),
             domain,
             overrides,
             palette,
@@ -258,8 +270,7 @@ impl Renderer {
     fn resolve_normalized(
         &self,
         text: &str,
-        scope: &str,
-        prepared: &Prepared<'_>,
+        prepared: &CompiledRenderer<'_>,
     ) -> Result<RenderedPalette, &'static str> {
         let fixed = |colors: BrandColors, source| {
             let light = FixedTone::from(colors.light);
@@ -283,7 +294,8 @@ impl Renderer {
         if let Some(colors) = prepared.overrides.get(text) {
             return Ok(fixed(*colors, "override"));
         }
-        let digest = identity_digest(text, scope, self.seed).map_err(|_| "Namespace too long")?;
+        let digest =
+            identity_digest(text, &prepared.scope, self.seed).map_err(|_| "Namespace too long")?;
         let mut winner = None;
         for &(id, colors) in &prepared.palette {
             use sha2::{Digest, Sha256};
