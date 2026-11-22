@@ -1,9 +1,9 @@
 import { createResolver } from '../packages/npm/dist/index.js';
 const roles = ['background','subtle','muted','fill','onFill','fillHover','fillActive','border','text','strong'];
 const encode = s => Buffer.from(s).toString('base64');
-function emit(text, namespace, seed, contrastTarget, normalize = {unicode:'none', case:'none', whitespace:'none'}, preset = 'labels', contrastModel = 'wcag2', contrastTargets = {}) {
-  const color = createResolver({namespace,seed,preset,normalize,contrastModel,contrastTargets,...(contrastTarget === undefined ? {} : {contrastTarget})}).resolve(text);
-  console.log([encode(text),encode(namespace),seed,contrastTarget,normalize.unicode,normalize.case,normalize.whitespace,preset,contrastModel,['fill','fillHover','fillActive','border','text','textOnSubtle','strong'].map(role=>contrastTargets[role]).join(','),color.hue,
+function emit(text, namespace, seed, contrastTarget, normalize = {unicode:'none', case:'none', whitespace:'none'}, preset = 'labels', contrastModel = 'wcag2', contrastTargets = {}, foregrounds = ['#000000','#ffffff'], foregroundPolicy = 'best') {
+  const color = createResolver({namespace,seed,preset,normalize,contrastModel,contrastTargets,foregrounds,foregroundPolicy,...(contrastTarget === undefined ? {} : {contrastTarget})}).resolve(text);
+  console.log([encode(text),encode(namespace),seed,contrastTarget,normalize.unicode,normalize.case,normalize.whitespace,preset,contrastModel,['fill','fillHover','fillActive','border','text','textOnSubtle','strong'].map(role=>contrastTargets[role]).join(','),foregrounds.join(','),foregroundPolicy,color.hue,
     ...['light','dark'].flatMap(theme=>roles.map(role=>color[theme][role].hex))].join('\t'));
 }
 for (const contrastTarget of [1, 4.5, 7, 21]) {
@@ -42,4 +42,14 @@ for (const [model, targets] of [
   ['apca',{text:0,textOnSubtle:90}], ['apca',{text:90,textOnSubtle:0}], ['apca',{text:0,textOnSubtle:0}],
 ]) {
   for (let i=0;i<12;i++) emit(String(i),'',0,undefined,undefined,'labels',model,targets);
+}
+
+for (const model of ['wcag2','apca']) {
+  for (const policy of ['best','first-passing']) {
+    for (const candidates of [['#556677','#000000','#ffffff'],['#ffffff','#000000','#556677'],['#777777']]) {
+      for (const target of (model === 'wcag2' ? [1,7,21] : [0,60,106])) {
+        emit('foreground','',0,target,undefined,'labels',model,{},candidates,policy);
+      }
+    }
+  }
 }

@@ -24,6 +24,8 @@ data class ContrastTargets(
     val strong: Double? = null,
 )
 
+enum class ForegroundPolicy { BEST, FIRST_PASSING }
+
 class Resolver(
     namespace: String = "",
     private val seed: UInt = 0u,
@@ -32,12 +34,20 @@ class Resolver(
     private val preset: Preset = Preset.LABELS,
     private val contrastModel: ContrastModel = ContrastModel.WCAG2,
     private val contrastTargets: ContrastTargets = ContrastTargets(),
+    foregrounds: List<String> = listOf("#000000", "#ffffff"),
+    private val foregroundPolicy: ForegroundPolicy = ForegroundPolicy.BEST,
 ) {
     private val apca = contrastModel == ContrastModel.APCA
     private val target = contrastTarget ?: if (apca) 60.0 else preset.target
     private val scope = normalization.apply(namespace)
 
+    private val candidates = foregrounds.map { hex ->
+        require(Regex("#[0-9A-Fa-f]{6}").matches(hex)) { "Expected a six-digit foreground hex color" }
+        IntArray(3) { i -> hex.substring(1 + 2 * i, 3 + 2 * i).toInt(16) }
+    }
+
     init {
+        require(candidates.isNotEmpty()) { "At least one foreground is required" }
         val range = if (apca) 0.0..106.0 else 1.0..21.0
         with(contrastTargets) {
             require(listOfNotNull(target, fill, fillHover, fillActive, border, text, textOnSubtle, strong).all { it in range })
@@ -65,16 +75,26 @@ class Resolver(
         }
         val fillL = if (dark) sample(0.4, 0.5, 0) else sample(0.72, 0.82, 0)
         val textL = if (dark) sample(0.72, 0.82, 1) else sample(0.43, 0.53, 1)
-        val black = IntArray(3)
-        val white = IntArray(3) { 255 }
         fun contrast(a: IntArray, b: IntArray) = abs(Contrast.measure(a, b, contrastModel, Gamut.SRGB))
-        fun foreground(rgb: IntArray) = if (contrast(black, rgb) >= contrast(white, rgb)) black else white
+        fun foreground(rgb: IntArray, required: Double): IntArray {
+            var best = candidates.first()
+            var bestScore = -1.0
+            for (candidate in candidates) {
+                val score = contrast(candidate, rgb)
+                if (foregroundPolicy == ForegroundPolicy.FIRST_PASSING && score >= required) return candidate
+                if (score > bestScore) {
+                    best = candidate
+                    bestScore = score
+                }
+            }
+            return best
+        }
         fun tone(l: Double, cap: Double, target: Double, backdrop: IntArray? = null, second: IntArray? = null, secondTarget: Double = target, surface: Boolean = false): IntArray {
             val lightness = l.coerceIn(0.0, 1.0)
             val chroma = minOf(cap, ColorMath.cusp(lightness, hue, Gamut.SRGB) * scale)
             val threshold = if (target == 0.0 && second != null) secondTarget else target
             return repairTone(lightness, chroma, hue, Gamut.SRGB, threshold) { rgb ->
-                val primary = if (backdrop == null || surface) contrast(backdrop ?: foreground(rgb), rgb)
+                val primary = if (backdrop == null || surface) contrast(backdrop ?: foreground(rgb, target), rgb)
                     else contrast(rgb, backdrop)
                 when {
                     second == null || secondTarget == 0.0 -> primary
@@ -87,7 +107,7 @@ class Resolver(
         val borderTarget = contrastTargets.border ?: if (apca) target else minOf(3.0, target)
         val subtle = tone(lb + direction * 0.04, 0.16, unconstrained)
         val fill = tone(fillL, 0.16, contrastTargets.fill ?: target)
-        val onFill = foreground(fill)
+        val onFill = foreground(fill, contrastTargets.fill ?: target)
         val colors = mapOf(
             "background" to background,
             "subtle" to subtle,
