@@ -2,6 +2,14 @@
 
 ![Light and dark label colors, collection assignments, and tonal roles](assets/gallery.svg)
 
+```js
+import { assignTextColors, resolveTextColors } from 'texthue';
+
+const research = resolveTextColors('research');
+const issues = assignTextColors(['bug', 'question', 'feature']);
+console.log(research.light.fill.hex, issues.colors.bug.light.fill.hex);
+```
+
 `texthue` turns exact text into repeatable light/dark color sets. One npm package supplies compiled ESM JavaScript and TypeScript declarations, with no runtime dependencies. It supports Node.js 20+ and browsers with TextEncoder. Resolution and input validation are synchronous.
 
 ```bash

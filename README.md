@@ -2,9 +2,19 @@
 
 ![Light and dark label colors, collection assignments, and tonal roles](docs/assets/gallery.svg)
 
-Turn exact text into repeatable colors for labels, projects, categories, charts, avatars, and other application data. The same text and options produce the same colors in JavaScript, TypeScript, Python, and Go. Every result includes light and dark themes, readable fill/foreground pairs, an text color, and Hex, RGB, HSL, and OKLCH representations.
+```js
+import { assignTextColors, resolveTextColors } from 'texthue';
+
+const research = resolveTextColors('research');
+const issues = assignTextColors(['bug', 'question', 'feature']);
+console.log(research.light.fill.hex, issues.colors.bug.light.fill.hex);
+```
+
+Turn exact text into repeatable colors for labels, projects, categories, charts, avatars, and other application data. The same text and options produce the same colors in JavaScript, TypeScript, Python, and Go. Every result includes light and dark themes, readable fill/foreground pairs, a text color, and Hex, RGB, HSL, and OKLCH representations.
 
 TextHue is stateless. The JavaScript and Python packages have no runtime dependencies. Go uses golang.org/x/text for Unicode normalization and casing. It does not store inputs, contact a service, or require a user account. Each application decides what its input means.
+
+Choose a workflow in the [task guide](docs/GUIDE.md).
 
 ## Libraries
 
