@@ -27,6 +27,27 @@ List<int> _parseHex(String hex) {
 
 enum ForegroundPolicy { best, firstPassing }
 
+typedef BrandColors = ({String light, String dark});
+
+final class _FixedTone {
+  final List<int> bytes;
+  final double hue, lightness;
+  final bool neutral;
+  _FixedTone._(this.bytes, this.hue, this.lightness, this.neutral);
+  factory _FixedTone(String hex) {
+    final bytes = _parseHex(hex);
+    final coords = Color.fromRgb(bytes[0], bytes[1], bytes[2]).oklch;
+    return _FixedTone._(bytes, ((coords.h * 1024).round() / 1024) % 360,
+        (coords.l * 4096).round() / 4096, coords.c == 0);
+  }
+
+  double get fraction {
+    final angle = hue < anchors.first ? hue + 360 : hue;
+    final i = anchors.lastIndexWhere((a) => a <= angle);
+    return (i + (angle - anchors[i]) / (anchors[i + 1] - anchors[i])) / 12;
+  }
+}
+
 final class _Background {
   final List<int> bytes;
   final double lightness;
@@ -83,6 +104,7 @@ final class Renderer {
   final Map<String, double> contrastTargets;
   final ForegroundPolicy foregroundPolicy;
   final HueDomain _hues;
+  final _overrides = <String, (_FixedTone, _FixedTone)>{};
   final List<List<int>> _foregrounds;
   final _Background _light, _dark;
   Renderer(
@@ -97,6 +119,7 @@ final class Renderer {
       List<HueArc> excludeHues = const [],
       List<String> foregrounds = const ["#000000", "#ffffff"],
       this.preset = Preset.labels,
+      Map<String, BrandColors> overrides = const {},
       double? contrastTarget,
       Map<String, double> contrastTargets = const {},
       String lightBackground = '#ffffff',
@@ -113,6 +136,13 @@ final class Renderer {
         _foregrounds = foregrounds.map(_parseHex).toList(growable: false),
         _light = _Background(lightBackground),
         _dark = _Background(darkBackground) {
+    for (final entry in overrides.entries) {
+      final key = normalization.apply(entry.key);
+      if (_overrides.containsKey(key))
+        throw ArgumentError('Duplicate normalized override');
+      _overrides[key] =
+          (_FixedTone(entry.value.light), _FixedTone(entry.value.dark));
+    }
     if (_foregrounds.isEmpty)
       throw ArgumentError("Expected at least one foreground");
     RangeError.checkValueInInterval(seed, 0, 0xffffffff, 'seed');
@@ -147,6 +177,18 @@ final class Renderer {
       _resolveNormalized(normalization.apply(text));
 
   RenderedPalette _resolveNormalized(String text) {
+    final fixed = _overrides[text];
+    if (fixed != null) {
+      final (light, dark) = fixed;
+      return (
+        version: 'text-to-color-v1',
+        source: 'override',
+        hue: light.hue,
+        hueFraction: light.fraction,
+        light: _theme(false, light.hue, 0.5, 0.5, light),
+        dark: _theme(true, dark.hue, 0.5, 0.5, dark)
+      );
+    }
     final f =
         identityFractions(identityDigest(text, namespace: _scope, seed: seed));
     final pos = f[0] * 12, i = pos.floor();
@@ -162,7 +204,8 @@ final class Renderer {
     );
   }
 
-  Map<String, Color> _theme(bool dark, double hue, double uL, double uC) {
+  Map<String, Color> _theme(bool dark, double hue, double uL, double uC,
+      [_FixedTone? fixed]) {
     final base = dark ? _dark : _light, direction = dark ? 1 : -1;
     double target(String role) =>
         contrastTargets[role] ??
@@ -206,8 +249,12 @@ final class Renderer {
       final l = value.clamp(0.0, 1.0);
       final role = fill ? profile.fill : profile.text;
       final scale = role?.chromaScale ?? (preset.low, preset.high);
-      final c = math.min(role?.chromaCap ?? (fill ? 0.16 : 0.19),
-          Gamut.sRGB.cusp(l, hue) * (scale.$1 + (scale.$2 - scale.$1) * uC));
+      final c = fixed?.neutral == true
+          ? 0.0
+          : math.min(
+              role?.chromaCap ?? (fill ? 0.16 : 0.19),
+              Gamut.sRGB.cusp(l, hue) *
+                  (scale.$1 + (scale.$2 - scale.$1) * uC));
       final secondary = subtle == null ? 0.0 : target('textOnSubtle');
       return Gamut.sRGB
           .repair(l, c, hue, threshold == 0 ? secondary : threshold, (bytes) {
@@ -226,9 +273,11 @@ final class Renderer {
           .bytes;
     }
 
-    final lb = base.lightness, lf = sample(true), lt = sample(false);
+    final lb = base.lightness,
+        lf = fixed?.lightness ?? sample(true),
+        lt = sample(false);
     final subtle = tone(lb + direction * 0.04, true, unconstrained);
-    final fill = tone(lf, true, target('fill')),
+    final fill = fixed?.bytes ?? tone(lf, true, target('fill')),
         onFill = foreground(fill, target('fill'));
     final roles = {
       'background': base.bytes,
