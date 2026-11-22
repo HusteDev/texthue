@@ -18,7 +18,19 @@ final class PaletteTests: XCTestCase {
         options.palette = entries.reversed()
         XCTAssertEqual(try Renderer(options: options).batch(labels), result)
         options.overrides = ["apple": BrandColors(light: "#ffeedd", dark: "#001122")]
-        XCTAssertEqual(try Renderer(options: options).resolve("apple").source, "override")
+        let branded = try Renderer(options: options)
+        for (label, source) in [("apple", "override"), ("pear", "palette")] {
+            let full = try branded.resolve(label)
+            XCTAssertEqual(full.source, source)
+            for (dark, theme) in [(false, full.light), (true, full.dark)] {
+                for (role, color) in theme {
+                    XCTAssertEqual(try branded.hex(label, dark: dark, role: role), color.hex)
+                    XCTAssertEqual(try branded.color(label, dark: dark, role: role), color)
+                }
+            }
+        }
+        XCTAssertThrowsError(try branded.hex("apple", role: "missing"))
+        XCTAssertThrowsError(try branded.color("pear", dark: true, role: "missing"))
     }
 
     func testBothThemesMustPassAndAllFailStillSelects() throws {

@@ -31,7 +31,7 @@ For brand colors, construct `RenderOptions` and pass it to `Renderer(options:)`.
 
 ## Verify the checkout
 
-Run the batch example with `swift run --package-path packages/swift TextHueLabels apple pear apple`. Each line prints the label, light fill and dark on-fill color in input order.
+Run the single-role example with `swift run --package-path packages/swift TextHueLabels apple pear apple`. Each line prints the label, light fill from `renderer.hex(label)`, and dark foreground from `renderer.color(label, dark: true, role: "onFill")`. Both helpers throw on an unknown role.
 
 Run `swift test --package-path packages/swift --force-resolved-versions` from the repository root with Swift 6 or later. The SwiftPM test target bundles the shared reference vectors. From a standalone copy of the Swift package, run `swift test --force-resolved-versions`.
 
