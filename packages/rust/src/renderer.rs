@@ -39,7 +39,16 @@ pub struct ThemeProfile {
     pub text: RoleProfile,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ForegroundPolicy {
+    #[default]
+    Best,
+    FirstPassing,
+}
+
 pub struct Renderer {
+    pub foregrounds: Vec<[u8; 3]>,
+    pub foreground_policy: ForegroundPolicy,
     pub hue_range: (f64, f64),
     pub exclude_hues: Vec<(f64, f64)>,
     pub light_profile: ThemeProfile,
@@ -57,6 +66,8 @@ impl Default for Renderer {
     fn default() -> Self {
         Self {
             namespace: String::new(),
+            foregrounds: vec![[0; 3], [255; 3]],
+            foreground_policy: ForegroundPolicy::Best,
             hue_range: (0.0, 360.0),
             exclude_hues: Vec::new(),
             seed: 0,
@@ -107,6 +118,9 @@ impl Renderer {
     }
 
     fn validate(&self) -> Result<HueDomain, &'static str> {
+        if self.foregrounds.is_empty() {
+            return Err("At least one foreground is required");
+        }
         if !(1.0..=21.0).contains(&self.contrast_target) {
             return Err("Invalid contrast target");
         }
@@ -186,12 +200,20 @@ impl Renderer {
             (low + (high - low) * u_l + offset).clamp(0.0, 1.0)
         };
         let score = |a, b| ContrastModel::Wcag2.measure(a, b, Gamut::Srgb);
-        let foreground = |rgb| {
-            if score([0; 3], rgb) >= score([255; 3], rgb) {
-                [0; 3]
-            } else {
-                [255; 3]
+        let foreground = |rgb, target| {
+            let mut best = self.foregrounds[0];
+            let mut best_score = -1.0;
+            for &candidate in &self.foregrounds {
+                let value = score(candidate, rgb);
+                if self.foreground_policy == ForegroundPolicy::FirstPassing && value >= target {
+                    return candidate;
+                }
+                if value > best_score {
+                    best = candidate;
+                    best_score = value;
+                }
             }
+            best
         };
         let tone = |value: f64,
                     fill: bool,
@@ -209,7 +231,7 @@ impl Renderer {
                     hue,
                     target,
                     |rgb| {
-                        let primary = score(rgb, back.unwrap_or_else(|| foreground(rgb)));
+                        let primary = score(rgb, back.unwrap_or_else(|| foreground(rgb, target)));
                         second.map_or(primary, |other| {
                             primary.min(score(rgb, other) * (target / required("textOnSubtle")))
                         })
@@ -222,7 +244,7 @@ impl Renderer {
         let lt = sample(false);
         let subtle = tone(lb + direction * 0.04, true, 1.0, None, None);
         let fill = tone(lf, true, required("fill"), None, None);
-        let on_fill = foreground(fill);
+        let on_fill = foreground(fill, required("fill"));
         [
             ("background", bg),
             ("subtle", subtle),
@@ -285,6 +307,46 @@ mod tests {
     use super::*;
     use serde::Deserialize;
     use serde_json::Value;
+    #[test]
+    fn ordered_foregrounds() {
+        for policy in [ForegroundPolicy::FirstPassing, ForegroundPolicy::Best] {
+            for target in [1.0, 21.0] {
+                let renderer = Renderer {
+                    foregrounds: vec![[0x55, 0x66, 0x77], [0; 3], [255; 3]],
+                    foreground_policy: policy,
+                    contrast_target: target,
+                    ..Renderer::default()
+                };
+                let p = renderer.resolve("foreground").unwrap();
+                let actual = [&p.light, &p.dark]
+                    .into_iter()
+                    .flat_map(|t| ["fill", "onFill", "fillHover"].map(|role| t[role].hex.as_str()))
+                    .collect::<Vec<_>>();
+                let expected = if target == 21.0 {
+                    [
+                        "#ffffff", "#000000", "#ffffff", "#000000", "#ffffff", "#000000",
+                    ]
+                } else {
+                    let first = policy == ForegroundPolicy::FirstPassing;
+                    [
+                        "#72da7e",
+                        if first { "#556677" } else { "#000000" },
+                        "#6ad277",
+                        "#2e7137",
+                        if first { "#556677" } else { "#ffffff" },
+                        "#32793c",
+                    ]
+                };
+                assert_eq!(actual, expected);
+            }
+        }
+        let empty = Renderer {
+            foregrounds: vec![],
+            ..Renderer::default()
+        };
+        assert!(empty.batch(std::iter::empty::<&str>()).is_err());
+    }
+
     #[test]
     fn restricted_hues() {
         for (allowed, excluded, hue, fill) in [
