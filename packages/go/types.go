@@ -129,11 +129,22 @@ type P3 struct {
 	B float64 `json:"b"`
 }
 
+// ToneTrace records the pre-quantization coordinates of a generated tone or the hex of a supplied color.
+type ToneTrace struct {
+	Source    string `json:"source"`
+	Hex       string `json:"hex,omitempty"`
+	Requested *OKLCH `json:"requested,omitempty"`
+	Biased    *OKLCH `json:"biased,omitempty"`
+	Repaired  *OKLCH `json:"repaired,omitempty"`
+	Fitted    *OKLCH `json:"fitted,omitempty"`
+}
+
 // Color holds an opaque rendition. In Display-P3 mode Hex, RGB and HSL describe the sRGB fallback.
 type Color struct {
-	P3          *P3    `json:"p3,omitempty"`
-	CSS         string `json:"css,omitempty"`
-	SRGBClipped *bool  `json:"srgbClipped,omitempty"`
+	Trace       *ToneTrace `json:"trace,omitempty"`
+	P3          *P3        `json:"p3,omitempty"`
+	CSS         string     `json:"css,omitempty"`
+	SRGBClipped *bool      `json:"srgbClipped,omitempty"`
 	// Hex is lowercase six-digit #rrggbb.
 	Hex   string `json:"hex"`
 	RGB   RGB    `json:"rgb"`

@@ -31,6 +31,7 @@ func run() error {
 		Texts     []string                            `json:"texts"`
 		Pinned    map[string]texthue.Assignment       `json:"pinned"`
 		Text      string                              `json:"text"`
+		Trace     bool                                `json:"trace"`
 		Options   json.RawMessage                     `json:"options"`
 	}
 	if err := json.NewDecoder(os.Stdin).Decode(&cases); err != nil {
@@ -59,7 +60,11 @@ func run() error {
 			if err != nil {
 				return err
 			}
-			colors, err := resolver.Resolve(item.Text)
+			resolve := resolver.Resolve
+			if item.Trace {
+				resolve = resolver.ResolveWithTrace
+			}
+			colors, err := resolve(item.Text)
 			if err != nil {
 				return err
 			}

@@ -159,6 +159,47 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
             self.assertEqual(run.returncode, 0, run.stderr)
             self.compare(expected, json.loads(run.stdout))
 
+    def test_three_language_trace_parity(self):
+        from texthue import Resolver
+
+        inputs, expected = [], []
+        for gamut in ("srgb", "display-p3"):
+            for options in (
+                {"contrastTarget": 7},
+                {"contrastModel": "apca", "contrastTarget": 106},
+                {"overrides": {"repair": "#888888"}},
+                {"palette": [{"id": "red", "light": "#ff0000"}]},
+            ):
+                resolver = Resolver({"gamut": gamut, **options})
+                inputs.append({"config": resolver.export_config(), "text": "repair", "trace": True})
+                expected.append(resolver.project("repair", formats=["hex", "trace"]))
+        script = """
+import {importConfig} from './packages/npm/dist/index.js';
+import {readFileSync} from 'node:fs';
+console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
+  ({config,text})=>importConfig(config).project(text,{formats:['hex','trace']}))));
+"""
+        for command in (
+            ["node", "--input-type=module", "-e", script],
+            ["go", "-C", "packages/go", "run", "./cmd/conformance"],
+        ):
+            run = subprocess.run(
+                command,
+                cwd=ROOT,
+                input=json.dumps(inputs),
+                text=True,
+                capture_output=True,
+                timeout=60,
+            )
+            self.assertEqual(run.returncode, 0, run.stderr)
+            for result, reference in zip(json.loads(run.stdout), expected, strict=True):
+                for theme, roles in reference.items():
+                    for role, fields in roles.items():
+                        actual = result[theme][role]
+                        self.compare(
+                            {key: actual[key] for key in fields}, fields, f"{theme}.{role}"
+                        )
+
     def test_display_p3_contrast(self):
         from texthue._core import _p3_apca_contrast, _p3_contrast
 

@@ -228,7 +228,7 @@ type surfaceConstraint struct {
 	target float64
 }
 
-func chooseForeground(l, c, h float64, background *encodedRGB, target float64, selectColor func(encodedRGB, float64) encodedRGB, apca, surface, wide bool, second ...surfaceConstraint) (encodedRGB, ContrastResult) {
+func chooseForeground(l, c, h float64, background *encodedRGB, target float64, selectColor func(encodedRGB, float64) encodedRGB, apca, surface, wide bool, second ...surfaceConstraint) (fitted, ContrastResult) {
 	m := xyzToRGB
 	if wide {
 		m = xyzToP3
@@ -314,7 +314,7 @@ func chooseForeground(l, c, h float64, background *encodedRGB, target float64, s
 			}
 		}
 	}
-	return chosen.rgb, ContrastResult{Ratio: ratio, MeetsTarget: ratio >= target,
+	return chosen, ContrastResult{Ratio: ratio, MeetsTarget: ratio >= target,
 		LightnessAdjusted: chosen.l != l, ChromaReduced: chosen.c < c, Fallback: fallback}
 }
 

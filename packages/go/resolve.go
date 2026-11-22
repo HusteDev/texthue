@@ -356,11 +356,20 @@ func (r *Resolver) Batch(texts []string) ([]ColorSet, error) {
 }
 
 func (r *Resolver) Resolve(text string) (ColorSet, error) {
+	return r.resolve(text, false)
+}
+
+// ResolveWithTrace includes the requested, biased, repaired and gamut-fitted tone coordinates.
+func (r *Resolver) ResolveWithTrace(text string) (ColorSet, error) {
+	return r.resolve(text, true)
+}
+
+func (r *Resolver) resolve(text string, trace bool) (ColorSet, error) {
 	if !utf8.ValidString(text) {
 		return ColorSet{}, &Error{Code: "INVALID_TEXT", Message: "text contains malformed UTF-8"}
 	}
 	name := r.normalize.transform(text)
-	return r.render(r.digest(name), nil, name), nil
+	return r.renderTones(r.digest(name), nil, name, trace), nil
 }
 
 func (r *Resolver) digest(normalized string) []byte {
@@ -371,6 +380,10 @@ func (r *Resolver) digest(normalized string) []byte {
 }
 
 func (r *Resolver) render(digest []byte, placement *Assignment, name string) ColorSet {
+	return r.renderTones(digest, placement, name, false)
+}
+
+func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string, trace bool) ColorSet {
 	target := r.target
 	// The first three big-endian 32-bit digest words become fractions in [0, 1) for hue, lightness, and chroma.
 	uH := float64(binary.BigEndian.Uint32(digest[0:4])) / 4294967296
@@ -427,11 +440,13 @@ func (r *Resolver) render(digest []byte, placement *Assignment, name string) Col
 			fillC *= .6
 			textC *= .6
 		}
+		requestedFill, requestedText := fillL, textL
 		fillL = biased(fillL, 0)
 		textL = biased(textL, 1)
 		if brand != nil {
 			fixed := formats(brand[i]).OKLCH
 			fillL = math.Round(fixed.L*4096) / 4096
+			requestedFill = fillL
 			if fixed.C == 0 {
 				theme.fill.cap = 0
 				theme.text.cap = 0
@@ -445,12 +460,18 @@ func (r *Resolver) render(digest []byte, placement *Assignment, name string) Col
 		ratioMetric := contrastMetric(false, r.wide)
 		metric := contrastMetric(r.apca, r.wide)
 		display := func(rgb encodedRGB) Color { return rendition(rgb, r.wide) }
-		tone := func(l, scale, cap float64, backdrop *encodedRGB, required float64, surface bool, second ...surfaceConstraint) (encodedRGB, ContrastResult) {
+		var traces struct{ Subtle, Muted, Fill, FillHover, FillActive, Border, Text, Strong *ToneTrace }
+		tone := func(out **ToneTrace, requested, l, scale, cap float64, backdrop *encodedRGB, required float64, surface bool, second ...surfaceConstraint) (encodedRGB, ContrastResult) {
 			l = math.Max(0, math.Min(1, l))
 			c := cuspIn(l, hue, m) * scale
-			rgb, meta := chooseForeground(l, math.Min(c, cap), hue, backdrop, required, r.selectForeground, r.apca, surface, r.wide, second...)
+			chosen, meta := chooseForeground(l, math.Min(c, cap), hue, backdrop, required, r.selectForeground, r.apca, surface, r.wide, second...)
 			meta.ChromaCapped = c > cap
-			return rgb, meta
+			if trace {
+				requested = math.Max(0, math.Min(1, requested))
+				capped := math.Min(c, cap)
+				*out = &ToneTrace{Source: "generated", Requested: &OKLCH{requested, cuspIn(requested, hue, m) * scale, hue}, Biased: &OKLCH{l, capped, hue}, Repaired: &OKLCH{chosen.l, capped, hue}, Fitted: &OKLCH{chosen.l, chosen.c, hue}}
+			}
+			return chosen.rgb, meta
 		}
 		direction := -1.0
 		if i == 1 {
@@ -465,9 +486,9 @@ func (r *Resolver) render(digest []byte, placement *Assignment, name string) Col
 		if r.apca {
 			unconstrained = 0
 		}
-		subtle, _ := tone(lb+direction*.04, fillC, theme.fill.cap, nil, unconstrained, true)
-		muted, _ := tone(lb+direction*.10, fillC, theme.fill.cap, nil, unconstrained, true)
-		fill, fillMeta := tone(fillL, fillC, theme.fill.cap, nil, required("fill"), true)
+		subtle, _ := tone(&traces.Subtle, lb+direction*.04, lb+direction*.04, fillC, theme.fill.cap, nil, unconstrained, true)
+		muted, _ := tone(&traces.Muted, lb+direction*.10, lb+direction*.10, fillC, theme.fill.cap, nil, unconstrained, true)
+		fill, fillMeta := tone(&traces.Fill, requestedFill, fillL, fillC, theme.fill.cap, nil, required("fill"), true)
 		if brand != nil {
 			fill = canonicalRGB(brand[i], r.wide)
 		}
@@ -482,11 +503,11 @@ func (r *Resolver) render(digest []byte, placement *Assignment, name string) Col
 				fillMeta.Fallback = Ptr("palette-constraint")
 			}
 		}
-		hover, hoverMeta := tone(fillL+direction*.025, fillC, theme.fill.cap, &onFill, required("fillHover"), true)
-		active, activeMeta := tone(fillL+direction*.05, fillC, theme.fill.cap, &onFill, required("fillActive"), true)
-		border, borderMeta := tone(lb+direction*.39, fillC, theme.fill.cap, &theme.background, required("border"), false)
-		text, textMeta := tone(textL, textC, theme.text.cap, &theme.background, required("text"), false, surfaceConstraint{subtle, required("textOnSubtle")})
-		strong, strongMeta := tone(textL+direction*.10, textC, theme.text.cap, &theme.background, required("strong"), false)
+		hover, hoverMeta := tone(&traces.FillHover, requestedFill+direction*.025, fillL+direction*.025, fillC, theme.fill.cap, &onFill, required("fillHover"), true)
+		active, activeMeta := tone(&traces.FillActive, requestedFill+direction*.05, fillL+direction*.05, fillC, theme.fill.cap, &onFill, required("fillActive"), true)
+		border, borderMeta := tone(&traces.Border, lb+direction*.39, lb+direction*.39, fillC, theme.fill.cap, &theme.background, required("border"), false)
+		text, textMeta := tone(&traces.Text, requestedText, textL, textC, theme.text.cap, &theme.background, required("text"), false, surfaceConstraint{subtle, required("textOnSubtle")})
+		strong, strongMeta := tone(&traces.Strong, requestedText+direction*.10, textL+direction*.10, textC, theme.text.cap, &theme.background, required("strong"), false)
 		subtleMeta := textMeta
 		textMeta.Ratio = ratioMetric(text, theme.background)
 		textMeta.MeetsTarget = textMeta.Ratio >= required("text")
@@ -511,6 +532,22 @@ func (r *Resolver) render(digest []byte, placement *Assignment, name string) Col
 		themes[i] = ThemeColors{Background: base, Subtle: display(subtle), Muted: display(muted), Fill: display(fill),
 			OnFill: display(onFill), FillHover: display(hover), FillActive: display(active), Border: display(border), Text: display(text), Strong: display(strong),
 			Contrast: ThemeContrast{Target: target, Fill: fillMeta, FillHover: hoverMeta, FillActive: activeMeta, Border: borderMeta, Text: textMeta, TextOnSubtle: subtleMeta, Strong: strongMeta}}
+		if trace {
+			t := &themes[i]
+			t.Background.Trace = &ToneTrace{Source: "supplied", Hex: t.Background.Hex}
+			t.OnFill.Trace = &ToneTrace{Source: "supplied", Hex: t.OnFill.Hex}
+			t.Fill.Trace = traces.Fill
+			if brand != nil {
+				t.Fill.Trace = &ToneTrace{Source: "supplied", Hex: t.Fill.Hex}
+			}
+			t.Subtle.Trace = traces.Subtle
+			t.Muted.Trace = traces.Muted
+			t.FillHover.Trace = traces.FillHover
+			t.FillActive.Trace = traces.FillActive
+			t.Border.Trace = traces.Border
+			t.Text.Trace = traces.Text
+			t.Strong.Trace = traces.Strong
+		}
 
 	}
 	if brand != nil {
