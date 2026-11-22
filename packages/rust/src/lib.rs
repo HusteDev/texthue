@@ -6,6 +6,8 @@ mod wasm;
 pub use composite::composite_over;
 mod renderer;
 mod tables;
+#[cfg(test)]
+mod work;
 pub use renderer::{
     BrandColors, CompiledRenderer, ContrastRelationship, ContrastReport, ForegroundPolicy, Preset,
     RenderedPalette, Renderer, RoleProfile, ThemeProfile,
@@ -69,6 +71,8 @@ pub fn identity_digest(
     namespace: &str,
     seed: u32,
 ) -> Result<[u8; 32], std::num::TryFromIntError> {
+    #[cfg(test)]
+    work::HASHES.set(work::HASHES.get() + 1);
     let length = u32::try_from(namespace.len())?;
     let mut hash = Sha256::new();
     hash.update(b"text-to-color-v1\0");

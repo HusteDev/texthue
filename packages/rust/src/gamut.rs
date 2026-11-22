@@ -105,6 +105,8 @@ impl Gamut {
     }
 
     pub fn cusp(self, l: f64, h: f64) -> f64 {
+        #[cfg(test)]
+        crate::work::CUSPS.set(crate::work::CUSPS.get() + 1);
         if l == 0.0 || l == 1.0 {
             0.0
         } else {
@@ -113,6 +115,8 @@ impl Gamut {
     }
 
     pub fn fit(self, l: f64, c: f64, h: f64) -> FittedColor {
+        #[cfg(test)]
+        crate::work::FITS.set(crate::work::FITS.get() + 1);
         if l == 0.0 || l == 1.0 {
             return FittedColor {
                 bytes: [(l * 255.0) as u8; 3],

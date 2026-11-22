@@ -28,8 +28,18 @@ impl Gamut {
         if initial.score >= target {
             return initial;
         }
-        let black = evaluate(0.0);
-        let white = evaluate(1.0);
+        // At either lightness endpoint both supported gamuts collapse to a neutral.
+        let endpoint = |byte: u8| RepairedTone {
+            color: FittedColor {
+                bytes: [byte; 3],
+                lightness: f64::from(byte) / 255.0,
+                chroma: 0.0,
+            },
+            score: measure([byte; 3]),
+            fallback: None,
+        };
+        let black = endpoint(0);
+        let white = endpoint(255);
         if black.score.max(white.score) < target {
             let best = if black.score >= white.score {
                 black

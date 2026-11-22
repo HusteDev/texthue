@@ -45,6 +45,14 @@ Collection assignment moved one member of the first pair. The redesigned hash re
 
 ### Compiled Rust renderer
 
+Rust's unit tests count gamut fits, cusp evaluations and identity hashes on the
+same 100-label corpus. In table order, the five scenarios used 1,600, 5,154,
+11,325, 2,668 and 10,252 fits. Each used 1,600 cusp evaluations and 100 hashes.
+Rust scores the known black and white endpoints directly during contrast repair.
+Run `cargo test --locked renderer_work_budgets -- --nocapture` from the crate
+directory to reproduce the counts. The timing measurements below preceded this
+endpoint optimization.
+
 On the Windows x64 benchmark host, Criterion estimated 19.8 µs for the default two-theme resolution of `project:atlas`, 47.5 µs at 7:1 and 74.0 µs at 21:1 on white. On #777777 the estimates were 29.2 µs at 4.5:1 and 70.4 µs at 21:1. A 40-label batch took 1.23 ms with distinct labels and 0.234 ms with eight distinct labels. These are Criterion point estimates for repeated inputs. The corpus measurements above sample different identities. Compared with the prior local Criterion baseline, the default estimate increased and the 21:1 white-background estimate decreased. Timing alone does not isolate the cost of contrast reporting.
 
 Reproduce from the crate directory with `cargo bench --locked --bench renderer -- --warm-up-time 1 --measurement-time 2 --sample-size 20`. The timed loops reuse compiled settings.
