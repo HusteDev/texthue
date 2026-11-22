@@ -1,5 +1,6 @@
 name: texthue
 description: Deterministic text-to-color assignments for Dart.
+repository: https://github.com/HusteDev/texthue/tree/main/packages/dart
 version: 0.1.0
 environment:
   sdk: '>=3.5.0 <4.0.0'
