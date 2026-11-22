@@ -74,6 +74,17 @@
       "dir": "packages/swift",
       "versionFiles": [],
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+      "extraSyncTargets": [
+        { "source": "root:conformance/apca-srgb-v1.json", "dest": "Tests/TextHueTests/Fixtures/apca-srgb-v1.json" },
+        { "source": "root:conformance/composite-v1.json", "dest": "Tests/TextHueTests/Fixtures/composite-v1.json" },
+        { "source": "root:conformance/normalization-v1.json", "dest": "Tests/TextHueTests/Fixtures/normalization-v1.json" },
+        { "source": "root:conformance/p3-contrast-v1.json", "dest": "Tests/TextHueTests/Fixtures/p3-contrast-v1.json" },
+        { "source": "root:conformance/p3-fit-v1.json", "dest": "Tests/TextHueTests/Fixtures/p3-fit-v1.json" },
+        { "source": "root:conformance/presets-v1.json", "dest": "Tests/TextHueTests/Fixtures/presets-v1.json" },
+        { "source": "root:conformance/renderer-v1.json", "dest": "Tests/TextHueTests/Fixtures/renderer-v1.json" },
+        { "source": "root:conformance/tone-repair-v1.tsv", "dest": "Tests/TextHueTests/Fixtures/tone-repair-v1.tsv" },
+        { "source": "root:conformance/vectors.json", "dest": "Tests/TextHueTests/Fixtures/vectors.json" }
+      ],
       "verifyCommands": [["swift", "test", "--force-resolved-versions"]],
       "conformanceRunner": null
     },

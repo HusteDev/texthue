@@ -1,9 +1,10 @@
 import Foundation
 
 func fixtureData(_ name: String) throws -> Data {
-    var root = URL(fileURLWithPath: #filePath)
-    for _ in 0..<5 { root.deleteLastPathComponent() }
-    return try Data(contentsOf: root.appendingPathComponent("conformance/" + name))
+    guard let url = Bundle.module.url(forResource: name, withExtension: nil, subdirectory: "Fixtures") else {
+        throw CocoaError(.fileNoSuchFile, userInfo: [NSFilePathErrorKey: name])
+    }
+    return try Data(contentsOf: url)
 }
 
 func fixture<T: Decodable>(_ name: String, as type: T.Type) throws -> T {

@@ -10,6 +10,6 @@ let package = Package(
         .target(name: "TextHue", dependencies: [
             .product(name: "Crypto", package: "swift-crypto", condition: .when(platforms: [.linux, .windows]))
         ]),
-        .testTarget(name: "TextHueTests", dependencies: ["TextHue"])
+        .testTarget(name: "TextHueTests", dependencies: ["TextHue"], resources: [.copy("Fixtures")])
     ]
 )

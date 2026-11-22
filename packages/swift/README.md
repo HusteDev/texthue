@@ -23,6 +23,6 @@ For brand colors, construct `RenderOptions` and pass it to `Renderer(options:)`.
 
 ## Verify the checkout
 
-Run `swift test --package-path packages/swift --force-resolved-versions` from the repository root with Swift 6 or later. The tests load shared reference vectors from the checkout's `conformance` directory.
+Run `swift test --package-path packages/swift --force-resolved-versions` from the repository root with Swift 6 or later. The SwiftPM test target bundles the shared reference vectors. From a standalone copy of the Swift package, run `swift test --force-resolved-versions`.
 
 The package uses CryptoKit on Apple platforms and pins swift-crypto 3.0.0 for Linux and Windows. The package manifest declares deployment minimums of macOS 10.15, iOS 13, tvOS 13 and watchOS 6.
