@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "description": "Resolve and assign TextHue colors synchronously in React components",
   "type": "module",
-  "exports": "./index.js",
-  "files": ["index.js", "LICENSE"],
+  "exports": { ".": { "types": "./index.d.ts", "default": "./index.js" } },
+  "files": ["index.js", "index.d.ts", "LICENSE"],
   "dependencies": {"texthue": "0.1.0"},
   "peerDependencies": {"react": "^18.2.0 || ^19.0.0"},
   "license": "MIT"

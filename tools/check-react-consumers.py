@@ -21,7 +21,7 @@ def main():
                 text=True,
             )
             archives.append(str(artifacts / json.loads(packed)[0]["filename"]))
-        for version in ("18.2.0", "19.3.1"):
+        for version, types in (("18.2.0", "18.3.12"), ("19.3.1", "19.0.12")):
             app = artifacts / version
             app.mkdir()
             (app / "package.json").write_text('{"private":true,"type":"module"}', encoding="utf-8")
@@ -35,12 +35,31 @@ def main():
                     *archives,
                     f"react@{version}",
                     f"react-dom@{version}",
+                    f"@types/react@{types}",
                     "jsdom@26.1.0",
                 ],
                 cwd=app,
                 check=True,
             )
             shutil.copy2(ROOT / "tests/react-consumer.mjs", app)
+            shutil.copy2(ROOT / "tests/react-consumer.tsx", app)
+            subprocess.run(
+                [
+                    "node",
+                    str(ROOT / "node_modules/typescript/bin/tsc"),
+                    "--strict",
+                    "--noEmit",
+                    "--module",
+                    "NodeNext",
+                    "--target",
+                    "ES2022",
+                    "--jsx",
+                    "react-jsx",
+                    "react-consumer.tsx",
+                ],
+                cwd=app,
+                check=True,
+            )
             subprocess.run(["node", "react-consumer.mjs"], cwd=app, check=True)
             print(f"PASS: packed React {version} consumer mount, update and unmount", flush=True)
 
