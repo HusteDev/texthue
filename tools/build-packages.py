@@ -251,8 +251,13 @@ print('Installed Python wheel passed all valid and invalid fixtures.')
         rebuilt.mkdir()
         python_build(source_root / f"texthue-{python_version}", rebuilt, env)
         with zipfile.ZipFile(wheel) as original, zipfile.ZipFile(rebuilt / wheel.name) as second:
-            package_files = [name for name in original.namelist() if name.startswith("texthue/")]
-            for name in package_files:
+            expected, actual = set(original.namelist()), set(second.namelist())
+            if expected != actual:
+                raise SystemExit(
+                    f"Source distribution rebuild changed wheel contents: "
+                    f"missing={sorted(expected - actual)}, added={sorted(actual - expected)}"
+                )
+            for name in sorted(expected):
                 if original.read(name) != second.read(name):
                     raise SystemExit(f"Source distribution rebuild changed {name}")
         module = manifest_package("go")["publish"]["modulePath"]
