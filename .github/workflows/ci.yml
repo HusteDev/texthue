@@ -61,7 +61,8 @@ jobs:
           cargo install --locked --version 0.2.130 wasm-bindgen-cli
           python tools/build-wasm.py
           node tools/check-wasm.mjs
-          npm pack --dry-run ./packages/wasm
+          archive=$(npm pack --silent ./packages/wasm | tail -1)
+          python3 tools/check-browser.py google-chrome --wasm-package "$archive"
 
   csharp:
     name: C# conformance and NuGet packaging (${{ matrix.os }})

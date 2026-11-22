@@ -1,0 +1,28 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>TextHue WebAssembly package conformance</title>
+<output id="result">PENDING</output>
+<script type="module">
+const result = document.getElementById('result');
+try {
+  const {initialize, roleHex} = await import('./package/index.js');
+  await initialize();
+  const {vectors} = await (await fetch('./vectors.json')).json();
+  let checks = 0;
+  for (const {text, options, expected} of vectors) {
+    if (Object.keys(options).some(key => !['namespace', 'seed'].includes(key))) continue;
+    for (const theme of ['light', 'dark']) {
+      for (const [role, color] of Object.entries(expected[theme])) {
+        if (role === 'contrast') continue;
+        const actual = roleHex(text, role, {...options, theme});
+        if (actual !== color.hex) throw Error(`${theme} ${role}: ${actual} != ${color.hex}`);
+        checks++;
+      }
+    }
+  }
+  if (checks !== 400) throw Error(`Unexpected comparison count ${checks}`);
+  result.textContent = 'PASS';
+} catch (error) {
+  result.textContent = String(error);
+}
+</script>
