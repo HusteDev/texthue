@@ -12,15 +12,15 @@ Measured on Windows x64 with Node 25.8.2. At 250 labels the half-pinned case com
 
 ## Two-theme resolver cost
 
-Median / p95 in microseconds on Windows x64, AMD Ryzen 7 PRO 7840U. Each harness warms a compiled resolver with 20 labels, then resolves item:0 through item:99. The dark background stays at #121212. JavaScript and Python time individual resolutions. Go times 100 resolutions per label and reports percentiles of the per-label averages because individual resolutions fell below the Windows timer resolution. The Go p95 therefore excludes within-label timing spikes.
+Median / p95 in microseconds on Windows x64, AMD Ryzen 7 PRO 7840U. Each harness warms a compiled resolver with 20 labels, then resolves item:0 through item:99. The dark background stays at #121212. JavaScript, Python and Rust time individual resolutions. The Rust measurements include both theme contrast reports. Go times 100 resolutions per label and reports percentiles of the per-label averages because individual resolutions fell below the Windows timer resolution. The Go p95 therefore excludes within-label timing spikes.
 
-| Light background and target | JavaScript | Python | Go |
-| --- | ---: | ---: | ---: |
-| White, 4.5 | 239 / 511 | 1,892 / 3,042 | 61 / 110 |
-| White, 7 | 315 / 868 | 2,299 / 3,428 | 100 / 141 |
-| White, 21 | 1,347 / 2,935 | 9,404 / 18,432 | 490 / 582 |
-| #777777, 4.5 | 338 / 700 | 2,526 / 3,255 | 142 / 202 |
-| #777777, 21 | 1,137 / 1,962 | 9,406 / 13,273 | 456 / 524 |
+| Light background and target | JavaScript | Python | Go | Rust |
+| --- | ---: | ---: | ---: | ---: |
+| White, 4.5 | 239 / 511 | 1,892 / 3,042 | 61 / 110 | 22.8 / 33.5 |
+| White, 7 | 315 / 868 | 2,299 / 3,428 | 100 / 141 | 32.6 / 42.1 |
+| White, 21 | 1,347 / 2,935 | 9,404 / 18,432 | 490 / 582 | 78.6 / 95.4 |
+| #777777, 4.5 | 338 / 700 | 2,526 / 3,255 | 142 / 202 | 30.7 / 39.7 |
+| #777777, 21 | 1,137 / 1,962 | 9,406 / 13,273 | 456 / 524 | 73.1 / 87.0 |
 
 Reproduce with `npm run build`, `node tools/bench.mjs`, `python tools/bench.py`, and `go -C packages/go test -run '^$' -bench BenchmarkResolverContrast -benchtime=100x`. Go's standard ns/op column measures a batch of 100. The custom median-us and p95-us columns report per-resolution costs.
 
@@ -45,6 +45,8 @@ Collection assignment moved one member of the first pair. The redesigned hash re
 
 ### Compiled Rust renderer
 
-On the Windows x64 benchmark host, Criterion estimated 19.8 µs for the default two-theme resolution of `project:atlas`, 47.5 µs at 7:1 and 74.0 µs at 21:1 on white. On #777777 the estimates were 29.2 µs at 4.5:1 and 70.4 µs at 21:1. A 40-label batch took 1.09 ms with distinct labels and 0.195 ms with eight distinct labels. These are Criterion point estimates for repeated inputs. The three-runtime table above samples different identities.
+On the Windows x64 benchmark host, Criterion estimated 19.8 µs for the default two-theme resolution of `project:atlas`, 47.5 µs at 7:1 and 74.0 µs at 21:1 on white. On #777777 the estimates were 29.2 µs at 4.5:1 and 70.4 µs at 21:1. A 40-label batch took 1.23 ms with distinct labels and 0.234 ms with eight distinct labels. These are Criterion point estimates for repeated inputs. The corpus measurements above sample different identities. Compared with the prior local Criterion baseline, the default estimate increased and the 21:1 white-background estimate decreased. Timing alone does not isolate the cost of contrast reporting.
 
 Reproduce from the crate directory with `cargo bench --locked --bench renderer -- --warm-up-time 1 --measurement-time 2 --sample-size 20`. The timed loops reuse compiled settings.
+
+For only the Rust corpus percentiles and a smoke test of each Criterion case, run `cargo bench --locked --bench renderer -- --test` from the crate directory.

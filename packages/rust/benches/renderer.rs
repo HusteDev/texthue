@@ -1,5 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use std::hint::black_box;
+use std::time::Instant;
 use texthue::Renderer;
 
 fn render(c: &mut Criterion) {
@@ -17,6 +18,24 @@ fn render(c: &mut Criterion) {
             ..Renderer::default()
         };
         let renderer = options.compile().unwrap();
+        // Match the JS/Python corpus. Keep each allocation and result drop outside the timer.
+        let mut samples = Vec::with_capacity(100);
+        for index in -20..100 {
+            let label = format!("item:{index}");
+            let start = Instant::now();
+            let result = renderer.resolve(black_box(&label)).unwrap();
+            let micros = start.elapsed().as_secs_f64() * 1e6;
+            black_box(result);
+            if index >= 0 {
+                samples.push(micros);
+            }
+        }
+        samples.sort_unstable_by(f64::total_cmp);
+        println!(
+            "corpus/{name} median-us={:.2} p95-us={:.2}",
+            (samples[49] + samples[50]) / 2.0,
+            samples[94]
+        );
         singles.bench_function(name, |b| {
             b.iter(|| renderer.resolve(black_box("project:atlas")).unwrap())
         });
