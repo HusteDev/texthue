@@ -28,6 +28,8 @@ document.
 
 ## Registered runners
 
+C# supplies a .NET 9 runner for direct sRGB resolution. Run `dotnet run --configuration Release --project packages/csharp/tools/JsonRunner` from the repository root with the request array on stdin. The generated parity test includes C# when the .NET toolchain is available.
+
 Rust supplies a Cargo example for direct resolution requests. Run
 `cargo run --quiet --locked --manifest-path packages/rust/Cargo.toml --example conformance`
 from the repository root with a JSON array on stdin. The runner uses the production
