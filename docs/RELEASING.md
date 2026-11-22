@@ -159,3 +159,10 @@ python tools/sign-maven.py artifacts/texthue-0.1.0-maven.zip texthue-0.1.0-signe
 The helper preserves the five staged artifacts, verifies each detached signature,
 and includes MD5, SHA-1, SHA-256 and SHA-512 checksums for each original file.
 Retain the resulting signed ZIP for publication retries.
+
+For an automatic Central deployment, retain the deployment ID returned by the
+upload. Set `CENTRAL_TOKEN` to the Central Portal bearer credential and run
+`python tools/maven_deployment.py <deployment-id> <version>` to wait for the
+original deployment. A timeout can be retried with the same ID. After Central
+reports publication, run `tools/release.py maven-state` with the original
+version and archive to check all five public artifacts.
