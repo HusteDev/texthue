@@ -4,8 +4,14 @@
   "private": true,
   "description": "TextHue cross-language deterministic color libraries",
   "type": "module",
-  "engines": { "node": ">=22" },
-  "workspaces": ["packages/npm", "packages/tailwind"],
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/npm",
+    "packages/tailwind",
+    "packages/react"
+  ],
   "scripts": {
     "build": "npm run build --workspace texthue",
     "test": "npm run build && node --test tests/*.test.mjs",
@@ -23,6 +29,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.12",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "typescript": "7.0.2"
   },
   "license": "MIT AND W3C-20150513"
