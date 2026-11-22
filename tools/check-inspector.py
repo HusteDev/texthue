@@ -16,10 +16,36 @@ from playwright.sync_api import expect, sync_playwright
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def check_markers(page):
+    page.locator("#labels").fill("\n".join(map(str, range(128))))
+    toggle = page.get_by_role("checkbox", name="Show identity shapes")
+    toggle.check()
+    page.get_by_role("button", name="Inspect palette").click()
+    expect(page.get_by_role("status")).to_have_text("128 distinct labels")
+    shapes = ("circle", "square", "triangle", "diamond", "star", "cross", "pentagon", "hexagon")
+    pixels = set()
+    for name in shapes:
+        glyph = page.get_by_role("img", name=name, exact=True).first
+        expect(glyph).to_be_visible()
+        pixels.add(glyph.screenshot())
+    assert len(pixels) == len(shapes), "Two displayed shapes have identical raster output"
+    markers = page.locator("th [role=img]").evaluate_all(
+        "(nodes) => nodes.map(n => [n.getAttribute('aria-label'), n.textContent])"
+    )
+    with page.expect_download() as event:
+        page.get_by_role("button", name="Download swatch sheet").click()
+    sheet = ET.parse(event.value.path())
+    ns = {"svg": "http://www.w3.org/2000/svg"}
+    exported = [[title.text, title.tail] for title in sheet.findall(".//svg:text/svg:title", ns)]
+    assert exported == markers
+    toggle.uncheck()
+
+
 def exercise(page, url):
     page.goto(url)
     status = page.get_by_role("status")
     expect(status).to_have_text("3 distinct labels")
+    check_markers(page)
     page.locator("#labels").fill("item:33\nitem:633")
     page.locator("#vision").select_option("deutan")
     submit = page.get_by_role("button", name="Inspect palette")
