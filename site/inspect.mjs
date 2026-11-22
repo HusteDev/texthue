@@ -14,7 +14,9 @@ export function inspect({labels, options, theme, vision, registry}) {
       const color = set[theme].fill.hex;
       return vision === 'normal' ? color : simulateVision(color, vision);
     });
-    return {label, swatches, contrast: saved[theme].contrast, fill: saved[theme].fill,
+    const projection = resolver.project(label, {themes:[theme], roles:['fill'], formats:['hex','trace']},
+      false, persistent.assignments[label]);
+    return {label, swatches, registryFillTrace:projection[theme].fill, contrast: saved[theme].contrast, fill: saved[theme].fill,
       variables: cssVariables(saved, {theme, slug:label})};
   });
   const diagnostics = analyzePalette(rows.map(row => row.fill.hex), vision);

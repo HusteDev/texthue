@@ -28,3 +28,13 @@ test('inspector replays exported configuration and registry JSON and rejects alt
   options.options.namespace = 'different';
   assert.throws(() => inspect({...input, options}), /fingerprint/i);
 });
+
+test('inspector traces the placed registry fill for moved labels and supplied colors', () => {
+  const labels = Array.from({length:30}, (_, i) => String(i));
+  const input = {labels,options:{overrides:{0:'#abcdef'}},theme:'dark',vision:'normal'};
+  const {rows,registry} = inspect(input);
+  assert.ok(rows.some(row => registry.assignments[row.label].moved && row.swatches[0] !== row.swatches[2]));
+  for (const row of rows) assert.equal(row.registryFillTrace.hex,row.swatches[2]);
+  assert.deepEqual(rows.find(row => row.label === '0').registryFillTrace.trace,{source:'supplied',hex:'#abcdef'});
+  assert.equal(rows.find(row => row.label === '1').registryFillTrace.trace.source,'generated');
+});

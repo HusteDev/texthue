@@ -62,7 +62,7 @@ function run() {
         }
       }
       details(results,'Registry palette distances (row indices start at zero)',diagnostics);
-      for (const row of rows) details(results,row.label,{contrast:row.contrast,fill:row.fill,css:row.variables});
+      for (const row of rows) details(results,row.label,{contrast:row.contrast,fill:row.fill,registryFillTrace:row.registryFillTrace,css:row.variables});
       download('Download configuration', 'texthue-config.json', 'application/json', () => JSON.stringify(config, null, 2));
       download('Download registry', 'texthue-registry.json', 'application/json', () => JSON.stringify(registry, null, 2));
       download('Download swatch sheet', 'texthue-swatches.svg', 'image/svg+xml', () => swatchSheet(rows, input.theme, input.vision));

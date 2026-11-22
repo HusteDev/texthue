@@ -395,9 +395,9 @@ export function createResolver(options: TextColorOptions = {}) {
       return result;
     });
   };
-  const project = (text:string,only:Only, strict = false) => {
+  const project = (text:string,only:Only, strict = false, placement?:Placement) => {
     const name = settings.normalize(textValue(text,'text','INVALID_TEXT'));
-    return render(settings,bases,digestOf(name),name,undefined,only,strict);
+    return render(settings,bases,digestOf(name),name,placement === undefined ? undefined : readPlacement(placement),only,strict);
   };
   const color = (text: string, {theme,role}:Selection) => {
     const selected = project(text,{themes:[theme],roles:[role]})[theme]?.[role];
@@ -414,16 +414,19 @@ export function createResolver(options: TextColorOptions = {}) {
     const payload = {schema:'texthue-config-v1',algorithm:VERSION,options:structuredClone(settings.exportOptions())};
     return {...payload, fingerprint:fingerprint(payload)};
   };
+  function readPlacement(raw:unknown):Placement {
+    const p = record(raw,['hueFraction','ring','moved'],'registry placement');
+    const {hueFraction,ring,moved} = p;
+    if (!finite(hueFraction) || hueFraction < 0 || hueFraction >= 1 || !finite(ring) ||
+        !Number.isSafeInteger(ring) || ring < 0 || typeof moved !== 'boolean') fail('INVALID_OPTIONS','Invalid registry placement');
+    return {hueFraction,ring,moved};
+  }
   const registryAssignments = (input:unknown) => {
     if (!input || typeof input !== 'object' || Array.isArray(input)) fail('INVALID_OPTIONS','Invalid registry assignments');
     const result:Record<string,Placement> = Object.create(null);
     for (const [name,raw] of Object.entries(input)) {
       textValue(name,'registry key','INVALID_OPTIONS');
-      const p = record(raw,['hueFraction','ring','moved'],'registry placement');
-      const {hueFraction,ring,moved} = p;
-      if (!finite(hueFraction) || hueFraction < 0 || hueFraction >= 1 || !finite(ring) ||
-          !Number.isSafeInteger(ring) || ring < 0 || typeof moved !== 'boolean') fail('INVALID_OPTIONS','Invalid registry placement');
-      result[name] = {hueFraction,ring,moved};
+      result[name] = readPlacement(raw);
     }
     return result;
   };
