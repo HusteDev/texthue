@@ -17,6 +17,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  rust-audit:
+    name: Rust dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: cargo install --locked --version 0.22.2 cargo-audit
+      - run: cargo audit --file packages/rust/Cargo.lock
+
   codeql:
     name: CodeQL (${{ matrix.language }})
     runs-on: ubuntu-latest

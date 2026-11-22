@@ -17,6 +17,28 @@ env:
   GOTOOLCHAIN: local
 
 jobs:
+  rust:
+    name: Rust conformance and packaging
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/rust
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo test --locked
+      - run: cargo package --locked
+      - name: Verify packaged fixtures and consumer example
+        run: |
+          version=$(cargo pkgid | sed 's/.*[@#]//')
+          manifest="target/package/texthue-${version}/Cargo.toml"
+          cargo test --locked --manifest-path "$manifest"
+          output=$(cargo run --locked --manifest-path "$manifest" --example labels)
+          test "$output" = '#5ab95a #ffffff'
+
   csharp:
     name: C# conformance and NuGet packaging (${{ matrix.os }})
     strategy:
