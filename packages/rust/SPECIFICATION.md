@@ -24,7 +24,7 @@ Package versions are independent of the `text-to-color-v1` identifier. The ident
 2. Apply default Unicode lowercase mapping when requested. This preserves the distinction between lowercase mapping and full case folding.
 3. For trim or collapse, remove leading and trailing Unicode White_Space characters. For collapse, replace each remaining White_Space run with one U+0020. U+FEFF is outside White_Space.
 
-Each step defaults to `none`. For example, with NFKC, lower and collapse enabled, `"  ï¼¡   B "` and `"a b"` share one identity. Apply the same rules to override and pinned keys. Runtimes use their Unicode data versions. Newly assigned characters can yield different results on older runtimes. See [Unicode normalization stability](https://www.unicode.org/reports/tr15/#Versioning).
+Each step defaults to `none`. For example, with NFKC, lower and collapse enabled, `"  Ａ   B "` and `"a b"` share one identity. Apply the same rules to override and pinned keys. Runtimes use their Unicode data versions. Newly assigned characters can yield different results on older runtimes. See [Unicode normalization stability](https://www.unicode.org/reports/tr15/#Versioning).
 
 Reject malformed text, including unpaired UTF-16 surrogates. A valid UTF-16 surrogate pair represents one supplementary scalar and must encode accordingly. A Python string containing surrogate code points is malformed.
 
@@ -42,7 +42,7 @@ Options are JSON-style records with these keys. Omission selects a default; expl
 | `backgrounds.dark` | `"#121212"` | Opaque six-digit Hex, case-insensitive |
 | `gamut` | `srgb` | `srgb` or `display-p3` |
 | `contrastModel` | `wcag2` | `wcag2` or `apca` |
-| `contrastTarget` | WCAG 4.5 (7 for controls), APCA 60 | Inclusive range 1â€“21 for WCAG or 0â€“106 for APCA |
+| `contrastTarget` | WCAG 4.5 (7 for controls), APCA 60 | Inclusive range 1–21 for WCAG or 0–106 for APCA |
 | `profiles.light.fill.lightness` | `[0.72, 0.82]` | `0 <= min <= max <= 1` |
 | `profiles.dark.fill.lightness` | `[0.40, 0.50]` | `0 <= min <= max <= 1` |
 | `profiles.light.text.lightness` | `[0.43, 0.53]` | `0 <= min <= max <= 1` |
@@ -103,7 +103,7 @@ ContrastResult = {
 }
 ```
 
-The result excludes input text, namespace, and digest. `hue` is the sampled OKLCH identity hue before conversion, with no decimal rounding. All colors are opaque sRGB. RGB channels are integers in 0â€“255. HSL hue uses degrees and saturation/lightness use percentages. OKLCH lightness uses 0â€“1, chroma is a number, and hue uses degrees.
+The result excludes input text, namespace, and digest. `hue` is the sampled OKLCH identity hue before conversion, with no decimal rounding. All colors are opaque sRGB. RGB channels are integers in 0–255. HSL hue uses degrees and saturation/lightness use percentages. OKLCH lightness uses 0–1, chroma is a number, and hue uses degrees.
 
 Fill, hover and active measure onFill against the respective surface. Border, text and strong measure against the theme background. textOnSubtle measures text against subtle. Each relationship reports a luminance ratio in the selected gamut. The Display-P3 ratio uses P3 luminance coefficients. WCAG mode compares the unrounded ratio to the relationship target. APCA mode also returns signed Lc in `value`, positive for dark text on a lighter surface. It compares absolute Lc to the target. `chromaReduced` compares the final retained pre-quantization chroma with the requested chroma; it does not compare rounded output OKLCH values. `lightnessAdjusted` compares the selected pre-quantization lightness with the original sampled lightness.
 
@@ -353,7 +353,7 @@ M6 (cube-root LMS -> OKLab)
 
 Normalize labels and deduplicate their UTF-8 identities. Reserve caller-pinned placements and fixed brand colors first. Process remaining identities in ascending lexicographic order of their SHA-256 digest bytes. Let `n` count the union of requested and pinned identities. For a nonempty collection, the required hue-fraction spacing within each ring is `clamp(1/n, 1/24, 1/12)`. Fractions wrap modulo one.
 
-Starting at ring zero, try the natural hash fraction, then offsets of âˆ’1, +1, âˆ’2, +2 and so on in units of one quarter of the spacing. Try 385 positions per ring. Take the first position whose circular distance from every occupied fraction on that ring is at least the spacing.
+Starting at ring zero, try the natural hash fraction, then offsets of −1, +1, −2, +2 and so on in units of one quarter of the spacing. Try 385 positions per ring. Take the first position whose circular distance from every occupied fraction on that ring is at least the spacing.
 
 Render the tentative placement. For each occupied identity, compute the Euclidean OKLab distance between the two rendered light fills and between the two rendered dark fills, using their sRGB bytes. The placement score is the minimum of all those distances, or positive infinity for an empty registry. Keep the tentative placement if its score is at least 0.04.
 
