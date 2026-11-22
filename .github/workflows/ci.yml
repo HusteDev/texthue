@@ -84,6 +84,9 @@ jobs:
       - run: python tools/verify.py --port csharp
       - run: dotnet pack packages/csharp/src/TextHue --configuration Release --no-build --output artifacts/nuget
       - run: python tools/check-nuget.py artifacts/nuget
+      - name: Check signed NuGet package recovery
+        shell: pwsh
+        run: ./tools/check-nuget-signing.ps1 artifacts/nuget
 
   dart:
     name: Dart conformance
