@@ -39,9 +39,31 @@ public enum Preset: String, Decodable {
     }
 }
 
+public struct BrandColors: Decodable {
+    public let light, dark: String
+
+    public init(light: String, dark: String) {
+        self.light = light
+        self.dark = dark
+    }
+
+    private enum CodingKeys: String, CodingKey { case light, dark }
+
+    public init(from decoder: Decoder) throws {
+        if let hex = try? decoder.singleValueContainer().decode(String.self) {
+            self.init(light: hex, dark: hex)
+        } else {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            try self.init(light: values.decode(String.self, forKey: .light),
+                          dark: values.decode(String.self, forKey: .dark))
+        }
+    }
+}
+
 public struct RenderOptions: Decodable {
     public var hueRange: [Double]?
     public var excludeHues: [[Double]]?
+    public var overrides: [String: BrandColors]?
     public var preset: Preset?
     public var normalize: Normalization?
     public var namespace: String?
@@ -69,6 +91,27 @@ private extension RGB {
     }
 }
 
+private struct FixedTone {
+    let bytes: [UInt8]
+    let hue, lightness: Double
+    let neutral: Bool
+
+    init(_ hex: String) throws {
+        let rgb = try RGB(hex: hex)
+        let coordinates = Color(rgb: rgb).oklch
+        bytes = [rgb.r, rgb.g, rgb.b]
+        hue = (floor(coordinates.h * 1024 + 0.5) / 1024).truncatingRemainder(dividingBy: 360)
+        lightness = floor(coordinates.l * 4096 + 0.5) / 4096
+        neutral = coordinates.c == 0
+    }
+
+    var fraction: Double {
+        let angle = hue < anchors[0] ? hue + 360 : hue
+        let i = anchors.lastIndex(where: { $0 <= angle })!
+        return (Double(i) + (angle - anchors[i]) / (anchors[i + 1] - anchors[i])) / 12
+    }
+}
+
 private struct ThemeBackground {
     let bytes: [UInt8]
     let lightness: Double
@@ -93,6 +136,7 @@ public struct Renderer {
 
     private let normalization: Normalization
     private let hueDomain: HueDomain
+    private let fixedColors: [Data: (FixedTone, FixedTone)]
     private let scope: String
 
     private let foregrounds: [[UInt8]]
@@ -123,6 +167,13 @@ public struct Renderer {
         darkBackground = try ThemeBackground(options.backgrounds?["dark"] ?? "#121212")
         self.options = options
         let normalization = options.normalize ?? Normalization()
+        var fixed: [Data: (FixedTone, FixedTone)] = [:]
+        for (label, colors) in options.overrides ?? [:] {
+            let key = Data(normalization.apply(label).utf8)
+            guard fixed[key] == nil else { throw RenderError.invalidOptions }
+            fixed[key] = try (FixedTone(colors.light), FixedTone(colors.dark))
+        }
+        fixedColors = fixed
         self.normalization = normalization
         self.scope = normalization.apply(options.namespace ?? "")
     }
@@ -155,6 +206,11 @@ public struct Renderer {
     }
 
     private func resolveNormalized(_ name: String) throws -> RenderedPalette {
+        if let (light, dark) = fixedColors[Data(name.utf8)] {
+            return try RenderedPalette(version: "text-to-color-v1", source: "override", hueFraction: light.fraction,
+                                       hue: light.hue, light: theme("light", light.hue, 0.5, 0.5, light),
+                                       dark: theme("dark", dark.hue, 0.5, 0.5, dark))
+        }
         let digest = try identityDigest(name, namespace: scope, seed: options.seed ?? 0)
         let fractions = identityFractions(digest)
         return try render(hueFraction: fractions[0], lightness: fractions[1], chroma: fractions[2])
@@ -170,7 +226,7 @@ public struct Renderer {
                                    dark: theme("dark", hue, lightness, chroma))
     }
 
-    private func theme(_ name: String, _ hue: Double, _ uL: Double, _ uC: Double) throws -> [String: Color] {
+    private func theme(_ name: String, _ hue: Double, _ uL: Double, _ uC: Double, _ fixed: FixedTone? = nil) throws -> [String: Color] {
         let dark = name == "dark", direction: Double = dark ? 1 : -1
         let base = dark ? darkBackground : lightBackground
         let bg = base.bytes, lb = base.lightness
@@ -187,7 +243,7 @@ public struct Renderer {
             let range = profile?.lightness ?? (dark ? (fill ? [0.4,0.5] : [0.72,0.82]) :
                                                 (fill ? [0.72,0.82] : [0.43,0.53]))
             let scale = profile?.chromaScale ?? preset.chromaScale
-            let cap = profile?.chromaCap ?? (fill ? 0.16 : 0.19)
+            let cap = fixed?.neutral == true ? 0 : profile?.chromaCap ?? (fill ? 0.16 : 0.19)
             let bias = biases[(dark ? 2 : 0) + (fill ? 0 : 1)], sector = Int(hue / 30)
             let offset = bias[sector] + (bias[(sector + 1) % 12] - bias[sector]) * (hue / 30 - Double(sector))
             return (min(1, max(0, range[0] + (range[1] - range[0]) * uL + offset)),
@@ -225,12 +281,12 @@ public struct Renderer {
             }.color.bytes
         }
         let subtle = tone(lb + direction * 0.04, fillP, unconstrained)
-        let fill = tone(fillP.l, fillP, required("fill")), onFill = foreground(fill, target: required("fill"))
+        let fill = fixed?.bytes ?? tone(fillP.l, fillP, required("fill")), onFill = foreground(fill, target: required("fill"))
         let roles = [
             "background": bg, "subtle": subtle, "muted": tone(lb + direction * 0.10, fillP, unconstrained),
             "fill": fill, "onFill": onFill,
-            "fillHover": tone(fillP.l + direction * 0.025, fillP, required("fillHover"), onFill, surface: true),
-            "fillActive": tone(fillP.l + direction * 0.05, fillP, required("fillActive"), onFill, surface: true),
+            "fillHover": tone((fixed?.lightness ?? fillP.l) + direction * 0.025, fillP, required("fillHover"), onFill, surface: true),
+            "fillActive": tone((fixed?.lightness ?? fillP.l) + direction * 0.05, fillP, required("fillActive"), onFill, surface: true),
             "border": tone(lb + direction * 0.39, fillP, required("border"), bg),
             "text": tone(textP.l, textP, required("text"), bg, subtle),
             "strong": tone(textP.l + direction * 0.10, textP, required("strong"), bg)
