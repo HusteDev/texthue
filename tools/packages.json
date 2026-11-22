@@ -56,6 +56,22 @@
       "conformanceRunner": ["go", "-C", "packages/go", "run", "./cmd/conformance"],
       "coverageFlag": "go",
       "publish": { "registry": "go-module", "modulePath": "github.com/HusteDev/texthue/packages/go" }
+    },
+    {
+      "id": "kotlin",
+      "language": "kotlin",
+      "dir": "packages/kotlin",
+      "versionFiles": [],
+      "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+      "conformanceRunner": null
+    },
+    {
+      "id": "swift",
+      "language": "swift",
+      "dir": "packages/swift",
+      "versionFiles": [],
+      "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+      "conformanceRunner": null
     }
   ]
 }
