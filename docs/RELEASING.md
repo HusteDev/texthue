@@ -1,6 +1,6 @@
 # Releasing TextHue
 
-The Publish workflow releases three targets. npm receives the core JavaScript package, PyPI receives the Python distribution, and Go resolves the module through its subdirectory tag. The root npm workspace is private.
+The Publish workflow supports npm, PyPI and Go. npm receives the core JavaScript package and optionally the React and Tailwind adapters, PyPI receives the Python distribution, and Go resolves the module through its subdirectory tag. The root npm workspace is private.
 
 The [package manifest](../tools/packages.json) lists each package directory, version source, shared files, and verification commands. Only entries with a `publish` record are registry targets for the current workflow.
 
@@ -16,7 +16,9 @@ The [package manifest](../tools/packages.json) lists each package directory, ver
 
 For Rust distribution testing, run `python tools/stage-rust.py .cache/rust-staging`. It tests the unpacked crate and executes its bundled consumer before copying the original Cargo archive into the destination. A conflicting archive at the same destination fails staging.
 
-These local checks exercise the listed packages. Public registry delivery for these rows requires separate publishing integration.
+These local checks exercise the listed packages. The native ports and WebAssembly package still require separate registry delivery integration.
+
+Select `npm_adapters` to publish both scoped packages. Configure npm publishing rights or trusted publishing for each package in the `npm` environment. The jobs require the staged core version to match the registry before uploading either adapter. On retry, each matching adapter is skipped independently.
 
 New drafts retain the React and Tailwind tarballs tested against the staged core
 tarball. To replay those consumer tests against a downloaded bundle, run

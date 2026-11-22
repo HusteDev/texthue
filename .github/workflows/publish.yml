@@ -42,6 +42,10 @@ on:
         description: Publish the npm package
         type: boolean
         default: true
+      npm_adapters:
+        description: Publish the staged React and Tailwind npm adapters
+        type: boolean
+        default: false
       pypi:
         description: Publish the Python distribution to PyPI
         type: boolean
@@ -281,6 +285,76 @@ jobs:
         if: steps.state.outputs.state == 'matching'
         run: echo "npm already has texthue@${{ needs.build.outputs.version }} with matching bytes; skipping."
 
+  publish-adapters:
+    name: Publish @texthue/${{ matrix.adapter }}
+    if: inputs.npm_adapters && !inputs.dry_run && !failure() && !cancelled()
+    needs: [build, publish-npm]
+    strategy:
+      fail-fast: false
+      matrix:
+        adapter: [react, tailwind]
+    env:
+      ADAPTER: ${{ matrix.adapter }}
+    runs-on: ubuntu-latest
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@texthue/${{ matrix.adapter }}/v/${{ needs.build.outputs.version }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: tools
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: distributions
+          path: artifacts
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - name: Require an npm CLI that supports trusted publishing (11.5.1+)
+        run: |
+          version=$(npm --version)
+          echo "npm $version"
+          node -e "const [a,b,c]=process.argv[1].split('.').map(Number); if (a<11||(a===11&&(b<5||(b===5&&c<1)))) { console.error('npm 11.5.1+ is required'); process.exit(1) }" "$version"
+      - name: Check the npm registry's current state for this version
+        id: state
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        # Exits nonzero (failing this job) for "conflicting" or
+        # "lookup-failed" — never silently republished over, and never
+        # skipped just because the registry could not be reached.
+        run: |
+          set -euo pipefail
+          CORE=$(python3 tools/release.py npm-state --package texthue --version "$VERSION" --tarball "artifacts/texthue-${VERSION}.tgz")
+          if [[ "$CORE" != matching ]]; then
+            echo "::error::The exact core dependency must already be published"
+            exit 1
+          fi
+          STATE=$(python3 tools/release.py npm-state --package "@texthue/$ADAPTER" --version "$VERSION" --tarball "artifacts/texthue-${ADAPTER}-${VERSION}.tgz")
+          echo "state=$STATE" >> "$GITHUB_OUTPUT"
+      - name: Configure npm authentication
+        if: steps.state.outputs.state == 'absent'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "$NPM_TOKEN" ]; then
+            echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+            echo "Authenticating with the NPM_TOKEN secret."
+          else
+            echo "No NPM_TOKEN secret; relying on npm trusted publishing (OIDC)."
+          fi
+      - name: Publish the tested tarball
+        if: steps.state.outputs.state == 'absent'
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: npm publish "artifacts/texthue-${ADAPTER}-${VERSION}.tgz" --provenance --access public
+      - name: Already published with these exact bytes
+        if: steps.state.outputs.state == 'matching'
+        run: echo "npm already has @texthue/$ADAPTER@${{ needs.build.outputs.version }} with matching bytes; skipping."
+
   publish-pypi:
     name: Publish PyPI
     if: inputs.pypi && !inputs.dry_run
@@ -386,7 +460,7 @@ jobs:
   github-release:
     name: Promote the draft GitHub release
     if: inputs.github_release && !inputs.dry_run && !failure() && !cancelled()
-    needs: [build, publish-npm, publish-pypi, publish-go]
+    needs: [build, publish-npm, publish-adapters, publish-pypi, publish-go]
     runs-on: ubuntu-latest
     permissions:
       contents: write

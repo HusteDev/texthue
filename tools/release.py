@@ -352,7 +352,9 @@ def _sha1_file(path: Path) -> str:
 
 def _cmd_npm_state(args: argparse.Namespace) -> int:
     tarball = Path(args.tarball)
-    local_digest = _sha1_file(tarball) if tarball.exists() else None
+    if tarball.is_symlink() or not tarball.is_file():
+        raise ReleaseError(f"Missing or invalid npm release tarball: {tarball.name}")
+    local_digest = _sha1_file(tarball)
     state = npm_target_state(args.package, args.version, local_digest)
     return _print_state_and_exit_code(state)
 

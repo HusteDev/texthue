@@ -40,13 +40,31 @@ class PublishWorkflowTests(unittest.TestCase):
         )
 
     def test_checkout_precedes_archive_download(self):
-        for registry in ("npm", "pypi"):
+        for registry in ("npm", "adapters", "pypi"):
             actions = [
                 s.get("uses", "").split("@")[0] for s in self.jobs[f"publish-{registry}"]["steps"]
             ]
             self.assertLess(
                 actions.index("actions/checkout"), actions.index("actions/download-artifact")
             )
+
+    def test_adapter_retry_requires_matching_core_and_staged_scoped_package(self):
+        job = self.jobs["publish-adapters"]
+        self.assertEqual(job["strategy"]["matrix"]["adapter"], ["react", "tailwind"])
+        self.assertFalse(job["strategy"]["fail-fast"])
+        self.assertEqual(job["needs"], ["build", "publish-npm"])
+        self.assertEqual(
+            job["if"], "inputs.npm_adapters && !inputs.dry_run && !failure() && !cancelled()"
+        )
+        state = next(step["run"] for step in job["steps"] if step.get("id") == "state")
+        self.assertIn('if [[ "$CORE" != matching ]]', state)
+        self.assertIn('--package "@texthue/$ADAPTER"', state)
+        publish = next(
+            step for step in job["steps"] if step.get("name") == "Publish the tested tarball"
+        )
+        self.assertEqual(publish["if"], "steps.state.outputs.state == 'absent'")
+        self.assertIn('"artifacts/texthue-${ADAPTER}-${VERSION}.tgz"', publish["run"])
+        self.assertIn("publish-adapters", self.jobs["github-release"]["needs"])
 
     def test_npm_version_gate(self):
         steps = self.jobs["publish-npm"]["steps"]
