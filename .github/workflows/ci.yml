@@ -17,6 +17,23 @@ env:
   GOTOOLCHAIN: local
 
 jobs:
+  csharp:
+    name: C# conformance and NuGet packaging (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: '9.0.x'
+      - run: dotnet run --configuration Release --project packages/csharp/tests/Conformance
+      - run: dotnet pack packages/csharp/src/TextHue --configuration Release --no-build --output artifacts/nuget
+
   dart:
     name: Dart conformance
     runs-on: ubuntu-latest
