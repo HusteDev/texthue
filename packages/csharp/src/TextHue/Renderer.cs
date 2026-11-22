@@ -24,26 +24,41 @@ public sealed record RoleProfile((double Low, double High)? Lightness = null,
 
 public sealed record ThemeProfile(RoleProfile? Fill = null, RoleProfile? Text = null);
 
+public enum Preset { Labels, Controls, Chart, Subdued, Mono }
+
 public sealed class Renderer
 {
     private readonly string scope;
     private readonly uint seed;
+    private readonly ContrastModel contrastModel;
+    private readonly (double Low, double High) chromaScale;
     private readonly double contrastTarget;
     private readonly FrozenDictionary<string, double> targets;
     private readonly ThemeProfile lightProfile, darkProfile;
     private readonly Color lightBackground, darkBackground;
 
-    public Renderer(string scope = "", uint seed = 0, double contrastTarget = 4.5,
+    public Renderer(string scope = "", uint seed = 0, double? contrastTarget = null,
                     Rgb? lightBackground = null, Rgb? darkBackground = null,
                     ThemeProfile? lightProfile = null, ThemeProfile? darkProfile = null,
-                    IReadOnlyDictionary<string, double>? contrastTargets = null)
+                    IReadOnlyDictionary<string, double>? contrastTargets = null,
+                    ContrastModel contrastModel = ContrastModel.Wcag2, Preset preset = Preset.Labels)
     {
-        if (!(contrastTarget >= 1 && contrastTarget <= 21))
+        if (!Enum.IsDefined(contrastModel)) throw new ArgumentOutOfRangeException(nameof(contrastModel));
+        this.contrastModel = contrastModel;
+        chromaScale = preset switch
+        {
+            Preset.Labels or Preset.Controls => (0.6, 0.8),
+            Preset.Chart => (0.8, 1), Preset.Subdued => (0.2, 0.4), Preset.Mono => (0, 0),
+            _ => throw new ArgumentOutOfRangeException(nameof(preset))
+        };
+        this.contrastTarget = contrastTarget ?? (contrastModel == ContrastModel.Apca ? 60 : preset == Preset.Controls ? 7 : 4.5);
+        bool Valid(double x) => contrastModel == ContrastModel.Apca ? x is >= 0 and <= 106 : x is >= 1 and <= 21;
+        if (!Valid(this.contrastTarget))
             throw new ArgumentOutOfRangeException(nameof(contrastTarget));
         targets = contrastTargets?.ToFrozenDictionary(StringComparer.Ordinal) ?? FrozenDictionary<string, double>.Empty;
         foreach (var (role, value) in targets)
             if (role is not ("fill" or "fillHover" or "fillActive" or "border" or "text" or "textOnSubtle" or "strong")
-                || !(value >= 1 && value <= 21))
+                || !Valid(value))
                 throw new ArgumentException("Invalid contrast relationship or target.", nameof(contrastTargets));
         this.lightProfile = lightProfile ?? new();
         this.darkProfile = darkProfile ?? new();
@@ -54,7 +69,6 @@ public sealed class Renderer
         }
         this.scope = scope;
         this.seed = seed;
-        this.contrastTarget = contrastTarget;
         this.lightBackground = new(lightBackground ?? new Rgb(255, 255, 255));
         this.darkBackground = new(darkBackground ?? new Rgb(18, 18, 18));
     }
@@ -91,7 +105,7 @@ public sealed class Renderer
         var background = dark ? darkBackground : lightBackground;
         double lb = Math.Floor(background.Oklch.L * 4096 + 0.5) / 4096;
         var profile = dark ? darkProfile : lightProfile;
-        double Target(string role) => targets.GetValueOrDefault(role, role == "border" ? Math.Min(3, contrastTarget) : contrastTarget);
+        double Target(string role) => targets.GetValueOrDefault(role, role == "border" && contrastModel == ContrastModel.Wcag2 ? Math.Min(3, contrastTarget) : contrastTarget);
         int direction = dark ? 1 : -1;
         double Sample(bool fill)
         {
@@ -107,30 +121,35 @@ public sealed class Renderer
         }
 
         Rgb white = new(255, 255, 255), black = new(0, 0, 0);
-        Rgb Foreground(Rgb rgb) => Contrast.Measure(black, rgb) >= Contrast.Measure(white, rgb) ? black : white;
-        Rgb Tone(double value, bool fill, double target, Rgb? back = null, Rgb? second = null)
+        double Score(Rgb text, Rgb bg) => Math.Abs(Contrast.Measure(text, bg, contrastModel));
+        Rgb Foreground(Rgb rgb) => Score(black, rgb) >= Score(white, rgb) ? black : white;
+        Rgb Tone(double value, bool fill, double target, Rgb? back = null, Rgb? second = null, bool surface = false)
         {
             double l = Math.Clamp(value, 0, 1);
             var role = fill ? profile.Fill : profile.Text;
-            var (low, high) = role?.ChromaScale ?? (0.6, 0.8);
+            var (low, high) = role?.ChromaScale ?? chromaScale;
             double c = Math.Min(role?.ChromaCap ?? (fill ? 0.16 : 0.19), Gamut.SRgb.Cusp(l, hue) * (low + (high - low) * uC));
-            return Gamut.SRgb.Repair(l, c, hue, target, rgb =>
+            double secondary = second.HasValue ? Target("textOnSubtle") : 0;
+            return Gamut.SRgb.Repair(l, c, hue, target == 0 ? secondary : target, rgb =>
             {
-                double primary = Contrast.Measure(rgb, back ?? Foreground(rgb));
-                return second.HasValue ? Math.Min(primary, Contrast.Measure(rgb, second.Value) * (target / Target("textOnSubtle"))) : primary;
+                double primary = back is Rgb bg ? (surface ? Score(bg, rgb) : Score(rgb, bg)) : Score(Foreground(rgb), rgb);
+                if (second is not Rgb other || secondary == 0) return primary;
+                double otherScore = Score(rgb, other);
+                return target == 0 ? otherScore : Math.Min(primary, otherScore * (target / secondary));
             }).Color.Bytes;
         }
 
         double lf = Sample(true), lt = Sample(false);
-        var subtle = Tone(lb + direction * 0.04, true, 1);
+        double unconstrained = contrastModel == ContrastModel.Apca ? 0 : 1;
+        var subtle = Tone(lb + direction * 0.04, true, unconstrained);
         var fill = Tone(lf, true, Target("fill"));
         var onFill = Foreground(fill);
         return new Dictionary<string, Rgb>
         {
             ["background"] = background.Rgb, ["subtle"] = subtle,
-            ["muted"] = Tone(lb + direction * 0.10, true, 1), ["fill"] = fill, ["onFill"] = onFill,
-            ["fillHover"] = Tone(lf + direction * 0.025, true, Target("fillHover"), onFill),
-            ["fillActive"] = Tone(lf + direction * 0.05, true, Target("fillActive"), onFill),
+            ["muted"] = Tone(lb + direction * 0.10, true, unconstrained), ["fill"] = fill, ["onFill"] = onFill,
+            ["fillHover"] = Tone(lf + direction * 0.025, true, Target("fillHover"), onFill, surface: true),
+            ["fillActive"] = Tone(lf + direction * 0.05, true, Target("fillActive"), onFill, surface: true),
             ["border"] = Tone(lb + direction * 0.39, true, Target("border"), background.Rgb),
             ["text"] = Tone(lt, false, Target("text"), background.Rgb, subtle),
             ["strong"] = Tone(lt + direction * 0.10, false, Target("strong"), background.Rgb)

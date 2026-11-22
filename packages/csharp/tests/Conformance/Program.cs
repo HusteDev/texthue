@@ -185,3 +185,20 @@ catch (EncoderFallbackException) { }
 if (batchRenderer.Batch(["ok"])[0].Hue != batchRenderer.Resolve("ok").Hue)
     throw new InvalidDataException("Failed batch affected later resolution.");
 Console.WriteLine("Passed ordered batch, duplicate, Unicode and failure checks.");
+
+using var presets = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "presets-v1.json")));
+foreach (var row in presets.RootElement.EnumerateArray())
+{
+    var options = row.GetProperty("options");
+    var preset = Enum.Parse<Preset>(options.GetProperty("preset").GetString()!, true);
+    var model = Enum.Parse<ContrastModel>(options.GetProperty("contrastModel").GetString()!, true);
+    var renderer = new Renderer(preset: preset, contrastModel: model,
+        contrastTarget: options.TryGetProperty("contrastTarget", out var target) ? target.GetDouble() : null);
+    var palette = renderer.Resolve(row.GetProperty("text").GetString()!);
+    foreach (var (theme, colors) in new[] { ("light", palette.Light), ("dark", palette.Dark) })
+        foreach (var role in row.GetProperty(theme).EnumerateObject())
+            if (colors[role.Name].Hex != role.Value.GetString())
+                throw new InvalidDataException($"Preset mismatch for {options} {theme} {role.Name}");
+}
+if (presets.RootElement.GetArrayLength() != 20) throw new InvalidDataException("Unexpected preset corpus size.");
+Console.WriteLine("Passed 20 two-theme preset cases.");
