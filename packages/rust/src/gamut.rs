@@ -57,14 +57,17 @@ fn inside(channels: [f64; 3]) -> bool {
     channels.iter().all(|v| (-1e-12..=1.0 + 1e-12).contains(v))
 }
 
-pub(crate) fn channel_byte(linear: f64) -> u8 {
+fn encoded_channel(linear: f64) -> f64 {
     let x = linear.clamp(0.0, 1.0);
-    let encoded = if x <= 0.0031308 {
+    if x <= 0.0031308 {
         x * 12.92
     } else {
         1.055 * x.powf(1.0 / 2.4) - 0.055
-    };
-    (encoded * 255.0 + 0.5).floor() as u8
+    }
+}
+
+pub(crate) fn channel_byte(linear: f64) -> u8 {
+    (encoded_channel(linear) * 255.0 + 0.5).floor() as u8
 }
 
 /// Convert quantized Display-P3 channels to sRGB and report whether clipping was required.
@@ -78,6 +81,19 @@ pub fn p3_fallback(bytes: [u8; 3]) -> ([u8; 3], bool) {
 }
 
 impl Gamut {
+    /// Convert a configured sRGB color to encoded channels in this gamut.
+    /// Channels are in [0, 1] and retain precision for contrast evaluation.
+    pub fn channels_from_srgb(self, bytes: [u8; 3]) -> [f64; 3] {
+        let rgb = bytes.map(|byte| f64::from(byte) / 255.0);
+        match self {
+            Self::Srgb => rgb,
+            Self::DisplayP3 => {
+                let xyz = multiply(&crate::color::RGBTOXYZ, rgb.map(linear_channel));
+                multiply(&XYZTOP3, xyz).map(encoded_channel)
+            }
+        }
+    }
+
     fn linear(self, l: f64, c: f64, h: f64) -> [f64; 3] {
         let angle = h * std::f64::consts::PI / 180.0;
         let lms = multiply(&LABTOLMS, [l, c * angle.cos(), c * angle.sin()]);
@@ -142,6 +158,18 @@ impl Gamut {
 mod tests {
     use super::*;
     use serde::Deserialize;
+
+    #[test]
+    fn configured_srgb_red_preserves_luminance_in_p3() {
+        let gamut = Gamut::DisplayP3;
+        let red = gamut.channels_from_srgb([255, 0, 0]);
+        for (channel, expected) in red.into_iter().zip([0.917488, 0.200287, 0.138561]) {
+            assert!((channel - expected).abs() < 0.000001);
+        }
+        let ratio = crate::ContrastModel::Wcag2.measure_channels(red, [0.0; 3], gamut);
+        let red_y = crate::color::RGBTOXYZ[1][0];
+        assert!((ratio - (red_y + 0.05) / 0.05).abs() < 1e-12);
+    }
 
     #[test]
     fn shared_p3_fits_and_fallbacks() {

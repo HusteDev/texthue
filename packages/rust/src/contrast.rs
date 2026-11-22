@@ -22,6 +22,12 @@ impl ContrastModel {
     /// Measure foreground text against its background in the supplied gamut.
     /// APCA preserves polarity. The ratio uses each gamut's luminance weights.
     pub fn measure(self, text: [u8; 3], background: [u8; 3], gamut: Gamut) -> f64 {
+        let channels = |rgb: [u8; 3]| rgb.map(|v| f64::from(v) / 255.0);
+        self.measure_channels(channels(text), channels(background), gamut)
+    }
+
+    /// Measure encoded channels in [0, 1] before output quantization.
+    pub fn measure_channels(self, text: [f64; 3], background: [f64; 3], gamut: Gamut) -> f64 {
         let weights = match (gamut, self) {
             (Gamut::Srgb, Self::Wcag2) => [0.2126, 0.7152, 0.0722],
             (Gamut::Srgb, Self::Apca) => [0.2126729, 0.7151522, 0.0721750],
@@ -34,12 +40,11 @@ impl ContrastModel {
                 [0.228982959480578, 0.691749262585238, 0.0792677779341829]
             }
         };
-        let luminance = |rgb: [u8; 3]| {
+        let luminance = |rgb: [f64; 3]| {
             let y: f64 = rgb
                 .into_iter()
                 .zip(weights)
-                .map(|(byte, w)| {
-                    let x = f64::from(byte) / 255.0;
+                .map(|(x, w)| {
                     w * if self == Self::Apca {
                         x.powf(2.4)
                     } else {
