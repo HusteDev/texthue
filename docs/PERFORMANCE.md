@@ -107,3 +107,18 @@ can benefit from compilation during earlier scenarios.
 | White, 21 | 640 | 994 |
 | #777777, 4.5 | 172 | 295 |
 | #777777, 21 | 600 | 1,013 |
+
+### Swift renderer
+
+From `packages/swift`, run `swift run --force-resolved-versions -c release TextHueBenchmark`.
+The measurements below used Swift 6.1.3 on x86-64 Linux in Docker. Each row
+times 100 individual two-theme resolutions after 20 warm-up labels.
+Compilation and resolver construction fall outside the timed region.
+
+| Light background and target | Median (µs) | p95 (µs) |
+| --- | ---: | ---: |
+| White, 4.5 | 153 | 192 |
+| White, 7 | 198 | 319 |
+| White, 21 | 674 | 813 |
+| #777777, 4.5 | 212 | 248 |
+| #777777, 21 | 630 | 879 |

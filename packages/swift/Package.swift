@@ -7,6 +7,7 @@ let package = Package(
     products: [.library(name: "TextHue", targets: ["TextHue"])],
     dependencies: [.package(url: "https://github.com/apple/swift-crypto.git", exact: "3.0.0")],
     targets: [
+        .executableTarget(name: "TextHueBenchmark", dependencies: ["TextHue"], path: "Tools/Benchmark"),
         .executableTarget(name: "TextHueConformance", dependencies: ["TextHue"], path: "Tools/Conformance"),
         .executableTarget(name: "TextHueLabels", dependencies: ["TextHue"], path: "Examples/Labels"),
         .target(name: "TextHue", dependencies: [
