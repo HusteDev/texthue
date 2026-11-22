@@ -25,14 +25,20 @@ fun main() {
             TextCase.valueOf(row[5].uppercase()), Whitespace.valueOf(row[6].uppercase()))
         val values = row[9].split(',').map { it.ifEmpty { null }?.toDouble() }
         val targets = ContrastTargets(values[0], values[1], values[2], values[3], values[4], values[5], values[6])
+        val overrides = row[20].split('|').filter { it.isNotEmpty() }.associate {
+            val (key, light, dark) = it.split(',')
+            decode(key) to BrandColors(light, dark)
+        }
         val palette = Resolver(decode(row[1]), row[2].toUInt(), row[3].ifEmpty { null }?.toDouble(), normalization, Preset.valueOf(row[7].uppercase()),
             ContrastModel.valueOf(row[8].uppercase()), targets, row[10].split(','),
             ForegroundPolicy.valueOf(row[11].replace('-', '_').uppercase()), arc(row[12]),
             row[13].split('|').filter { it.isNotEmpty() }.map(::arc), Backgrounds(row[14], row[15]),
-            Profiles(ThemeProfiles(profile(row[16]), profile(row[17])), ThemeProfiles(profile(row[18]), profile(row[19])))).resolve(decode(row[0]))
-        check(abs(palette.hue - row[20].toDouble()) < 1e-12)
+            Profiles(ThemeProfiles(profile(row[16]), profile(row[17])), ThemeProfiles(profile(row[18]), profile(row[19]))), overrides).resolve(decode(row[0]))
+        check(palette.source == row[21])
+        check(abs(palette.hueFraction - row[22].toDouble()) < 1e-12)
+        check(abs(palette.hue - row[23].toDouble()) < 1e-12)
         val colors = listOf(palette.light, palette.dark).flatMap { theme -> roles.map { theme.colors.getValue(it) } }
-        check(colors == row.drop(21)) { "$line: $colors" }
+        check(colors == row.drop(24)) { "$line: $colors" }
     }.count()
     check(count > 0)
     check(runCatching { UnitRange(0.8, 0.1) }.exceptionOrNull() is IllegalArgumentException)

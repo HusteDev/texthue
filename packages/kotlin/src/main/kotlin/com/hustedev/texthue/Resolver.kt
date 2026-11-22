@@ -6,7 +6,7 @@ import kotlin.math.floor
 data class ThemePalette(val colors: Map<String, String>) {
     fun color(role: String): Color = renderedColor(parseHex(colors.getValue(role)))
 }
-data class Palette(val hue: Double, val light: ThemePalette, val dark: ThemePalette)
+data class Palette(val hue: Double, val light: ThemePalette, val dark: ThemePalette, val source: String, val hueFraction: Double)
 
 enum class Preset(internal val minScale: Double, internal val maxScale: Double, internal val target: Double = 4.5) {
     LABELS(0.6, 0.8),
@@ -42,6 +42,22 @@ private class ThemeBackground(hex: String) {
     val lightness = floor(ColorMath.oklch(bytes).l * 4096 + 0.5) / 4096
 }
 
+data class BrandColors(val light: String, val dark: String = light)
+
+private class FixedTone(hex: String) {
+    val bytes = parseHex(hex)
+    private val coordinates = ColorMath.oklch(bytes)
+    val hue = (floor(coordinates.h * 1024 + 0.5) / 1024) % 360
+    val lightness = floor(coordinates.l * 4096 + 0.5) / 4096
+    val neutral = coordinates.c == 0.0
+
+    fun fraction(): Double {
+        val angle = if (hue < anchors.first()) hue + 360 else hue
+        val i = anchors.indexOfFirst { it > angle } - 1
+        return (i + (angle - anchors[i]) / (anchors[i + 1] - anchors[i])) / 12
+    }
+}
+
 class Resolver(
     namespace: String = "",
     private val seed: UInt = 0u,
@@ -56,11 +72,21 @@ class Resolver(
     excludeHues: List<HueArc> = emptyList(),
     backgrounds: Backgrounds = Backgrounds(),
     private val profiles: Profiles = Profiles(),
+    overrides: Map<String, BrandColors> = emptyMap(),
 ) {
     private val apca = contrastModel == ContrastModel.APCA
     private val target = contrastTarget ?: if (apca) 60.0 else preset.target
     private val hueDomain = HueDomain(hueRange, excludeHues)
     private val scope = normalization.apply(namespace)
+
+    private val fixedColors = buildMap {
+        for ((name, colors) in overrides) {
+            val key = normalization.apply(name)
+            require(Charsets.UTF_8.newEncoder().canEncode(name)) { "Malformed override name" }
+            require(!containsKey(key)) { "Duplicate normalized override" }
+            put(key, FixedTone(colors.light) to FixedTone(colors.dark))
+        }
+    }
 
     private val candidates = foregrounds.map(::parseHex)
     private val lightBackground = ThemeBackground(backgrounds.light)
@@ -75,15 +101,20 @@ class Resolver(
     }
 
     fun resolve(text: String): Palette {
-        val (uH, uL, uC) = Identity.fractions(Identity.digest(normalization.apply(text), scope, seed))
+        val name = normalization.apply(text)
+        val (uH, uL, uC) = Identity.fractions(Identity.digest(name, scope, seed))
+        fixedColors[name]?.let { (light, dark) ->
+            return Palette(light.hue, theme(false, light.hue, 0.5, 0.5, light),
+                theme(true, dark.hue, 0.5, 0.5, dark), "override", light.fraction())
+        }
         val position = uH * 12
         val slot = position.toInt()
         val naturalHue = (anchors[slot] + (anchors[slot + 1] - anchors[slot]) * (position - slot)) % 360
         val hue = hueDomain.map(naturalHue)
-        return Palette(hue, theme(false, hue, uL, uC), theme(true, hue, uL, uC))
+        return Palette(hue, theme(false, hue, uL, uC), theme(true, hue, uL, uC), "hash", uH)
     }
 
-    private fun theme(dark: Boolean, hue: Double, uL: Double, uC: Double): ThemePalette {
+    private fun theme(dark: Boolean, hue: Double, uL: Double, uC: Double, fixed: FixedTone? = null): ThemePalette {
         val base = if (dark) darkBackground else lightBackground
         val background = base.bytes
         val direction = if (dark) 1 else -1
@@ -97,7 +128,7 @@ class Resolver(
             return (low + (high - low) * uL + correction).coerceIn(0.0, 1.0)
         }
         val fillRange = profile.fill.lightness ?: if (dark) UnitRange(0.4, 0.5) else UnitRange(0.72, 0.82)
-        val fillL = sample(fillRange.low, fillRange.high, 0)
+        val fillL = fixed?.lightness ?: sample(fillRange.low, fillRange.high, 0)
         val textRange = profile.text.lightness ?: if (dark) UnitRange(0.72, 0.82) else UnitRange(0.43, 0.53)
         val textL = sample(textRange.low, textRange.high, 1)
         fun contrast(a: IntArray, b: IntArray) = abs(Contrast.measure(a, b, contrastModel, Gamut.SRGB))
@@ -117,7 +148,8 @@ class Resolver(
         fun tone(l: Double, role: RoleProfile, defaultCap: Double, target: Double, backdrop: IntArray? = null, second: IntArray? = null, secondTarget: Double = target, surface: Boolean = false): IntArray {
             val lightness = l.coerceIn(0.0, 1.0)
             val scale = role.chromaScale?.sample(uC) ?: defaultScale
-            val chroma = minOf(role.chromaCap ?: defaultCap, ColorMath.cusp(lightness, hue, Gamut.SRGB) * scale)
+            val cap = if (fixed?.neutral == true) 0.0 else role.chromaCap ?: defaultCap
+            val chroma = minOf(cap, ColorMath.cusp(lightness, hue, Gamut.SRGB) * scale)
             val threshold = if (target == 0.0 && second != null) secondTarget else target
             return repairTone(lightness, chroma, hue, Gamut.SRGB, threshold) { rgb ->
                 val primary = if (backdrop == null || surface) contrast(backdrop ?: foreground(rgb, target), rgb)
@@ -132,7 +164,7 @@ class Resolver(
         val unconstrained = if (apca) 0.0 else 1.0
         val borderTarget = contrastTargets.border ?: if (apca) target else minOf(3.0, target)
         val subtle = tone(lb + direction * 0.04, profile.fill, 0.16, unconstrained)
-        val fill = tone(fillL, profile.fill, 0.16, contrastTargets.fill ?: target)
+        val fill = fixed?.bytes ?: tone(fillL, profile.fill, 0.16, contrastTargets.fill ?: target)
         val onFill = foreground(fill, contrastTargets.fill ?: target)
         val colors = mapOf(
             "background" to background,
