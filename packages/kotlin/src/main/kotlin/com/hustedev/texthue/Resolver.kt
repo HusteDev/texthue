@@ -36,9 +36,12 @@ class Resolver(
     private val contrastTargets: ContrastTargets = ContrastTargets(),
     foregrounds: List<String> = listOf("#000000", "#ffffff"),
     private val foregroundPolicy: ForegroundPolicy = ForegroundPolicy.BEST,
+    hueRange: HueArc = HueArc(0.0, 360.0),
+    excludeHues: List<HueArc> = emptyList(),
 ) {
     private val apca = contrastModel == ContrastModel.APCA
     private val target = contrastTarget ?: if (apca) 60.0 else preset.target
+    private val hueDomain = HueDomain(hueRange, excludeHues)
     private val scope = normalization.apply(namespace)
 
     private val candidates = foregrounds.map { hex ->
@@ -58,7 +61,8 @@ class Resolver(
         val (uH, uL, uC) = Identity.fractions(Identity.digest(normalization.apply(text), scope, seed))
         val position = uH * 12
         val slot = position.toInt()
-        val hue = (anchors[slot] + (anchors[slot + 1] - anchors[slot]) * (position - slot)) % 360
+        val naturalHue = (anchors[slot] + (anchors[slot + 1] - anchors[slot]) * (position - slot)) % 360
+        val hue = hueDomain.map(naturalHue)
         return Palette(hue, theme(false, hue, uL, uC), theme(true, hue, uL, uC))
     }
 
