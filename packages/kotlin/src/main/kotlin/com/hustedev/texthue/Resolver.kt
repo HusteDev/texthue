@@ -154,8 +154,18 @@ class Resolver(
         return best
     }
 
-    fun resolve(text: String): Palette {
-        val name = normalization.apply(text)
+    fun resolve(text: String): Palette = resolveNormalized(normalization.apply(text))
+
+    /** Preserve input order and reuse identical normalized identities within this call. */
+    fun batch(texts: Iterable<String>): List<Palette> {
+        val cache = mutableMapOf<String, Palette>()
+        return texts.map { text ->
+            val name = normalization.apply(text)
+            cache.getOrPut(name) { resolveNormalized(name) }
+        }
+    }
+
+    private fun resolveNormalized(name: String): Palette {
         val digest = Identity.digest(name, scope, seed)
         val (uH, uL, uC) = Identity.fractions(digest)
         val override = fixedColors[name]
@@ -220,6 +230,6 @@ class Resolver(
             "text" to tone(textL, profile.text, 0.19, contrastTargets.text ?: target, background, subtle, contrastTargets.textOnSubtle ?: target),
             "strong" to tone(textL + direction * 0.10, profile.text, 0.19, contrastTargets.strong ?: target, background),
         )
-        return ThemePalette(colors.mapValues { (_, rgb) -> rgb.joinToString("", prefix = "#") { it.toString(16).padStart(2, '0') } })
+        return ThemePalette(java.util.Collections.unmodifiableMap(colors.mapValues { (_, rgb) -> rgb.joinToString("", prefix = "#") { it.toString(16).padStart(2, '0') } }))
     }
 }
