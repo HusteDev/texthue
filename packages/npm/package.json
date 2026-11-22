@@ -7,6 +7,7 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" },
+    "./single": { "types": "./dist/single.d.ts", "import": "./dist/single.js", "default": "./dist/single.js" },
     "./diagnostics": { "types": "./dist/diagnostics.d.ts", "import": "./dist/diagnostics.js", "default": "./dist/diagnostics.js" },
     "./package.json": "./package.json"
   },

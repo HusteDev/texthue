@@ -1,4 +1,4 @@
-import {compareBytes} from './fingerprint.js';
+import {compareBytes} from './bytes.js';
 import type {createResolver} from './index.js';
 import type {Color, ThemeColors} from './types.js';
 

@@ -1,3 +1,4 @@
+import {compareBytes} from './bytes.js';
 import {sha256} from './sha256.js';
 
 const utf8 = new TextEncoder();
@@ -7,14 +8,6 @@ function length(value: number): Uint8Array {
   const bytes = new DataView(new ArrayBuffer(4));
   bytes.setUint32(0, value);
   return new Uint8Array(bytes.buffer);
-}
-
-export function compareBytes(left: Uint8Array, right: Uint8Array): number {
-  for (let i = 0; i < Math.min(left.length, right.length); i++) {
-    const diff = Number(left[i]) - Number(right[i]);
-    if (diff) return diff;
-  }
-  return left.length - right.length;
 }
 
 // Called only on validated and expanded configuration values.
