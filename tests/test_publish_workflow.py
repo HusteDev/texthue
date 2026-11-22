@@ -16,7 +16,7 @@ class PublishWorkflowTests(unittest.TestCase):
         cls.jobs = yaml.safe_load((ROOT / ".github/workflows/publish.yml").read_text())["jobs"]
 
     def test_targets_can_retry_independently(self):
-        for registry in ("npm", "pypi", "go"):
+        for registry in ("npm", "pypi", "go", "rust"):
             job = self.jobs[f"publish-{registry}"]
             with self.subTest(registry=registry):
                 self.assertEqual(job["if"], f"inputs.{registry} && !inputs.dry_run")
@@ -40,7 +40,7 @@ class PublishWorkflowTests(unittest.TestCase):
         )
 
     def test_checkout_precedes_archive_download(self):
-        for registry in ("npm", "adapters", "pypi"):
+        for registry in ("npm", "adapters", "pypi", "rust"):
             actions = [
                 s.get("uses", "").split("@")[0] for s in self.jobs[f"publish-{registry}"]["steps"]
             ]

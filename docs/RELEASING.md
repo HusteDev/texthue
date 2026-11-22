@@ -21,6 +21,12 @@ to compare the archive with the crates.io sparse index. A matching version must
 have the staged SHA-256 and be available for new consumers. A yanked version
 or a checksum conflict stops recovery, as does an unreadable index.
 
+Select `rust` to publish from the staged crate. Configure a crates.io publish
+token as `CARGO_REGISTRY_TOKEN` in the `crates-io` GitHub environment.
+`python tools/publish-crate.py <version> <staged-crate>` constructs the request
+locally. The workflow adds `--upload` only after checking the registry. The request
+contains the original compressed bytes and metadata read from that same archive.
+
 Select `wasm` to publish the staged `@texthue/wasm` tarball. Configure the npm
 environment for that scoped package. Its Node and browser checks run before
 draft staging. A retry compares the staged archive with the registry, independently
