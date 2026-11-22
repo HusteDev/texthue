@@ -16,6 +16,25 @@ def entry(file, declaration):
     return file, number
 
 
+def measure(binary, profile, sites, test):
+    subprocess.run(
+        [
+            binary,
+            f"-test.run={test}",
+            f"-test.coverprofile={profile}",
+        ],
+        cwd=GO,
+        check=True,
+    )
+    blocks = {}
+    for line in profile.read_text().splitlines()[1:]:
+        match = re.fullmatch(r".*/([^/:]+):(\d+)\.\d+,\d+\.\d+ \d+ (\d+)", line)
+        if match:
+            file, start, count = match.groups()
+            blocks.setdefault((file, int(start)), int(count))
+    return {key: blocks[site] for key, site in sites.items()}
+
+
 def main():
     sites = {
         "fits": entry("color.go", "func fitIn("),
@@ -35,22 +54,7 @@ def main():
             ("gray", 2868),
             ("impossible", 11452),
         ):
-            subprocess.run(
-                [
-                    binary,
-                    f"-test.run=^TestContrastWorkCorpus$/{name}$",
-                    f"-test.coverprofile={profile}",
-                ],
-                cwd=GO,
-                check=True,
-            )
-            blocks = {}
-            for line in profile.read_text().splitlines()[1:]:
-                match = re.fullmatch(r".*/([^/:]+):(\d+)\.\d+,\d+\.\d+ \d+ (\d+)", line)
-                if match:
-                    file, start, count = match.groups()
-                    blocks.setdefault((file, int(start)), int(count))
-            counts = {key: blocks[site] for key, site in sites.items()}
+            counts = measure(binary, profile, sites, f"^TestContrastWorkCorpus$/{name}$")
             print(json.dumps({"scenario": name, **counts}), flush=True)
             if not (
                 0 < counts["fits"] <= fit_limit
@@ -58,6 +62,20 @@ def main():
                 and counts["hashes"] == 100
             ):
                 raise SystemExit(f"Go renderer work outside budget for {name}")
+
+        sites["formats"] = entry("color.go", "func formats(")
+        baseline = measure(binary, profile, sites, "^TestHexWorkCorpus$/background$")
+        if any(baseline[key] for key in ("fits", "cusps", "hashes")):
+            raise SystemExit(f"Background lookup performed identity or tone work: {baseline}")
+        for role, tones in (("fill", 1), ("fillHover", 2), ("text", 2)):
+            counts = measure(binary, profile, sites, f"^TestHexWorkCorpus$/{role}$")
+            print(json.dumps({"hexRole": role, **counts}), flush=True)
+            if (
+                counts["hashes"] != 100
+                or counts["cusps"] != 100 * tones
+                or counts["formats"] != baseline["formats"]
+            ):
+                raise SystemExit(f"Go hex lookup performed unexpected work for {role}")
 
 
 if __name__ == "__main__":

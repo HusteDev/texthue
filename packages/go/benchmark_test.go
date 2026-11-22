@@ -35,6 +35,22 @@ func TestContrastWorkCorpus(t *testing.T) {
 	}
 }
 
+func TestHexWorkCorpus(t *testing.T) {
+	for _, role := range []string{"background", "fill", "fillHover", "text"} {
+		t.Run(role, func(t *testing.T) {
+			resolver, err := NewResolver()
+			if err != nil {
+				t.Fatal(err)
+			}
+			for index := 0; index < 100; index++ {
+				if _, err := resolver.Hex("item:"+strconv.Itoa(index), "dark", role); err != nil {
+					t.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
 func BenchmarkResolverContrast(b *testing.B) {
 	scenarios := append([]contrastScenario{
 		{"apca", 75, "#ffffff", []Option{WithContrastModel("apca")}},
