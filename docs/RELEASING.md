@@ -166,3 +166,12 @@ upload. Set `CENTRAL_TOKEN` to the Central Portal bearer credential and run
 original deployment. A timeout can be retried with the same ID. After Central
 reports publication, run `tools/release.py maven-state` with the original
 version and archive to check all five public artifacts.
+
+In the publish workflow, leave the Maven input empty to skip Kotlin. Set it to
+`new` for a first upload. The `maven-central` environment supplies the
+`CENTRAL_TOKEN` and armored `MAVEN_SIGNING_KEY` secrets plus the
+`MAVEN_SIGNING_FINGERPRINT` variable. The key must support unattended signing.
+The upload step writes the Central deployment UUID to the job summary. To resume,
+dispatch the original version and commit with that UUID as the Maven input.
+If the upload response was lost, retrieve the deployment ID from Central using
+the deployment name (version and commit) before dispatching again.

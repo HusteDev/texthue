@@ -42,6 +42,10 @@ on:
         description: Publish the npm package
         type: boolean
         default: true
+      maven:
+        description: Leave blank to skip Maven, enter new for a first upload, or enter the original Central deployment UUID to resume
+        type: string
+        required: false
       dart:
         description: Publish the staged Dart archive to pub.dev
         type: boolean
@@ -390,6 +394,61 @@ jobs:
         if: steps.state.outputs.state == 'matching'
         run: echo "npm already has @texthue/$ADAPTER@${{ needs.build.outputs.version }} with matching bytes; skipping."
 
+  publish-maven:
+    name: Publish Kotlin to Maven Central
+    if: inputs.maven != '' && !inputs.dry_run
+    needs: build
+    environment: maven-central
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      DEPLOYMENT: ${{ inputs.maven }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: tools
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: distributions
+          path: artifacts
+      - name: Compare original artifacts with Central
+        id: state
+        run: |
+          set -euo pipefail
+          state=$(python3 tools/release.py maven-state --version "$VERSION" --archive "artifacts/texthue-${VERSION}-maven.zip")
+          echo "state=$state" >> "$GITHUB_OUTPUT"
+      - name: Sign and upload first deployment
+        if: steps.state.outputs.state == 'absent' && inputs.maven == 'new'
+        env:
+          SIGNING_KEY: ${{ secrets.MAVEN_SIGNING_KEY }}
+          SIGNING_FINGERPRINT: ${{ vars.MAVEN_SIGNING_FINGERPRINT }}
+          CENTRAL_TOKEN: ${{ secrets.CENTRAL_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_RUN_ATTEMPT" != 1 ]]; then
+            echo "::error::Dispatch with the existing Central deployment ID to resume."
+            exit 1
+          fi
+          export GNUPGHOME="$(mktemp -d)"
+          printf '%s' "$SIGNING_KEY" | gpg --batch --import
+          python3 tools/sign-maven.py "artifacts/texthue-${VERSION}-maven.zip" signed.zip "$VERSION" "$SIGNING_FINGERPRINT"
+          id=$(curl --fail --silent --show-error --header "Authorization: Bearer $CENTRAL_TOKEN" \
+            --form 'bundle=@signed.zip;type=application/octet-stream' \
+            "https://central.sonatype.com/api/v1/publisher/upload?publishingType=AUTOMATIC&name=texthue-$VERSION-$GITHUB_SHA")
+          id=$(python3 -c 'import sys,uuid; print(uuid.UUID(sys.argv[1]))' "$id")
+          echo "Central deployment: $id" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "DEPLOYMENT=$id" >> "$GITHUB_ENV"
+      - name: Wait for original deployment and verify published bytes
+        if: steps.state.outputs.state == 'absent'
+        env:
+          CENTRAL_TOKEN: ${{ secrets.CENTRAL_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 tools/maven_deployment.py "$DEPLOYMENT" "$VERSION"
+          state=$(python3 tools/release.py maven-state --version "$VERSION" --archive "artifacts/texthue-${VERSION}-maven.zip")
+          test "$state" = matching
+
   publish-dart:
     name: Publish Dart package
     if: inputs.dart && !inputs.dry_run
@@ -634,7 +693,7 @@ jobs:
   github-release:
     name: Promote the draft GitHub release
     if: inputs.github_release && !inputs.dry_run && !failure() && !cancelled()
-    needs: [build, publish-npm, publish-adapters, publish-dart, publish-nuget, publish-rust, publish-wasm, publish-pypi, publish-go, verify-swift-release]
+    needs: [build, publish-npm, publish-adapters, publish-dart, publish-maven, publish-nuget, publish-rust, publish-wasm, publish-pypi, publish-go, verify-swift-release]
     runs-on: ubuntu-latest
     permissions:
       contents: write

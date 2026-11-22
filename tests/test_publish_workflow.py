@@ -45,10 +45,13 @@ class PublishWorkflowTests(unittest.TestCase):
         self.assertEqual(job["needs"], "build")
         self.assertIn("verify-swift-release", self.jobs["github-release"]["needs"])
         commands = [step["run"] for step in job["steps"] if "run" in step]
-        self.assertEqual(commands, [
-            "swift test --force-resolved-versions",
-            "python3 tools/check-swift-tag.py",
-        ])
+        self.assertEqual(
+            commands,
+            [
+                "swift test --force-resolved-versions",
+                "python3 tools/check-swift-tag.py",
+            ],
+        )
 
     def test_checkout_precedes_archive_download(self):
         for registry in ("npm", "adapters", "pypi", "rust", "nuget", "dart"):
@@ -76,6 +79,19 @@ class PublishWorkflowTests(unittest.TestCase):
         self.assertEqual(publish["if"], "steps.state.outputs.state == 'absent'")
         self.assertIn('"artifacts/texthue-${ADAPTER}-${VERSION}.tgz"', publish["run"])
         self.assertIn("publish-adapters", self.jobs["github-release"]["needs"])
+
+    def test_maven_resume_polls_without_uploading(self):
+        job = self.jobs["publish-maven"]
+        self.assertEqual(job["if"], "inputs.maven != '' && !inputs.dry_run")
+        self.assertIn("publish-maven", self.jobs["github-release"]["needs"])
+        upload, wait = job["steps"][-2:]
+        self.assertEqual(
+            upload["if"], "steps.state.outputs.state == 'absent' && inputs.maven == 'new'"
+        )
+        self.assertIn('"$GITHUB_RUN_ATTEMPT" != 1', upload["run"])
+        self.assertEqual(wait["if"], "steps.state.outputs.state == 'absent'")
+        self.assertIn('tools/maven_deployment.py "$DEPLOYMENT" "$VERSION"', wait["run"])
+        self.assertIn('test "$state" = matching', wait["run"])
 
     def test_wasm_can_publish_without_core(self):
         wasm = self.jobs["publish-wasm"]
