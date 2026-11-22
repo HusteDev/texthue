@@ -299,3 +299,39 @@ func CompositeOver(source Color, alpha float64, backdrop Color) (Color, error) {
 	}
 	return formats(result), nil
 }
+
+// apcaContrast measures signed APCA-W3 0.1.9 Lc for opaque sRGB, text first.
+func apcaContrast(text, background rgb8) float64 {
+	luminance := func(rgb rgb8) float64 {
+		y := 0.2126729*math.Pow(float64(rgb[0])/255, 2.4) + 0.7151522*math.Pow(float64(rgb[1])/255, 2.4) + 0.0721750*math.Pow(float64(rgb[2])/255, 2.4)
+		if y < .022 {
+			y += math.Pow(.022-y, 1.414)
+		}
+		return y
+	}
+	fg, bg := luminance(text), luminance(background)
+	if math.Abs(fg-bg) < .0005 {
+		return 0
+	}
+	backPower, frontPower, offset := .56, .57, .027
+	if bg < fg {
+		backPower, frontPower, offset = .65, .62, -.027
+	}
+	raw := 1.14 * (math.Pow(bg, backPower) - math.Pow(fg, frontPower))
+	if math.Abs(raw) < .1 {
+		return 0
+	}
+	return 100 * (raw - offset)
+}
+
+// MeasureAPCA returns signed APCA Lc for opaque sRGB colors, text first.
+func MeasureAPCA(text, background Color) (float64, error) {
+	fg := rgb8{text.RGB.R, text.RGB.G, text.RGB.B}
+	bg := rgb8{background.RGB.R, background.RGB.G, background.RGB.B}
+	for i := range fg {
+		if fg[i] < 0 || fg[i] > 255 || bg[i] < 0 || bg[i] > 255 {
+			return 0, invalid("sRGB bytes")
+		}
+	}
+	return apcaContrast(fg, bg), nil
+}

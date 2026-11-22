@@ -754,3 +754,21 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
             "contrast": {"target": target, **meta},
         }
     return result
+
+
+def _apca_contrast(text, background):
+    """Signed APCA-W3 0.1.9 Lc of two opaque sRGB byte triples, text first."""
+
+    def luminance(rgb):
+        r, g, b = (channel / 255 for channel in rgb)
+        y = 0.2126729 * r**2.4 + 0.7151522 * g**2.4 + 0.0721750 * b**2.4
+        return y + (0.022 - y) ** 1.414 if y < 0.022 else y
+
+    fg, bg = luminance(text), luminance(background)
+    if abs(fg - bg) < 0.0005:
+        return 0.0
+    positive = bg > fg
+    raw = 1.14 * (bg ** (0.56 if positive else 0.65) - fg ** (0.57 if positive else 0.62))
+    if abs(raw) < 0.1:
+        return 0.0
+    return 100 * (raw - (0.027 if positive else -0.027))

@@ -135,3 +135,12 @@ test('linear-light compositing produces a reusable opaque background', async () 
     }
   }
 });
+
+test('signed APCA matches pinned reference on opaque sRGB pairs', async () => {
+  const {measureApca} = await import('../packages/npm/dist/index.js');
+  const {readFile} = await import('node:fs/promises');
+  const rows = JSON.parse(await readFile(new URL('../conformance/apca-srgb-v1.json',import.meta.url),'utf8'));
+  for (const [r,g,b,br,bg,bb,expected] of rows) {
+    assert.ok(Math.abs(measureApca({rgb:{r,g,b}},{rgb:{r:br,g:bg,b:bb}})-expected)<1e-10);
+  }
+});

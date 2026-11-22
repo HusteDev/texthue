@@ -27,3 +27,7 @@ THIS WORK IS PROVIDED "AS IS," AND COPYRIGHT HOLDERS MAKE NO REPRESENTATIONS OR 
 COPYRIGHT HOLDERS WILL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF ANY USE OF THE SOFTWARE OR DOCUMENT.
 
 The name and trademarks of copyright holders may NOT be used in advertising or publicity pertaining to the work without specific, written prior permission. Title to copyright in this work will at all times remain with copyright holders.
+
+## APCA reference and distribution scope
+
+The signed sRGB lightness contrast calculation follows the SAPC-4g parameters in APCA-W3 0.1.9 by Andrew Somers / Myndex. Its npm reference implementation generated the expected values for the test corpus. The reference package is a development oracle and is absent from consumer dependencies. Its license specifies conditions on use, including web-content scope and polarity. Confirm applicable permissions for the intended distribution and native use cases before publishing APCA support. [Upstream license](https://github.com/Myndex/apca-w3/blob/master/LICENSE.md)

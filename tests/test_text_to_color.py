@@ -77,6 +77,13 @@ console.log(JSON.stringify([compareAssignments(side(old),side(next),texts)]));
             )
             self.compare(json.loads(result.stdout)[0], report)
 
+    def test_apca_reference(self):
+        from texthue._core import _apca_contrast
+
+        rows = json.loads((ROOT / "conformance/apca-srgb-v1.json").read_text())
+        for row in rows:
+            self.assertAlmostEqual(_apca_contrast(row[:3], row[3:6]), row[6], delta=1e-10)
+
     def test_linear_light_composite(self):
         from texthue import composite_over
 

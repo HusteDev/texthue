@@ -290,3 +290,18 @@ export function blendOver(source:Triple, alpha:number, background:Triple):Triple
     return Math.round(255*encode(linear));
   }) as Triple;
 }
+
+/** Signed APCA-W3 0.1.9 Lc for two opaque sRGB byte triples, text first. */
+export function apcaContrast(text:Triple, background:Triple):number {
+  const luminance = ([r,g,b]:Triple) => {
+    const y = 0.2126729*(r/255)**2.4 + 0.7151522*(g/255)**2.4 + 0.0721750*(b/255)**2.4;
+    // biome-ignore lint/suspicious/noApproximativeNumericConstant: APCA-W3 specifies 1.414 exactly.
+    return y < 0.022 ? y + (0.022-y)**1.414 : y;
+  };
+  const fg = luminance(text), bg = luminance(background);
+  if (Math.abs(fg-bg)<0.0005) return 0;
+  const positive = bg > fg;
+  const raw = 1.14*(bg**(positive?0.56:0.65) - fg**(positive?0.57:0.62));
+  if (Math.abs(raw)<0.1) return 0;
+  return 100*(raw-(positive?0.027:-0.027));
+}

@@ -425,3 +425,21 @@ func TestLinearLightComposite(t *testing.T) {
 		}
 	}
 }
+
+func TestAPCAReference(t *testing.T) {
+	data, err := os.ReadFile("../../conformance/apca-srgb-v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows [][7]float64
+	if err = json.Unmarshal(data, &rows); err != nil {
+		t.Fatal(err)
+	}
+	for i, row := range rows {
+		fg := rgb8{int(row[0]), int(row[1]), int(row[2])}
+		bg := rgb8{int(row[3]), int(row[4]), int(row[5])}
+		if got := apcaContrast(fg, bg); math.Abs(got-row[6]) >= 1e-10 {
+			t.Fatalf("pair %d: got %g, want %g", i, got, row[6])
+		}
+	}
+}

@@ -68,6 +68,11 @@ def _color_bytes(color: Color) -> tuple[int, int, int]:
     return channels
 
 
+def measure_apca(text: Color, background: Color) -> float:
+    """Measure signed APCA Lc for opaque sRGB colors, text first."""
+    return _core._apca_contrast(_color_bytes(text), _color_bytes(background))
+
+
 def composite_over(color: Color, alpha: float, backdrop: Color) -> Color:
     """Composite a translucent source over an opaque backdrop in linear sRGB."""
     if not _core._number(alpha) or not 0 <= alpha <= 1:
@@ -258,6 +263,7 @@ def assign_text_colors(texts, options=_OMITTED_OPTIONS, *, pinned=None, **kwargs
 
 
 __all__ = [
+    "measure_apca",
     "composite_over",
     "compare_assignments",
     "export_config",

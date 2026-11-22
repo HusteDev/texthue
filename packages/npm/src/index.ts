@@ -9,7 +9,7 @@
  */
 
 import { assignCollection, type Placement } from './assignment.js';
-import { blendOver, chooseColor, contrast, cusp, formats, hexFormat, hslFormat, oklchFormat, rgbFormat } from './color-math.js';
+import { apcaContrast, blendOver, chooseColor, contrast, cusp, formats, hexFormat, hslFormat, oklchFormat, rgbFormat } from './color-math.js';
 import { compareBytes, fingerprint } from './fingerprint.js';
 import { sha256 } from './sha256.js';
 import { anchors, biases } from './tables.js';
@@ -54,6 +54,11 @@ function colorBytes(color:Color):Triple {
     fail('INVALID_OPTIONS','Expected an opaque color with sRGB bytes');
   }
   return [rgb.r,rgb.g,rgb.b];
+}
+
+/** Signed APCA Lc for opaque sRGB colors. Positive values indicate dark text on a lighter background. */
+export function measureApca(text:Color, background:Color):number {
+  return apcaContrast(colorBytes(text),colorBytes(background));
 }
 
 /** Composite a translucent source over an opaque backdrop in linear sRGB. */
