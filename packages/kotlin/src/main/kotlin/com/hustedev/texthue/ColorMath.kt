@@ -6,7 +6,7 @@ import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.sin
 
-internal enum class Gamut(val fromXyz: Array<DoubleArray>) {
+enum class Gamut(internal val fromXyz: Array<DoubleArray>) {
     SRGB(arrayOf(
         doubleArrayOf(12831.0/3959, -329.0/214, -1974.0/3959),
         doubleArrayOf(-851781.0/878810, 1648619.0/878810, 36519.0/878810),
@@ -57,7 +57,9 @@ internal object ColorMath {
         doubleArrayOf(0.0259040424655478, 0.7827717124575296, -0.8086757549230774),
     )
 
-    fun linearChannel(byte: Int): Double {
+    fun linearChannel(byte: Int): Double = linearChannel(byte.toDouble())
+
+    private fun linearChannel(byte: Double): Double {
         val x = byte / 255.0
         return if (x <= 0.04045) x / 12.92 else ((x + 0.055) / 1.055).pow(2.4)
     }
@@ -76,13 +78,15 @@ internal object ColorMath {
         return DoubleArray(3) { encodedChannel(p3[it]) * 255 }
     }
 
-    fun p3Fallback(rgb: IntArray): Pair<IntArray, Boolean> {
+    fun p3Fallback(rgb: DoubleArray): Pair<IntArray, Boolean> {
         val linear = DoubleArray(3) { linearChannel(rgb[it]) }
         val srgb = multiply(Gamut.SRGB.fromXyz, multiply(p3ToXyz, linear))
         return IntArray(3) { channelByte(srgb[it]) } to !inside(srgb)
     }
 
-    fun oklab(rgb: IntArray, gamut: Gamut = Gamut.SRGB): DoubleArray {
+    fun oklab(rgb: IntArray): DoubleArray = oklab(rgb.encoded(), Gamut.SRGB)
+
+    private fun oklab(rgb: DoubleArray, gamut: Gamut): DoubleArray {
         val linear = DoubleArray(3) { i -> linearChannel(rgb[i]) }
         val matrix = if (gamut == Gamut.DISPLAY_P3) p3ToXyz else rgbToXyz
         val lms = multiply(xyzToLms, multiply(matrix, linear))
@@ -90,7 +94,9 @@ internal object ColorMath {
         return multiply(lmsToLab, lms)
     }
 
-    fun oklch(rgb: IntArray, gamut: Gamut = Gamut.SRGB): Oklch {
+    fun oklch(rgb: IntArray): Oklch = oklch(rgb.encoded(), Gamut.SRGB)
+
+    fun oklch(rgb: DoubleArray, gamut: Gamut): Oklch {
         val (l, a, b) = oklab(rgb, gamut)
         if (rgb[0] == rgb[1] && rgb[1] == rgb[2]) return Oklch(round6(l), 0.0, 0.0)
         val hue = ((Math.atan2(b, a) * 180 / PI) % 360 + 360) % 360
@@ -136,3 +142,5 @@ internal object ColorMath {
         return FittedColor(bytes, retained, l)
     }
 }
+
+internal fun IntArray.encoded() = DoubleArray(size) { this[it].toDouble() }

@@ -20,12 +20,13 @@ private inline fun <reified E : Enum<E>> Fields.enum(key: String, default: E): E
     (get(key) as? String)?.let { enumValueOf<E>(it.replace('-', '_').uppercase()) } ?: default
 
 private fun resolver(o: Fields): Resolver {
-    require(o["gamut"] in listOf(null, "srgb"))
+    require(o["gamut"] in listOf(null, "srgb", "display-p3"))
     val n = o.obj("normalize")
     val t = o.obj("contrastTargets")
     val p = o.obj("profiles")
     val b = o.obj("backgrounds")
     return Resolver(
+        gamut = if (o["gamut"] == "display-p3") Gamut.DISPLAY_P3 else Gamut.SRGB,
         namespace = o["namespace"] as? String ?: "",
         seed = o["seed"]?.toString()?.toUInt() ?: 0u,
         contrastTarget = o.number("contrastTarget"),
@@ -68,7 +69,21 @@ private fun theme(p: ThemePalette, target: Double): Fields {
             }
         }
     }
-    return p.colors.mapValues { (role, _) -> p.color(role) } + ("contrast" to (pairs + ("target" to target)))
+    val colors = p.colors.mapValues { (role, _) ->
+        val color = p.color(role)
+        buildMap<String, Any?> {
+            put("hex", color.hex)
+            put("rgb", color.rgb)
+            put("hsl", color.hsl)
+            put("oklch", color.oklch)
+            if (color.p3 != null) {
+                put("p3", color.p3)
+                put("css", color.css)
+                put("srgbClipped", color.srgbClipped)
+            }
+        }
+    }
+    return colors + ("contrast" to (pairs + ("target" to target)))
 }
 
 fun main() {

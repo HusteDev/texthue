@@ -12,15 +12,8 @@ data class Color(val hex: String, val rgb: Rgb, val hsl: Hsl, val oklch: Oklch,
 internal fun round6(value: Double) = floor(value * 1e6 + 0.5) / 1e6
 
 internal fun renderedColor(bytes: IntArray, gamut: Gamut = Gamut.SRGB): Color {
-    if (gamut == Gamut.DISPLAY_P3) {
-        val (fallback, clipped) = ColorMath.p3Fallback(bytes)
-        val channels = bytes.map { round6(it / 255.0) }
-        val css = channels.joinToString(" ", "color(display-p3 ", ")") {
-            java.math.BigDecimal.valueOf(it).stripTrailingZeros().toPlainString()
-        }
-        return renderedColor(fallback).copy(oklch = ColorMath.oklch(bytes, gamut),
-            p3 = DisplayP3(channels[0], channels[1], channels[2]), css = css, srgbClipped = clipped)
-    }
+    if (gamut == Gamut.DISPLAY_P3) return renderedP3(bytes.encoded())
+
     val (red, green, blue) = bytes.map { it / 255.0 }
     val maximum = maxOf(red, green, blue)
     val minimum = minOf(red, green, blue)
@@ -48,4 +41,14 @@ fun compositeOver(source: String, alpha: Double, backdrop: String): Color {
         ColorMath.channelByte(alpha * ColorMath.linearChannel(front[i]) +
             (1 - alpha) * ColorMath.linearChannel(back[i]))
     })
+}
+
+internal fun renderedP3(bytes: DoubleArray): Color {
+    val (fallback, clipped) = ColorMath.p3Fallback(bytes)
+    val channels = bytes.map { round6(it / 255.0) }
+    val css = channels.joinToString(" ", "color(display-p3 ", ")") {
+        java.math.BigDecimal.valueOf(it).stripTrailingZeros().toPlainString()
+    }
+    return renderedColor(fallback).copy(oklch = ColorMath.oklch(bytes, Gamut.DISPLAY_P3),
+        p3 = DisplayP3(channels[0], channels[1], channels[2]), css = css, srgbClipped = clipped)
 }

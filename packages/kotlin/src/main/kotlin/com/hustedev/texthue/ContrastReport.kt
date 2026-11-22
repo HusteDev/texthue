@@ -9,16 +9,16 @@ data class ContrastRelationship(val ratio: Double, val model: ContrastModel, val
 internal data class ToneAdjustment(val adjusted: Boolean, val capped: Boolean,
     val reduced: Boolean, val fallback: String?)
 
-internal fun relationshipReport(colors: Map<String, IntArray>, adjustments: Map<String, ToneAdjustment>,
-    model: ContrastModel, fixed: Boolean, target: (String) -> Double): Map<String, ContrastRelationship> = buildMap {
+internal fun relationshipReport(colors: Map<String, DoubleArray>, adjustments: Map<String, ToneAdjustment>,
+    model: ContrastModel, gamut: Gamut, fixed: Boolean, target: (String) -> Double): Map<String, ContrastRelationship> = buildMap {
     for (role in listOf("fill", "fillHover", "fillActive", "text", "strong", "border")) {
         val flags = adjustments[role]
         for ((pair, front, back) in contrastPairs(role)) {
             val a = colors.getValue(front)
             val b = colors.getValue(back)
-            val value = Contrast.measure(a, b, model, Gamut.SRGB)
+            val value = Contrast.measure(a, b, model, gamut)
             val ratio = if (model == ContrastModel.WCAG2) value
-                else Contrast.measure(a, b, ContrastModel.WCAG2, Gamut.SRGB)
+                else Contrast.measure(a, b, ContrastModel.WCAG2, gamut)
             val passes = abs(value) >= target(pair)
             val fallback = if (fixed && pair == "fill" && !passes) "palette-constraint" else flags?.fallback
             put(pair, ContrastRelationship(ratio, model, value, passes, flags?.adjusted == true,
