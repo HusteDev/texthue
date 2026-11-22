@@ -69,6 +69,7 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
   }
   const markers: Record<string,Marker> | undefined = includeMarkers ? Object.create(null) : undefined;
   const projections: Triple[][] = [];
+  const searches: {label:string; positionsConsidered:number; colorsEvaluated:number; bestDistance:number|null}[] = [];
   const pointsFor = (set:ColorSet) => (vision ?? []).flatMap(profile =>
     [visionPoint(set.light.fill.hex,profile), visionPoint(set.dark.fill.hex,profile)]);
   if (vision) {
@@ -86,13 +87,17 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
         let bestPoints = pointsFor(render(digest,p,name));
         let best = worstDistance(bestPoints,projections);
         const initial = p;
+        let positionsConsidered = 1;
+        let colorsEvaluated = 1;
         for (let step = 1; step < 24 && best !== Infinity; step++) {
+          positionsConsidered++;
           const hueFraction = wrap(initial.hueFraction + step / 24);
           if (occupied.some(other => {
             const delta = Math.abs(other.hueFraction - hueFraction);
             return other.ring === initial.ring && Math.min(delta,1-delta) < separation;
           })) continue;
           const candidate = {...initial,hueFraction,moved:true};
+          colorsEvaluated++;
           const candidatePoints = pointsFor(render(digest,candidate,name));
           const score = worstDistance(candidatePoints,projections);
           if (score > best) {
@@ -101,6 +106,7 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
             bestPoints = candidatePoints;
           }
         }
+        searches.push({label:name, positionsConsidered, colorsEvaluated, bestDistance:best === Infinity ? null : best});
         projections.push(bestPoints);
       }
       assignments[name] = p;
@@ -133,7 +139,7 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
       if (distance === minDistance) closestPairs.push([first.name,second.name]);
     }
   }
-  return {colors,assignments,...(markers && {markers}),report:{minDistance,closestPairs,
+  return {colors,assignments,...(markers && {markers}),report:{minDistance,closestPairs,...(vision && {searches}),
     withinRingCapacity:names.size <= 5*Math.floor(1/separation),
     distinctFills:new Set(Object.values(colors).map(c => c.light.fill.hex)).size === entries.length}};
 }

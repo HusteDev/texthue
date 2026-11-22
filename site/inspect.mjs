@@ -36,6 +36,8 @@ export function inspect({labels, options, theme, vision, registry, optimizeVisio
     closest:diagnostics.pairs.filter(pair => pair.distance === diagnostics.stats.min)
       .map(({first,second,distance}) => ({labels:names(first,second),distance})),
     duplicates:diagnostics.duplicates.map(([first,second]) => names(first,second)),
+    exhaustedSearches:(persistent.report.searches ?? []).filter(search =>
+      search.positionsConsidered === 24 && search.bestDistance !== null && search.bestDistance < minimumDistance),
     belowMinimum:diagnostics.pairs.filter(pair => pair.distance < minimumDistance)
       .map(({first,second,distance}) => ({labels:names(first,second),distance})),
   };

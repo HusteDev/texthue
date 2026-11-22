@@ -72,6 +72,7 @@ function run() {
       for (const [title,items] of [
         ['Normalized aliases',findings.aliases], ['Closest pairs in selected vision profile',findings.closest],
         ['Exact duplicate registry fills',findings.duplicates], ['Pairs below minimum distance',findings.belowMinimum],
+        ['Placement searches below target after 24 positions across scored themes and profiles',findings.exhaustedSearches],
       ]) details(results,`${title} (${items.length})`,items);
       details(results,'Registry palette distances (row indices start at zero)',diagnostics);
       for (const row of rows) details(results,row.label,{contrast:row.contrast,fill:row.fill,registryFillTrace:row.registryFillTrace,css:row.variables});

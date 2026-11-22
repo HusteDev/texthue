@@ -64,3 +64,19 @@ test('inspector distinguishes normalized aliases, duplicate fills and pairs belo
   assert.deepEqual(inspect({...input,labels:['A','a']}).findings.closest,[]);
   assert.throws(() => inspect({...input,minimumDistance:-1}),RangeError);
 });
+
+test('bounded search reports work separately from fixed or pinned collisions', () => {
+  const input = {labels:['a','b'],options:{},theme:'light',vision:'deutan',optimizeVision:true,minimumDistance:2};
+  const searched = inspect(input);
+  const [failure] = searched.findings.exhaustedSearches;
+  assert.equal(searched.findings.exhaustedSearches.length,1);
+  assert.equal(failure.positionsConsidered,24);
+  assert.ok(failure.colorsEvaluated > 0 && failure.colorsEvaluated <= 24);
+  assert.ok(failure.bestDistance < input.minimumDistance);
+  const replay = inspect({...input,registry:searched.registry});
+  assert.equal(replay.findings.belowMinimum.length,1);
+  assert.deepEqual(replay.findings.exhaustedSearches,[]);
+  const fixed = inspect({...input,options:{overrides:{a:'#444444',b:'#444444'}}});
+  assert.equal(fixed.findings.duplicates.length,1);
+  assert.deepEqual(fixed.findings.exhaustedSearches,[]);
+});
