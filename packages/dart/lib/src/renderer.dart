@@ -30,7 +30,30 @@ final class _Background {
   }
 }
 
+final class RoleProfile {
+  final (double, double)? lightness, chromaScale;
+  final double? chromaCap;
+
+  RoleProfile({this.lightness, this.chromaScale, this.chromaCap}) {
+    for (final range in [lightness, chromaScale].nonNulls) {
+      if (!(range.$1 >= 0 && range.$1 <= range.$2 && range.$2 <= 1)) {
+        throw ArgumentError.value(range, 'profile range');
+      }
+    }
+    final cap = chromaCap;
+    if (cap != null && !(cap >= 0 && cap <= 0.4)) {
+      throw ArgumentError.value(cap, 'chromaCap');
+    }
+  }
+}
+
+final class ThemeProfile {
+  final RoleProfile? fill, text;
+  const ThemeProfile({this.fill, this.text});
+}
+
 final class Renderer {
+  final ThemeProfile lightProfile, darkProfile;
   final String namespace;
   final int seed;
   final double contrastTarget;
@@ -39,6 +62,8 @@ final class Renderer {
   Renderer(
       {this.namespace = '',
       this.seed = 0,
+      this.lightProfile = const ThemeProfile(),
+      this.darkProfile = const ThemeProfile(),
       this.contrastTarget = 4.5,
       Map<String, double> contrastTargets = const {},
       String lightBackground = '#ffffff',
@@ -83,9 +108,13 @@ final class Renderer {
     double target(String role) =>
         contrastTargets[role] ??
         (role == 'border' ? math.min(3.0, contrastTarget) : contrastTarget);
+    final profile = dark ? darkProfile : lightProfile;
     double sample(bool fill) {
-      final start = dark ? (fill ? 0.4 : 0.72) : (fill ? 0.72 : 0.43);
-      final end = dark ? (fill ? 0.5 : 0.82) : (fill ? 0.82 : 0.53);
+      final range = (fill ? profile.fill : profile.text)?.lightness;
+      final start =
+          range?.$1 ?? (dark ? (fill ? 0.4 : 0.72) : (fill ? 0.72 : 0.43));
+      final end =
+          range?.$2 ?? (dark ? (fill ? 0.5 : 0.82) : (fill ? 0.82 : 0.53));
       final bias = biases[(dark ? 2 : 0) + (fill ? 0 : 1)],
           sector = (hue / 30).floor();
       final offset = bias[sector] +
@@ -101,8 +130,10 @@ final class Renderer {
     List<int> tone(double value, bool fill, double threshold,
         {List<int>? background, List<int>? subtle}) {
       final l = value.clamp(0.0, 1.0);
-      final c = math.min(fill ? 0.16 : 0.19,
-          Gamut.sRGB.cusp(l, hue) * (0.6 + (0.8 - 0.6) * uC));
+      final role = fill ? profile.fill : profile.text;
+      final scale = role?.chromaScale ?? (0.6, 0.8);
+      final c = math.min(role?.chromaCap ?? (fill ? 0.16 : 0.19),
+          Gamut.sRGB.cusp(l, hue) * (scale.$1 + (scale.$2 - scale.$1) * uC));
       return Gamut.sRGB
           .repair(l, c, hue, threshold, (bytes) {
             final primary =

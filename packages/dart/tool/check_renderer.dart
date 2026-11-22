@@ -2,6 +2,21 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:texthue/texthue.dart';
 
+ThemeProfile profile(Map? theme) {
+  RoleProfile? role(Map? value) {
+    if (value == null) return null;
+    (double, double)? range(List? pair) => pair == null
+        ? null
+        : ((pair[0] as num).toDouble(), (pair[1] as num).toDouble());
+    return RoleProfile(
+        lightness: range(value['lightness']),
+        chromaScale: range(value['chromaScale']),
+        chromaCap: (value['chromaCap'] as num?)?.toDouble());
+  }
+
+  return ThemeProfile(fill: role(theme?['fill']), text: role(theme?['text']));
+}
+
 void main() {
   final corpus = jsonDecode(
       File.fromUri(Platform.script.resolve('../../../conformance/vectors.json'))
@@ -9,8 +24,9 @@ void main() {
   var count = 0;
   for (final row in corpus['vectors']) {
     final opts = row['options'] as Map, expected = row['expected'];
-    if (opts.containsKey('profiles')) continue;
     final renderer = Renderer(
+        lightProfile: profile(opts['profiles']?['light']),
+        darkProfile: profile(opts['profiles']?['dark']),
         namespace: opts['namespace'] ?? '',
         seed: opts['seed'] ?? 0,
         contrastTarget: (opts['contrastTarget'] as num?)?.toDouble() ?? 4.5,
@@ -36,6 +52,6 @@ void main() {
     }
     count++;
   }
-  if (count != 26) throw StateError('Unexpected corpus size $count');
+  if (count != 32) throw StateError('Unexpected corpus size $count');
   print('Passed $count two-theme renderer cases');
 }
