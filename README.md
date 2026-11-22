@@ -28,13 +28,13 @@ Choose a workflow in the [task guide](docs/GUIDE.md).
 
 These ports support single-label resolution, ordered batches, collection assignment, and replay of pinned placements. Each guide describes its toolchain and how to run the port from a checkout.
 
-| Platform | Assign a collection with previous placements | Guide |
-| --- | --- | --- |
-| Rust | `compiled.assign(labels, &previous.assignments)` | [Rust](packages/rust/README.md) |
-| C# / .NET | `renderer.Assign(labels, previous.Assignments)` | [.NET](packages/csharp/README.md) |
-| Kotlin | `resolver.assign(labels, pinned = previous.assignments)` | [Kotlin and Android](packages/kotlin/README.md) |
-| Swift | `try renderer.assign(labels, pinned: previous.assignments)` | [SwiftPM](packages/swift/README.md) |
-| Dart | `renderer.assign(labels, pinned: previous.assignments)` | [Dart](packages/dart/README.md) |
+| Platform | Select Display-P3 | Assign a collection with previous placements | Guide |
+| --- | --- | --- | --- |
+| Rust | `Renderer { gamut: Gamut::DisplayP3, ..Renderer::default() }` | `compiled.assign(labels, &previous.assignments)` | [Rust](packages/rust/README.md) |
+| C# / .NET | `new Renderer(gamut: Gamut.DisplayP3)` | `renderer.Assign(labels, previous.Assignments)` | [.NET](packages/csharp/README.md) |
+| Kotlin | `Resolver(gamut = Gamut.DISPLAY_P3)` | `resolver.assign(labels, pinned = previous.assignments)` | [Kotlin and Android](packages/kotlin/README.md) |
+| Swift | `options.gamut = .displayP3` | `try renderer.assign(labels, pinned: previous.assignments)` | [SwiftPM](packages/swift/README.md) |
+| Dart | `Renderer(gamut: Gamut.displayP3)` | `renderer.assign(labels, pinned: previous.assignments)` | [Dart](packages/dart/README.md) |
 
 Keep the resolver configuration stable when reusing placements. JavaScript, Python, and Go also expose configuration and registry import/export with fingerprint verification.
 
@@ -140,7 +140,7 @@ Go's `WithContrastModel("apca")`. The default target in this mode is 60 Lc.
 Targets from 0 through 106 apply to the magnitude of signed Lc. Each APCA
 relationship reports its signed `value` and whether it meets its target.
 Positive Lc indicates darker foreground text. The separate `ratio` field
-records the WCAG 2 ratio for the same final pair. A text color can pass on the
+records the luminance contrast ratio in the selected gamut. With sRGB this is the WCAG 2 ratio. A text color can pass on the
 theme background and fail on the subtle surface, so check both relationships.
 
 Select Display-P3 with JavaScriptâ€™s `createResolver({gamut: 'display-p3'})`,
@@ -151,8 +151,7 @@ Display-P3 rendition using its luminance coefficients. A fallback used in an
 sRGB interface needs a separate contrast check. Supplied sRGB brand colors and
 backgrounds are converted to P3 before measuring their relationships.
 
-The CSS helper accepts `p3` in JavaScript, Python, and Go. It converts the
-resolved sRGB color to Display-P3 coordinates and emits a CSS string with up
+The CSS helper accepts `p3` in JavaScript, Python, and Go. For a native P3 rendition it returns that rendition’s CSS. For an sRGB rendition it converts the color to Display-P3 coordinates and emits a CSS string with up
 to six fractional digits per channel. For example, sRGB red serializes as
 `color(display-p3 0.917488 0.200287 0.138561)`.
 
