@@ -135,7 +135,7 @@ private struct ThemeBackground {
     }
 }
 
-public struct RenderedPalette: Equatable {
+public struct RenderedPalette: Equatable, Encodable {
     public let version: String
     public let source: String
     public let hueFraction: Double

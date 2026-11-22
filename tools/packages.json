@@ -88,7 +88,7 @@
         { "source": "root:conformance/vectors.json", "dest": "Tests/TextHueTests/Fixtures/vectors.json" }
       ],
       "verifyCommands": [["swift", "test", "--force-resolved-versions"], ["python", "../../tools/check-swift-example.py"]],
-      "conformanceRunner": null
+      "conformanceRunner": ["swift", "run", "--package-path", "packages/swift", "--force-resolved-versions", "TextHueConformance"]
     },
     {
       "id": "dart",
