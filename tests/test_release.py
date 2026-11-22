@@ -225,6 +225,32 @@ class GoTargetStateTests(unittest.TestCase):
 
 
 class ReleaseManifestTests(unittest.TestCase):
+    def test_resume_requires_original_complete_bundle(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for suffix in (".tgz", ".tar.gz", "-py3-none-any.whl"):
+                (root / f"texthue-1.0.0{suffix}").write_bytes(suffix.encode())
+            manifest = release.ReleaseManifest.from_artifacts(
+                "1.0.0", "abc", "text-to-color-v1", root
+            )
+            (root / "release-manifest.json").write_text(manifest.to_json(), encoding="utf-8")
+            (root / "SHA256SUMS").write_text(
+                "".join(f"{digest}  {name}\n" for name, digest in manifest.archives.items()),
+                encoding="utf-8",
+            )
+            release.verify_bundle("1.0.0", "abc", root)
+            with self.assertRaises(release.ReleaseError):
+                release.verify_bundle("1.0.0", "def", root)
+            archive = root / "texthue-1.0.0.tgz"
+            archive.write_bytes(b"rebuilt")
+            with self.assertRaises(release.ReleaseError):
+                release.verify_bundle("1.0.0", "abc", root)
+            archive.unlink()
+            with self.assertRaises(release.ReleaseError):
+                release.verify_bundle("1.0.0", "abc", root)
+
     def test_from_artifacts_hashes_every_file_except_the_checksum_list(self, tmp_dir=None):
         import tempfile
 

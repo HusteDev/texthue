@@ -242,7 +242,7 @@ class ReleaseManifest:
         archives = {
             path.name: hashlib.sha256(path.read_bytes()).hexdigest()
             for path in sorted(artifacts_dir.glob("*"))
-            if path.is_file() and path.name != "SHA256SUMS"
+            if path.is_file() and path.name not in {"SHA256SUMS", "release-manifest.json"}
         }
         return ReleaseManifest(version, commit, algorithm_version, archives)
 
@@ -275,6 +275,25 @@ def _cmd_check_version(args: argparse.Namespace) -> int:
         print(str(error), file=sys.stderr)
         return 1
     print(version)
+    return 0
+
+
+def verify_bundle(version: str, commit: str, directory: Path) -> None:
+    """Check the complete consumer archive set and both digest records."""
+    names = {f"texthue-{version}{suffix}" for suffix in (".tgz", ".tar.gz", "-py3-none-any.whl")}
+    if {p.name for p in directory.iterdir()} != names | {"SHA256SUMS", "release-manifest.json"}:
+        raise ReleaseError("Incomplete or unexpected release assets.")
+    expected = ReleaseManifest.from_artifacts(version, commit, "text-to-color-v1", directory)
+    saved = json.loads((directory / "release-manifest.json").read_text(encoding="utf-8"))
+    if saved != json.loads(expected.to_json()):
+        raise ReleaseError("Release metadata or archive digest mismatch.")
+    sums = (directory / "SHA256SUMS").read_text(encoding="utf-8").splitlines()
+    if sorted(sums) != sorted(f"{digest}  {name}" for name, digest in expected.archives.items()):
+        raise ReleaseError("Release checksum list mismatch.")
+
+
+def _cmd_verify_bundle(args: argparse.Namespace) -> int:
+    verify_bundle(args.version, args.commit, Path(args.directory))
     return 0
 
 
@@ -336,6 +355,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     check_version_parser.add_argument("requested")
     check_version_parser.set_defaults(func=_cmd_check_version)
+
+    verify_parser = subparsers.add_parser("verify-bundle")
+    for argument in ("version", "commit", "directory"):
+        verify_parser.add_argument(argument)
+    verify_parser.set_defaults(func=_cmd_verify_bundle)
 
     manifest_parser = subparsers.add_parser(
         "manifest", help="Write release-manifest.json from the built artifacts."

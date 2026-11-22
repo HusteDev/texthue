@@ -65,3 +65,5 @@ Do not commit tokens or place them in package metadata.
 ## Post-publication verification
 
 Install each registry version into a clean consumer, without local replacements, and verify the known `research` output (`#59b8d8` light fill, `#255464` dark fill). Check that the READMEs, licenses, declarations and typing markers, and source links render correctly. Record the registry URLs and the release commit.
+
+For a partial publication, dispatch the same commit and version with **resume** enabled and select the remaining targets. The workflow downloads the original release assets and checks the commit, archive set and both digest records before forwarding them to publishers. A missing or inconsistent bundle stops recovery. Restore the original assets or select a new version.

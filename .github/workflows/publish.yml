@@ -30,6 +30,10 @@ on:
         description: Release version without a leading v. Must match every package manifest.
         required: true
         type: string
+      resume:
+        description: Require the original release bundle and fail if it is missing
+        type: boolean
+        default: false
       npm:
         description: Publish the npm package
         type: boolean
@@ -96,9 +100,38 @@ jobs:
           set -euo pipefail
           VERSION=$(python tools/release.py check-version "$REQUESTED")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-      - run: python tools/verify.py
-      - run: python tools/build-packages.py
+      - name: Locate the durable release bundle
+        id: bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          RESUME: ${{ inputs.resume }}
+        run: |
+          set -euo pipefail
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" > releases.json
+          count=$(jq --arg tag "v$VERSION" '[.[][] | select(.tag_name == $tag)] | length' releases.json)
+          case "$count" in
+            0)
+              if [[ "$RESUME" == true ]]; then
+                echo "::error::Original release bundle is missing"
+                exit 1
+              fi
+              echo "state=absent" >> "$GITHUB_OUTPUT"
+              ;;
+            1)
+              jq -e --arg tag "v$VERSION" --arg sha "$GITHUB_SHA" \
+                '.[][] | select(.tag_name == $tag) | .target_commitish == $sha' releases.json
+              gh release download "v$VERSION" --dir artifacts
+              echo "state=existing" >> "$GITHUB_OUTPUT"
+              ;;
+            *) exit 1 ;;
+          esac
+      - if: steps.bundle.outputs.state == 'absent'
+        run: python tools/verify.py
+      - if: steps.bundle.outputs.state == 'absent'
+        run: python tools/build-packages.py
       - name: Write the release manifest (commit, versions, algorithm id, archive digests)
+        if: steps.bundle.outputs.state == 'absent'
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
@@ -109,38 +142,22 @@ jobs:
             --algorithm-version text-to-color-v1 \
             --artifacts artifacts \
             --out artifacts/release-manifest.json
+      - name: Verify bundle contents before distributing
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: python tools/release.py verify-bundle "$VERSION" "$GITHUB_SHA" artifacts
+      - name: Stage original tested bytes
+        if: steps.bundle.outputs.state == 'absent'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: gh release create "v$VERSION" artifacts/* --target "$GITHUB_SHA" --title "TextHue $VERSION" --generate-notes --draft
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: distributions
           path: artifacts/
           if-no-files-found: error
           retention-days: 14
-      - name: Create or reuse a draft GitHub release holding the tested bytes
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
-        # A draft release is the durable, inspectable place the tested
-        # archives and manifest live before any registry sees them. If a
-        # prior run already created it (this run is a resume), reuse it and
-        # refuse to touch it if it was already published (never move/replace
-        # a released tag's assets). Re-running never rebuilds these bytes:
-        # every later job downloads this same "distributions" artifact.
-        run: |
-          set -euo pipefail
-          if gh release view "v${VERSION}" --json isDraft --jq .isDraft > draft_state.txt 2>/dev/null; then
-            if [ "$(cat draft_state.txt)" != "true" ]; then
-              echo "::error::v${VERSION} is already a published (non-draft) release. Bump the version to publish new bytes, or use the manual fallback in docs/RELEASING.md to attach a missed asset."
-              exit 1
-            fi
-            echo "Reusing existing draft release v${VERSION}."
-            gh release upload "v${VERSION}" artifacts/* --clobber
-          else
-            gh release create "v${VERSION}" artifacts/* \
-              --target "$GITHUB_SHA" \
-              --title "TextHue ${VERSION}" \
-              --generate-notes \
-              --draft
-          fi
 
   publish-npm:
     name: Publish npm
