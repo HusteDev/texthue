@@ -3,7 +3,7 @@
 import { type ColorSet, resolveTextColors, type TextColorOptions } from 'texthue';
 
 const options: TextColorOptions = { profiles: { dark: { fill: { chroma: [0, 0] as const } } } };
-const pending: Promise<ColorSet> = resolveTextColors('valid', options);
+const pending: ColorSet = resolveTextColors('valid', options);
 void pending;
 // @ts-expect-error Input must be text.
 resolveTextColors(42);

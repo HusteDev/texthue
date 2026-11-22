@@ -7,6 +7,7 @@
  *
  * @packageDocumentation
  */
+import { sha256 } from './sha256.js';
 import { chooseColor, foreground, formats } from './color-math.js';
 import type { ChosenColor, ColorSet, Range, ResolvedOptions, TextColorErrorCode, TextColorOptions, ThemeColors, Triple } from './types.js';
 
@@ -168,13 +169,9 @@ function optionsValue(options: unknown): ResolvedOptions {
  * normalization is applied. The same text and options produce the same
  * result in every TextHue library. No input is retained after the call.
  *
- * SHA-256 is computed with Web Crypto, so the function is asynchronous and
- * requires Node.js 22+ or a browser secure context.
- *
  * @param text - Any well-formed Unicode string, including the empty string.
  * @param options - Optional namespace, backgrounds, contrast target, and profiles. Omit for defaults; `null` is invalid.
- * @returns A promise for the complete color set. Rejects with `TextColorError` on invalid input.
- * @throws {Error} If Web Crypto is unavailable in the current runtime.
+ * @returns The complete color set. Throws with `TextColorError` on invalid input.
  *
  * @example
  * ```ts
@@ -183,9 +180,8 @@ function optionsValue(options: unknown): ResolvedOptions {
  * colors.dark.fill.hex;  // '#5f3692'
  * ```
  */
-export async function resolveTextColors(text: string, options: TextColorOptions = {}): Promise<ColorSet> {
+export function resolveTextColors(text: string, options: TextColorOptions = {}): ColorSet {
   textValue(text, 'text', 'INVALID_TEXT');
-  // Copy validated settings before awaiting the digest so caller mutations cannot affect this call.
   const settings = optionsValue(options);
   const encoder = new TextEncoder();
   const prefix = encoder.encode(`${VERSION}\0`);
@@ -193,13 +189,9 @@ export async function resolveTextColors(text: string, options: TextColorOptions 
   const input = encoder.encode(text);
   if (namespace.length > 0xffffffff) fail('INVALID_OPTIONS', 'namespace exceeds the v1 byte-length limit');
   // Payload: VERSION, NUL, namespace byte length (uint32 big-endian), namespace, text.
-  const bytes = new Uint8Array(prefix.length + 4 + namespace.length + input.length);
-  bytes.set(prefix);
-  new DataView(bytes.buffer).setUint32(prefix.length, namespace.length, false);
-  bytes.set(namespace, prefix.length + 4);
-  bytes.set(input, prefix.length + 4 + namespace.length);
-  if (!globalThis.crypto?.subtle) throw new Error('Web Crypto is required (Node.js 22+ or a browser secure context)');
-  const digest = new DataView(await globalThis.crypto.subtle.digest('SHA-256', bytes));
+  const header = new DataView(new ArrayBuffer(4));
+  header.setUint32(0, namespace.length);
+  const digest = sha256(prefix, new Uint8Array(header.buffer), namespace, input);
   // The first three big-endian 32-bit digest words become fractions in [0, 1) for hue, lightness, and chroma.
   const fractions = [0, 4, 8].map(offset => digest.getUint32(offset, false) / 4294967296) as Triple;
   const hue = fractions[0] * 360;

@@ -71,20 +71,20 @@ for (const item of fixture.vectors) {
 
 for (const item of fixture.invalid) {
   test(`reject invalid input: ${item.id}`, async () => {
-    await assert.rejects(() => resolveTextColors(item.text, Object.hasOwn(item, 'options') ? item.options : {}),
+    assert.throws(() => resolveTextColors(item.text, Object.hasOwn(item, 'options') ? item.options : {}),
       error => error instanceof TextColorError && error.code === item.code);
   });
 }
 
 test('reject runtime-only non-finite values and malformed option records', async () => {
   for (const value of [NaN, Infinity, -Infinity, '4.5', null]) {
-    await assert.rejects(() => resolveTextColors('x', { contrastTarget: value }), { code: 'INVALID_OPTIONS' });
+    assert.throws(() => resolveTextColors('x', { contrastTarget: value }), { code: 'INVALID_OPTIONS' });
   }
   for (const value of [new Date(), new Map(), { [Symbol('typo')]: true }]) {
-    await assert.rejects(() => resolveTextColors('x', value), { code: 'INVALID_OPTIONS' });
+    assert.throws(() => resolveTextColors('x', value), { code: 'INVALID_OPTIONS' });
   }
-  await assert.rejects(() => resolveTextColors('x', { profiles: { light: { fill: { chroma: [0, NaN] } } } }), { code: 'INVALID_OPTIONS' });
-  await assert.rejects(() => resolveTextColors(undefined), { code: 'INVALID_TEXT' });
+  assert.throws(() => resolveTextColors('x', { profiles: { light: { fill: { chroma: [0, NaN] } } } }), { code: 'INVALID_OPTIONS' });
+  assert.throws(() => resolveTextColors(undefined), { code: 'INVALID_TEXT' });
 });
 
 test('settings are captured before asynchronous hashing and results share no mutable state', async () => {

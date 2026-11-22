@@ -140,7 +140,7 @@ for (const item of fixture.vectors) {
   }
 }
 for (const item of fixture.invalid) {
-  await assert.rejects(resolveTextColors(item.text, item.options), error => error instanceof TextColorError && error.code === item.code);
+  assert.throws(() => resolveTextColors(item.text, item.options), error => error instanceof TextColorError && error.code === item.code);
 }
 console.log('Packed npm package passed all valid and invalid fixtures.');
 """,
