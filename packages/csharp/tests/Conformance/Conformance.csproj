@@ -7,6 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/TextHue/TextHue.csproj" />
-    <None Include="../../../../conformance/composite-v1.json;../../../../conformance/normalization-v1.json;../../../../conformance/vectors.json;../../../../conformance/apca-srgb-v1.json;../../../../conformance/p3-contrast-v1.json;../../../../conformance/p3-fit-v1.json;../../../../conformance/tone-repair-v1.tsv;../../../../conformance/presets-v1.json" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../../../conformance/assign-vectors.json;../../../../conformance/composite-v1.json;../../../../conformance/normalization-v1.json;../../../../conformance/vectors.json;../../../../conformance/apca-srgb-v1.json;../../../../conformance/p3-contrast-v1.json;../../../../conformance/p3-fit-v1.json;../../../../conformance/tone-repair-v1.tsv;../../../../conformance/presets-v1.json" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

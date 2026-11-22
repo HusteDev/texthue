@@ -333,3 +333,42 @@ pins.Add("é", default);
 try { _ = new Renderer(overrides: pins, normalization: folding); throw new InvalidDataException("Normalized collision accepted."); }
 catch (ArgumentException) { }
 Console.WriteLine("Passed 90 normalization vectors, normalized overrides and batch reuse.");
+using var collections = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "assign-vectors.json")));
+foreach (var row in collections.RootElement.EnumerateArray())
+{
+    bool lower = false;
+    var collectionOverrides = new Dictionary<string, BrandColors>();
+    if (row.TryGetProperty("options", out var opts))
+    {
+        lower = opts.TryGetProperty("normalize", out var norm) && norm.GetProperty("case").GetString() == "lower";
+        if (opts.TryGetProperty("overrides", out var overrides))
+            foreach (var e in overrides.EnumerateObject())
+            {
+                Rgb ReadHex(string theme)
+                {
+                    string value = (e.Value.ValueKind == JsonValueKind.String ? e.Value : e.Value.GetProperty(theme)).GetString()!;
+                    var bytes = Convert.FromHexString(value[1..]);
+                    return new(bytes[0], bytes[1], bytes[2]);
+                }
+                collectionOverrides.Add(e.Name, new(ReadHex("light"), ReadHex("dark")));
+            }
+    }
+    static Dictionary<string, Placement> Placements(JsonElement value) =>
+        value.EnumerateObject().ToDictionary(e => e.Name, e => new Placement(e.Value.GetProperty("hueFraction").GetDouble(),
+            e.Value.GetProperty("ring").GetInt64(), e.Value.GetProperty("moved").GetBoolean()));
+    var registry = row.TryGetProperty("pinned", out var previous) ? Placements(previous) : null;
+    var result = new Renderer(normalization: new Normalization(Lowercase: lower), overrides: collectionOverrides)
+        .Assign(row.GetProperty("texts").EnumerateArray().Select(s => s.GetString()!), registry);
+    var expected = Placements(row.GetProperty("assignments"));
+    if (expected.Count != result.Assignments.Count || expected.Any(e => result.Assignments[e.Key] != e.Value))
+        throw new InvalidDataException("Placement mismatch");
+    foreach (var fill in row.GetProperty("lightFills").EnumerateObject())
+        if (result.Colors[fill.Name].Light["fill"].Hex != fill.Value.GetString()) throw new InvalidDataException("Assigned fill mismatch");
+    var report = row.GetProperty("report");
+    var closest = report.GetProperty("closestPairs").EnumerateArray().Select(pair => (pair[0].GetString()!, pair[1].GetString()!));
+    if (result.Report.MinDistance is not double distance || Math.Abs(distance - report.GetProperty("minDistance").GetDouble()) > 1e-12 ||
+        result.Report.WithinRingCapacity != report.GetProperty("withinRingCapacity").GetBoolean() ||
+        result.Report.DistinctFills != report.GetProperty("distinctFills").GetBoolean() || !closest.SequenceEqual(result.Report.ClosestPairs))
+        throw new InvalidDataException("Assignment report mismatch");
+}
+Console.WriteLine($"Passed {collections.RootElement.GetArrayLength()} collection assignment vectors.");

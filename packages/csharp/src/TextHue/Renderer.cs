@@ -32,7 +32,7 @@ public enum Preset { Labels, Controls, Chart, Subdued, Mono }
 public readonly record struct BrandColors(Rgb Light, Rgb Dark);
 public sealed record PaletteEntry(string Id, Rgb? Light = null, Rgb? Dark = null);
 
-public sealed class Renderer
+public sealed partial class Renderer
 {
     private sealed class FixedTone(Rgb rgb)
     {
@@ -147,14 +147,15 @@ public sealed class Renderer
     public RenderedPalette Resolve(string text) => ResolveNormalized(normalization.Apply(text));
 
     private readonly record struct Mapping(double Fraction, double Hue, double UL, double UC,
-        FixedTone? Light = null, FixedTone? Dark = null, string Source = "hash");
+        FixedTone? Light = null, FixedTone? Dark = null, string Source = "hash", int Ring = 0);
 
     private static readonly string[] Roles = ["background", "subtle", "muted", "fill", "onFill",
         "fillHover", "fillActive", "border", "text", "strong"];
 
-    private RenderedPalette ResolveNormalized(string text)
+    private RenderedPalette ResolveNormalized(string text) => Render(Map(text));
+
+    private RenderedPalette Render(Mapping mapping)
     {
-        var mapping = Map(text);
         IReadOnlyDictionary<string, Color> Theme(bool dark)
         {
             var bytes = RoleRenderer(mapping, dark);
@@ -172,10 +173,10 @@ public sealed class Renderer
     private Rgb SelectedBytes(string text, bool dark, string role) =>
         RoleRenderer(Map(normalization.Apply(text)), dark)(role);
 
-    private Mapping Map(string text)
+    private Mapping Map(string text, byte[]? digest = null)
     {
         if (overrides.TryGetValue(text, out var pinned)) return Fixed(pinned.Light, pinned.Dark, "override");
-        var digest = Identity.Digest(text, scope, seed);
+        digest ??= Identity.Digest(text, scope, seed);
         if (palette.Count > 0)
         {
             byte[] best = [];
@@ -190,11 +191,15 @@ public sealed class Renderer
             return Fixed(winner.Light, winner.Dark, "palette");
         }
         var (uH, uL, uC) = Identity.Fractions(digest);
-        double position = uH * 12;
+        return new(uH, MappedHue(uH), uL, uC);
+    }
+
+    private double MappedHue(double fraction)
+    {
+        double position = fraction * 12;
         int i = (int)position;
         var anchors = Tables.Anchors;
-        double hue = hueDomain.Map((anchors[i] + (anchors[i + 1] - anchors[i]) * (position - i)) % 360);
-        return new(uH, hue, uL, uC);
+        return hueDomain.Map((anchors[i] + (anchors[i + 1] - anchors[i]) * (position - i)) % 360);
     }
 
     private static Mapping Fixed(FixedTone light, FixedTone dark, string source)
@@ -225,7 +230,7 @@ public sealed class Renderer
             var bias = Tables.Biases[(dark ? 2 : 0) + (fill ? 0 : 1)];
             int sector = (int)(hue / 30);
             double offset = bias[sector] + (bias[(sector + 1) % 12] - bias[sector]) * (hue / 30 - sector);
-            return Math.Clamp(low + (high - low) * uL + offset, 0, 1);
+            return Math.Clamp(low + (high - low) * uL + offset + RingOffsets[mapping.Ring], 0, 1);
         }
 
         double Score(Rgb text, Rgb bg) => Math.Abs(Contrast.Measure(text, bg, contrastModel));
@@ -250,7 +255,7 @@ public sealed class Renderer
             double l = Math.Clamp(value, 0, 1);
             var role = fill ? profile.Fill : profile.Text;
             var (low, high) = role?.ChromaScale ?? chromaScale;
-            double c = fixedTone?.Neutral == true ? 0 : Math.Min(role?.ChromaCap ?? (fill ? 0.16 : 0.19), Gamut.SRgb.Cusp(l, hue) * (low + (high - low) * uC));
+            double c = fixedTone?.Neutral == true ? 0 : Math.Min(role?.ChromaCap ?? (fill ? 0.16 : 0.19), Gamut.SRgb.Cusp(l, hue) * ((low + (high - low) * uC) * (mapping.Ring < 3 ? 1 : 0.6)));
             double secondary = second.HasValue ? Target("textOnSubtle") : 0;
             return Gamut.SRgb.Repair(l, c, hue, target == 0 ? secondary : target, rgb =>
             {

@@ -18,3 +18,8 @@ From the repository root, build the NuGet package with `dotnet pack packages/csh
 For one role, use `renderer.Hex("apple", dark: true, role: "border")` or
 `renderer.ResolveColor("apple", role: "fill")`. Both render the selected theme
 and the role's dependencies. `Hex` formats the sRGB bytes directly.
+
+Use `renderer.Assign(labels)` to assign a collection and
+`renderer.Assign(updatedLabels, previous.Assignments)` to retain prior
+placements. The result contains palettes for the requested normalized labels.
+Its report measures the closest pairs using rendered light-fill OKLab distance.
