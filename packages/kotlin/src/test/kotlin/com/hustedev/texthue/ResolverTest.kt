@@ -33,11 +33,19 @@ fun main() {
             val (id, light, dark) = it.split(',')
             PaletteEntry(decode(id), light.ifEmpty { null }, dark.ifEmpty { null })
         }
-        val palette = Resolver(decode(row[1]), row[2].toUInt(), row[3].ifEmpty { null }?.toDouble(), normalization, Preset.valueOf(row[7].uppercase()),
+        val resolver = Resolver(decode(row[1]), row[2].toUInt(), row[3].ifEmpty { null }?.toDouble(), normalization, Preset.valueOf(row[7].uppercase()),
             ContrastModel.valueOf(row[8].uppercase()), targets, row[10].split(','),
             ForegroundPolicy.valueOf(row[11].replace('-', '_').uppercase()), arc(row[12]),
             row[13].split('|').filter { it.isNotEmpty() }.map(::arc), Backgrounds(row[14], row[15]),
-            Profiles(ThemeProfiles(profile(row[16]), profile(row[17])), ThemeProfiles(profile(row[18]), profile(row[19]))), overrides, entries).resolve(decode(row[0]))
+            Profiles(ThemeProfiles(profile(row[16]), profile(row[17])), ThemeProfiles(profile(row[18]), profile(row[19]))), overrides, entries)
+        val label = decode(row[0])
+        val palette = resolver.resolve(label)
+        for ((dark, theme) in listOf(false to palette.light, true to palette.dark)) {
+            for (role in roles) {
+                check(resolver.hex(label, dark, role) == theme.colors.getValue(role))
+                check(resolver.color(label, dark, role).hex == theme.color(role).hex)
+            }
+        }
         check(palette.source == row[22])
         check(abs(palette.hueFraction - row[23].toDouble()) < 1e-12)
         check(abs(palette.hue - row[24].toDouble()) < 1e-12)

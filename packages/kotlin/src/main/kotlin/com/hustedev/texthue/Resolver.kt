@@ -31,6 +31,8 @@ enum class ForegroundPolicy { BEST, FIRST_PASSING }
 
 data class Backgrounds(val light: String = "#ffffff", val dark: String = "#121212")
 
+private val paletteRoles = listOf("background", "subtle", "muted", "fill", "onFill", "fillHover", "fillActive", "border", "text", "strong")
+
 private val hexColor = Regex("#[0-9A-Fa-f]{6}")
 
 internal fun parseHex(hex: String): IntArray {
@@ -165,22 +167,39 @@ class Resolver(
         }
     }
 
-    private fun resolveNormalized(name: String): Palette {
+    private data class Mapping(val hue: Double, val uL: Double, val uC: Double, val fraction: Double,
+                               val source: String, val fixed: Pair<FixedTone, FixedTone>? = null)
+
+    private fun mapping(name: String): Mapping {
         val digest = Identity.digest(name, scope, seed)
         val (uH, uL, uC) = Identity.fractions(digest)
         val override = fixedColors[name]
-        (override ?: selectEntry(digest))?.let { (light, dark) ->
-            return Palette(light.hue, theme(false, light.hue, 0.5, 0.5, light),
-                theme(true, dark.hue, 0.5, 0.5, dark), if (override != null) "override" else "palette", light.fraction())
+        (override ?: selectEntry(digest))?.let { pair ->
+            return Mapping(pair.first.hue, 0.5, 0.5, pair.first.fraction(),
+                if (override != null) "override" else "palette", pair)
         }
         val position = uH * 12
         val slot = position.toInt()
         val naturalHue = (anchors[slot] + (anchors[slot + 1] - anchors[slot]) * (position - slot)) % 360
-        val hue = hueDomain.map(naturalHue)
-        return Palette(hue, theme(false, hue, uL, uC), theme(true, hue, uL, uC), "hash", uH)
+        return Mapping(hueDomain.map(naturalHue), uL, uC, uH, "hash")
     }
 
-    private fun theme(dark: Boolean, hue: Double, uL: Double, uC: Double, fixed: FixedTone? = null): ThemePalette {
+    private fun resolveNormalized(name: String): Palette {
+        val mapped = mapping(name)
+        return Palette(mapped.hue, theme(false, mapped), theme(true, mapped), mapped.source, mapped.fraction)
+    }
+
+    fun hex(text: String, dark: Boolean = false, role: String = "fill"): String =
+        theme(dark, mapping(normalization.apply(text)), role).colors.getValue(role)
+
+    fun color(text: String, dark: Boolean = false, role: String = "fill"): Color =
+        renderedColor(parseHex(hex(text, dark, role)))
+
+    private fun theme(dark: Boolean, mapped: Mapping, selected: String? = null): ThemePalette {
+        val fixed = if (dark) mapped.fixed?.second else mapped.fixed?.first
+        val hue = fixed?.hue ?: mapped.hue
+        val uL = mapped.uL
+        val uC = mapped.uC
         val base = if (dark) darkBackground else lightBackground
         val background = base.bytes
         val direction = if (dark) 1 else -1
@@ -215,21 +234,24 @@ class Resolver(
         }
         val unconstrained = if (apca) 0.0 else 1.0
         val borderTarget = contrastTargets.border ?: if (apca) target else minOf(3.0, target)
-        val subtle = tone(lb + direction * 0.04, profile.fill, 0.16, unconstrained)
-        val fill = fixed?.bytes ?: tone(fillL, profile.fill, 0.16, contrastTargets.fill ?: target)
-        val onFill = foreground(fill, contrastTargets.fill ?: target)
-        val colors = mapOf(
-            "background" to background,
-            "subtle" to subtle,
-            "muted" to tone(lb + direction * 0.10, profile.fill, 0.16, unconstrained),
-            "fill" to fill,
-            "onFill" to onFill,
-            "fillHover" to tone(fillL + direction * 0.025, profile.fill, 0.16, contrastTargets.fillHover ?: target, onFill, surface = true),
-            "fillActive" to tone(fillL + direction * 0.05, profile.fill, 0.16, contrastTargets.fillActive ?: target, onFill, surface = true),
-            "border" to tone(lb + direction * 0.39, profile.fill, 0.16, borderTarget, background),
-            "text" to tone(textL, profile.text, 0.19, contrastTargets.text ?: target, background, subtle, contrastTargets.textOnSubtle ?: target),
-            "strong" to tone(textL + direction * 0.10, profile.text, 0.19, contrastTargets.strong ?: target, background),
-        )
+        val subtle by lazy(LazyThreadSafetyMode.NONE) { tone(lb + direction * 0.04, profile.fill, 0.16, unconstrained) }
+        val fill by lazy(LazyThreadSafetyMode.NONE) { fixed?.bytes ?: tone(fillL, profile.fill, 0.16, contrastTargets.fill ?: target) }
+        val onFill by lazy(LazyThreadSafetyMode.NONE) { foreground(fill, contrastTargets.fill ?: target) }
+        fun bytes(role: String): IntArray = when (role) {
+            "background" -> background
+            "subtle" -> subtle
+            "muted" -> tone(lb + direction * 0.10, profile.fill, 0.16, unconstrained)
+            "fill" -> fill
+            "onFill" -> onFill
+            "fillHover" -> tone(fillL + direction * 0.025, profile.fill, 0.16, contrastTargets.fillHover ?: target, onFill, surface = true)
+            "fillActive" -> tone(fillL + direction * 0.05, profile.fill, 0.16, contrastTargets.fillActive ?: target, onFill, surface = true)
+            "border" -> tone(lb + direction * 0.39, profile.fill, 0.16, borderTarget, background)
+            "text" -> tone(textL, profile.text, 0.19, contrastTargets.text ?: target, background, subtle, contrastTargets.textOnSubtle ?: target)
+            "strong" -> tone(textL + direction * 0.10, profile.text, 0.19, contrastTargets.strong ?: target, background)
+            else -> throw IllegalArgumentException("Unknown color role: $role")
+        }
+        val roles = selected?.let { listOf(it) } ?: paletteRoles
+        val colors = roles.associateWith(::bytes)
         return ThemePalette(java.util.Collections.unmodifiableMap(colors.mapValues { (_, rgb) -> rgb.joinToString("", prefix = "#") { it.toString(16).padStart(2, '0') } }))
     }
 }

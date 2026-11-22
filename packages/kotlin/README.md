@@ -7,6 +7,7 @@ import com.hustedev.texthue.Resolver
 
 fun main() {
     val resolver = Resolver(namespace = "project", seed = 42u)
+    println(resolver.hex("apple", dark = true, role = "border"))
     val palette = resolver.resolve("apple")
     println(palette.light.color("fill").hex)
     println(palette.dark.color("onFill").hex)
