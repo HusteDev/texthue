@@ -94,6 +94,20 @@ def check_links():
     print(f"PASS: local links in {len(paths)} documents")
 
 
+def check_fixture_digests(fixtures):
+    unchecked = {path.name for path in fixtures.iterdir() if path.suffix in {".json", ".tsv"}}
+    for line in (fixtures / "DIGESTS").read_text(encoding="ascii").splitlines():
+        expected, filename = line.split()
+        if filename not in unchecked:
+            raise SystemExit(f"Unknown or duplicate frozen fixture: {filename}")
+        unchecked.remove(filename)
+        canonical = (fixtures / filename).read_text(encoding="utf-8").encode("utf-8")
+        if hashlib.sha256(canonical).hexdigest() != expected:
+            raise SystemExit(f"Frozen fixture digest mismatch: {filename}")
+    if unchecked:
+        raise SystemExit(f"Missing frozen fixture digests: {', '.join(sorted(unchecked))}")
+
+
 def main():
     """Run all checks in dependency order and exit nonzero on the first failure."""
     ports = {p["id"]: p for p in load_packages() if "verifyCommands" in p}
@@ -146,12 +160,7 @@ def main():
     run(
         "300-collection rendered fill separation", ["node", "tools/measure-separation.mjs"], env=env
     )
-    fixtures = ROOT / "conformance"
-    for line in (fixtures / "DIGESTS").read_text(encoding="ascii").splitlines():
-        expected, filename = line.split()
-        canonical = (fixtures / filename).read_text(encoding="utf-8").encode("utf-8")
-        if hashlib.sha256(canonical).hexdigest() != expected:
-            raise SystemExit(f"Frozen fixture digest mismatch: {filename}")
+    check_fixture_digests(ROOT / "conformance")
     run(
         "normalization vectors",
         ["node", "tools/build-normalization-vectors.mjs", "--check"],
