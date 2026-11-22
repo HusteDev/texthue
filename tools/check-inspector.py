@@ -53,8 +53,16 @@ def exercise(page, url, clipboard):
         page.locator("#theme").select_option(theme)
         page.get_by_role("button", name="Inspect palette").click()
         expect(page.get_by_role("cell", name=ratio, exact=True)).to_be_visible()
-    page.locator("#options").fill('{"gamut":"display-p3","overrides":{"badge":"#ff0000"}}')
+    expect(
+        page.get_by_role("columnheader", name="Registry fill / background (Display-P3)")
+    ).to_have_count(0)
+    page.locator("#options").fill('{"gamut":"display-p3","backgrounds":{"dark":"#000000"}}')
     page.get_by_role("button", name="Inspect palette").click()
+    expect(
+        page.get_by_role("columnheader", name="Registry fill / background (Display-P3)")
+    ).to_be_visible()
+    expect(page.get_by_role("cell", name="3.22:1", exact=True)).to_be_visible()
+    expect(page.get_by_role("cell", name="3.21:1", exact=True)).to_be_visible()
     chips = page.locator("#results td span[title^='color(display-p3']")
     expect(chips).to_have_count(3)
     for chip in chips.all():

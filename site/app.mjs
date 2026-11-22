@@ -52,6 +52,7 @@ function run() {
       const table = append(results, 'table');
       const head = append(table, 'tr');
       for (const title of ['Label','Hash','Assigned','Registry','Registry fill / background (sRGB)']) append(head,'th',title);
+      if (config.options.gamut === 'display-p3') append(head,'th','Registry fill / background (Display-P3)');
       for (const row of rows) {
         const line = append(table, 'tr');
         const labelCell = append(line,'th');
@@ -73,6 +74,9 @@ function run() {
           cell.append(hex);
         }
         append(line,'td',`${row.fillOnBackground.srgbRatio.toFixed(2)}:1`);
+        if (config.options.gamut === 'display-p3') {
+          append(line,'td',`${row.fillOnBackground.displayP3LuminanceRatio.toFixed(2)}:1`);
+        }
       }
       for (const [title,items] of [
         ['Normalized aliases',findings.aliases], ['Closest pairs in selected vision profile',findings.closest],
