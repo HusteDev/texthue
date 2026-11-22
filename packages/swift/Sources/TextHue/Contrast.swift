@@ -1,7 +1,8 @@
 import Foundation
 
-public enum Gamut {
-    case sRGB, displayP3
+public enum Gamut: String, Decodable {
+    case sRGB = "srgb"
+    case displayP3 = "display-p3"
 
     var ratioWeights: [Double] {
         switch self {

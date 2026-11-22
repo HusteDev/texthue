@@ -70,10 +70,14 @@ public struct Color: Codable, Equatable {
     }
 
     public init(bytes native: RGB, gamut: Gamut) {
+        self.init(encoded: [native.r, native.g, native.b].map(Double.init), gamut: gamut)
+    }
+
+    init(encoded: [Double], gamut: Gamut) {
         func round6(_ value: Double) -> Double { floor(value * 1e6 + 0.5) / 1e6 }
-        let nativeValues = [native.r, native.g, native.b].map { Double($0) / 255 }
+        let nativeValues = encoded.map { $0 / 255 }
         if gamut == .displayP3 {
-            let fallback = Gamut.p3Fallback(native)
+            let fallback = Gamut.p3Fallback(encoded: encoded)
             rgb = fallback.rgb
             srgbClipped = fallback.clipped
             let channels = nativeValues.map(round6)
@@ -87,7 +91,7 @@ public struct Color: Codable, Equatable {
             }
             css = "color(display-p3 " + decimals.joined(separator: " ") + ")"
         } else {
-            rgb = native
+            rgb = RGB(r: UInt8(encoded[0]), g: UInt8(encoded[1]), b: UInt8(encoded[2]))
             srgbClipped = nil
             p3 = nil
             css = nil
@@ -108,7 +112,7 @@ public struct Color: Codable, Equatable {
         hsl = HSL(h: round6(60 * hue).truncatingRemainder(dividingBy: 360),
                   s: round6(saturation * 100), l: round6(light * 100))
         let lab = Self.lab(nativeValues, gamut: gamut)
-        let neutral = native.r == native.g && native.g == native.b
+        let neutral = encoded[0] == encoded[1] && encoded[1] == encoded[2]
         let angle = atan2(lab[2], lab[1]) * 180 / .pi
         let degrees = (angle + 360).truncatingRemainder(dividingBy: 360)
         oklch = OKLCH(l: round6(lab[0]),

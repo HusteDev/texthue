@@ -72,6 +72,7 @@ public struct BrandColors: Decodable {
 }
 
 public struct RenderOptions: Decodable {
+    public var gamut: Gamut?
     public var hueRange: [Double]?
     public var excludeHues: [[Double]]?
     public var palette: [PaletteEntry]?
@@ -209,7 +210,8 @@ public struct Renderer {
     private let fixedColors: [Data: (FixedTone, FixedTone)]
     private let scope: String
 
-    private let foregrounds: [[UInt8]]
+    private let gamut: Gamut
+    private let foregrounds: [[Double]]
     private let lightBackground, darkBackground: ThemeBackground
 
     public init(options: RenderOptions) throws {
@@ -229,9 +231,11 @@ public struct Renderer {
         }
         let candidates = options.foregrounds ?? ["#000000", "#ffffff"]
         guard !candidates.isEmpty else { throw RenderError.invalidOptions }
+        let gamut = options.gamut ?? .sRGB
+        self.gamut = gamut
         let parsedForegrounds = try candidates.map {
             let rgb = try RGB(hex: $0)
-            return [rgb.r, rgb.g, rgb.b]
+            return gamut.canonicalChannels(sRGB: [rgb.r, rgb.g, rgb.b])
         }
         foregrounds = parsedForegrounds
         var compiled: [RankedEntry] = []
@@ -241,7 +245,7 @@ public struct Renderer {
         let target = options.contrastTargets?["fill"] ?? options.contrastTarget
             ?? (model == .apca ? 60 : options.preset == .controls ? 7 : 4.5)
         func passes(_ tone: FixedTone) -> Bool {
-            parsedForegrounds.contains { abs(model.measure(text: $0, background: tone.bytes, gamut: .sRGB)) >= target }
+            parsedForegrounds.contains { abs(model.measure(encodedText: $0, background: gamut.canonicalChannels(sRGB: tone.bytes), gamut: gamut)) >= target }
         }
         if let palette = options.palette {
             guard !palette.isEmpty else { throw RenderError.invalidOptions }
@@ -311,11 +315,11 @@ public struct Renderer {
 
     public func color(_ text: String, dark: Bool = false, role: String = "fill") throws -> Color {
         let bytes = try selected(text, dark, role)
-        return Color(rgb: RGB(r: bytes[0], g: bytes[1], b: bytes[2]))
+        return Color(encoded: bytes, gamut: gamut)
     }
 
     public func hex(_ text: String, dark: Bool = false, role: String = "fill", strict: Bool = false) throws -> String {
-        if !strict { return try Color.hexString(selected(text, dark, role)) }
+        if !strict { return try outputHex(selected(text, dark, role)) }
         let mapped = try mapping(normalization.apply(text))
         let name = dark ? "dark" : "light"
         let pairs = role == "text" ? ["text", "textOnSubtle"] : [role == "onFill" ? "fill" : role]
@@ -329,10 +333,16 @@ public struct Renderer {
         for pair in pairs {
             guard let (front, back) = contrastRoles(pair) else { continue }
             let model = options.contrastModel ?? .wcag2
-            let value = model.measure(text: colors[front]!, background: colors[back]!, gamut: .sRGB)
+            let value = model.measure(encodedText: colors[front]!, background: colors[back]!, gamut: gamut)
             if abs(value) < requiredContrast(pair) { throw RenderError.unmetConstraint }
         }
-        return Color.hexString(colors[role]!)
+        return outputHex(colors[role]!)
+    }
+
+    private func outputHex(_ encoded: [Double]) -> String {
+        if gamut == .sRGB { return Color.hexString(encoded.map(UInt8.init)) }
+        let rgb = Gamut.p3Fallback(encoded: encoded).rgb
+        return Color.hexString([rgb.r, rgb.g, rgb.b])
     }
 
     private func contrastRoles(_ pair: String) -> (String, String)? {
@@ -350,7 +360,7 @@ public struct Renderer {
         return options.contrastTargets?[role] ?? (role == "border" && model == .wcag2 ? min(target, 3) : target)
     }
 
-    private func selected(_ text: String, _ dark: Bool, _ role: String) throws -> [UInt8] {
+    private func selected(_ text: String, _ dark: Bool, _ role: String) throws -> [Double] {
         let mapped = try mapping(normalization.apply(text))
         return try rawTheme(dark ? "dark" : "light", mapped, [role]).roles[role]!
     }
@@ -386,12 +396,12 @@ public struct Renderer {
 
     private typealias Flags = (adjusted: Bool, capped: Bool, reduced: Bool, fallback: String?)
     private func rawTheme(_ name: String, _ mapped: Mapping, _ requestedRoles: [String]) throws
-        -> (roles: [String: [UInt8]], metadata: [String: Flags]) {
+        -> (roles: [String: [Double]], metadata: [String: Flags]) {
         let dark = name == "dark", direction: Double = dark ? 1 : -1
         let fixed = dark ? mapped.dark : mapped.light
         let hue = fixed?.hue ?? mapped.hue, uL = mapped.l, uC = mapped.c
         let base = dark ? darkBackground : lightBackground
-        let bg = base.bytes, lb = base.lightness
+        let bg = gamut.canonicalChannels(sRGB: base.bytes), lb = base.lightness
         let model = options.contrastModel ?? .wcag2
         let preset = options.preset ?? .labels
         let target = options.contrastTarget ?? (model == .apca ? 60 : preset == .controls ? 7 : 4.5)
@@ -412,10 +422,10 @@ public struct Renderer {
                     (scale[0] + (scale[1] - scale[0]) * uC) * (mapped.ring < 3 ? 1 : 0.6), cap)
         }
         let fillP = sampled("fill"), textP = sampled("text")
-        func score(_ a: [UInt8], _ b: [UInt8]) -> Double {
-            abs(model.measure(text: a, background: b, gamut: .sRGB))
+        func score(_ a: [Double], _ b: [Double]) -> Double {
+            abs(model.measure(encodedText: a, background: b, gamut: gamut))
         }
-        func foreground(_ bytes: [UInt8], target: Double) -> [UInt8] {
+        func foreground(_ bytes: [Double], target: Double) -> [Double] {
             var best = foregrounds[0], bestScore = -1.0
             for candidate in foregrounds {
                 let value = score(candidate, bytes)
@@ -429,13 +439,14 @@ public struct Renderer {
         }
         var metadata: [String: (adjusted: Bool, capped: Bool, reduced: Bool, fallback: String?)] = [:]
         func tone(_ role: String, _ value: Double, _ profile: (l: Double, scale: Double, cap: Double),
-                  _ target: Double, _ back: [UInt8]? = nil, _ second: [UInt8]? = nil, surface: Bool = false) -> [UInt8] {
+                  _ target: Double, _ back: [Double]? = nil, _ second: [Double]? = nil, surface: Bool = false) -> [Double] {
             let l = min(1, max(0, value))
-            let requested = Gamut.sRGB.cusp(lightness: l, hue: hue) * profile.scale
+            let requested = gamut.cusp(lightness: l, hue: hue) * profile.scale
             let c = min(profile.cap, requested)
             let secondary = second == nil ? 0 : required("textOnSubtle")
             let threshold = target == 0 ? secondary : target
-            let result = Gamut.sRGB.repair(lightness: l, chroma: c, hue: hue, target: threshold) { bytes in
+            let result = gamut.repair(lightness: l, chroma: c, hue: hue, target: threshold) { fitted in
+                let bytes = fitted.map(Double.init)
                 let primary: Double
                 if let back { primary = surface ? score(back, bytes) : score(bytes, back) }
                 else { primary = score(foreground(bytes, target: target), bytes) }
@@ -444,12 +455,12 @@ public struct Renderer {
                 return target == 0 ? secondScore : min(primary, secondScore * (target / secondary))
             }
             metadata[role] = (result.color.lightness != l, requested > profile.cap, result.color.chroma < c, result.fallback)
-            return result.color.bytes
+            return result.color.bytes.map(Double.init)
         }
         lazy var subtle = tone("subtle", lb + direction * 0.04, fillP, unconstrained)
-        lazy var fill = fixed?.bytes ?? tone("fill", fillP.l, fillP, required("fill"))
+        lazy var fill = fixed.map { gamut.canonicalChannels(sRGB: $0.bytes) } ?? tone("fill", fillP.l, fillP, required("fill"))
         lazy var onFill = foreground(fill, target: required("fill"))
-        var roles: [String: [UInt8]] = [:]
+        var roles: [String: [Double]] = [:]
         for role in requestedRoles {
             roles[role] = switch role {
             case "background": bg
@@ -480,17 +491,17 @@ public struct Renderer {
             let colorRole = role == "textOnSubtle" ? "text" : role
             let (frontRole, backRole) = contrastRoles(role)!
             let front = roles[frontRole]!, back = roles[backRole]!
-            let measured = model.measure(text: front, background: back, gamut: .sRGB)
+            let measured = model.measure(encodedText: front, background: back, gamut: gamut)
             let passes = abs(measured) >= requiredContrast(role)
             let flags = metadata[colorRole]
             let fallback = role == "fill" && fixed != nil && !passes ? "palette-constraint" : flags?.fallback
             relationships[role] = ContrastRelationship(
-                ratio: ContrastModel.wcag2.measure(text: front, background: back, gamut: .sRGB),
+                ratio: ContrastModel.wcag2.measure(encodedText: front, background: back, gamut: gamut),
                 meetsTarget: passes, lightnessAdjusted: flags?.adjusted ?? false, chromaCapped: flags?.capped ?? false,
                 chromaReduced: flags?.reduced ?? false, fallback: fallback,
                 model: model == .apca ? "apca" : nil, value: model == .apca ? measured : nil)
         }
-        return ReportedTheme(colors: roles.mapValues { Color(rgb: RGB(r: $0[0], g: $0[1], b: $0[2])) },
+        return ReportedTheme(colors: roles.mapValues { Color(encoded: $0, gamut: gamut) },
                              contrast: ContrastReport(target: target, relationships: relationships))
     }
 }

@@ -23,6 +23,21 @@ final class APCARendererTests: XCTestCase {
         }
     }
 
+    func testP3TextAgainstSuppliedBackground() throws {
+        var options = RenderOptions()
+        options.gamut = .displayP3
+        options.contrastModel = .apca
+        options.backgrounds = ["dark": "#176fd0"]
+        let renderer = try Renderer(options: options)
+        let palette = try renderer.resolve("sample")
+        let text = try XCTUnwrap(palette.dark["text"])
+        XCTAssertEqual(text.css, "color(display-p3 1 0.882353 0.823529)")
+        XCTAssertEqual(try renderer.color("sample", dark: true, role: "text"), text)
+        XCTAssertEqual(try renderer.hex("sample", dark: true, role: "text", strict: true), "#ffe0d0")
+        let value = try XCTUnwrap(palette.darkContrast.relationships["text"]?.value)
+        XCTAssertEqual(value, -63.99623265441859, accuracy: 1e-12)
+    }
+
     func testIndependentZeroTargets() throws {
         for (primary, secondary, light, dark) in [
             (0.0, 90.0, "#003b44", "#a8f2ff"),

@@ -41,7 +41,11 @@ extension Gamut {
     }
 
     static func p3Fallback(_ bytes: RGB) -> (rgb: RGB, clipped: Bool) {
-        let linearP3 = [bytes.r, bytes.g, bytes.b].map { linearChannel(Double($0) / 255) }
+        p3Fallback(encoded: [bytes.r, bytes.g, bytes.b].map(Double.init))
+    }
+
+    static func p3Fallback(encoded: [Double]) -> (rgb: RGB, clipped: Bool) {
+        let linearP3 = encoded.map { linearChannel($0 / 255) }
         let linearRGB = multiply(xyzToRGB, multiply(p3ToXYZ, linearP3))
         return (RGB(r: channelByte(linearRGB[0]), g: channelByte(linearRGB[1]),
                     b: channelByte(linearRGB[2])), !inside(linearRGB))
