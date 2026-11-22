@@ -196,8 +196,13 @@ mod tests {
 
     #[test]
     fn shared_assignment_vectors() {
-        let rows: Vec<Value> =
+        let mut rows: Vec<Value> =
             serde_json::from_str(include_str!("../../testdata/assign-vectors.json")).unwrap();
+        if let Some(path) = std::env::var_os("TEXTHUE_SEPARATION_CORPUS") {
+            let corpus: Vec<Value> = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+            assert_eq!(corpus.len(), 300);
+            rows.extend(corpus);
+        }
         for row in rows {
             let mut renderer = Renderer::default();
             renderer.normalization.lowercase = row["options"]["normalize"]["case"] == "lower";
@@ -216,7 +221,9 @@ mod tests {
                 .flatten()
                 .map(|(k, v)| (k.clone(), placement(v)))
                 .collect();
-            let labels = row["texts"]
+            let labels = row
+                .get("texts")
+                .unwrap_or(&row["labels"])
                 .as_array()
                 .unwrap()
                 .iter()
@@ -229,8 +236,19 @@ mod tests {
                 .map(|(k, v)| (k.clone(), placement(v)))
                 .collect();
             assert_eq!(result.assignments, expected);
-            for (k, hex) in row["lightFills"].as_object().unwrap() {
-                assert_eq!(result.colors[k].light["fill"].hex, hex.as_str().unwrap());
+            if let Some(fills) = row["lightFills"].as_object() {
+                for (k, hex) in fills {
+                    assert_eq!(result.colors[k].light["fill"].hex, hex.as_str().unwrap());
+                }
+            } else {
+                let labels = row["labels"].as_array().unwrap();
+                let fills = row["fills"].as_array().unwrap();
+                assert_eq!(labels.len(), fills.len());
+                for (label, pair) in labels.iter().zip(fills) {
+                    let palette = &result.colors[label.as_str().unwrap()];
+                    assert_eq!(palette.light["fill"].hex, pair[0].as_str().unwrap());
+                    assert_eq!(palette.dark["fill"].hex, pair[1].as_str().unwrap());
+                }
             }
             let report = &row["report"];
             assert!(

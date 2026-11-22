@@ -60,6 +60,14 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: python ../../tools/verify.py --port rust
+      - name: Compare Rust placements and both theme fills with JavaScript
+        working-directory: .
+        shell: bash
+        run: |
+          npm ci
+          npm run build
+          node tools/measure-separation.mjs --cases > "$RUNNER_TEMP/separation.json"
+          TEXTHUE_SEPARATION_CORPUS="$RUNNER_TEMP/separation.json" cargo test --locked --manifest-path packages/rust/Cargo.toml shared_assignment_vectors
       - name: Measure rust performance
         shell: bash
         working-directory: .
