@@ -119,6 +119,7 @@ struct RawTheme {
     flags: BTreeMap<&'static str, (bool, bool, bool, Option<&'static str>)>,
 }
 
+#[derive(Clone, Copy)]
 struct Mapping {
     ring: usize,
     source: &'static str,

@@ -122,8 +122,8 @@
         "moved": true
       },
       "1": {
+        "ring": 1,
         "hueFraction": 0.546587426836292,
-        "ring": 0,
         "moved": true
       },
       "2": {
@@ -190,7 +190,7 @@
     },
     "lightFills": {
       "0": "#a8a3ef",
-      "1": "#6dbbc2",
+      "1": "#7ed6de",
       "2": "#f3bac3",
       "3": "#b0ae5f",
       "4": "#6dc6a5",
@@ -238,43 +238,43 @@
     ],
     "assignments": {
       "0": {
-        "hueFraction": 0.8184075141325593,
+        "hueFraction": 0.4121575141325593,
         "ring": 0,
         "moved": true
       },
       "1": {
-        "hueFraction": 0.05700409350295854,
         "ring": 1,
+        "hueFraction": 0.5465874268362918,
         "moved": true
       },
       "2": {
-        "hueFraction": 0.10860259093654645,
         "ring": 1,
+        "hueFraction": 0.7544359242698798,
         "moved": true
       },
       "3": {
-        "hueFraction": 0.25908509331444896,
+        "hueFraction": 0.24866842664778233,
         "ring": 0,
         "moved": true
       },
       "4": {
-        "hueFraction": 0.4897837904281914,
         "ring": 0,
+        "hueFraction": 0.750200457094858,
         "moved": true
       },
       "5": {
-        "hueFraction": 0.7730747248666981,
-        "ring": 0,
+        "ring": 1,
+        "hueFraction": 0.4605747248666982,
         "moved": true
       },
       "6": {
-        "hueFraction": 0.21377121579522887,
+        "hueFraction": 0.2033545491285622,
         "ring": 0,
         "moved": true
       },
       "7": {
-        "hueFraction": 0.005795235202337379,
         "ring": 1,
+        "hueFraction": 0.9224619018690039,
         "moved": true
       },
       "8": {
@@ -283,58 +283,58 @@
         "moved": false
       },
       "9": {
-        "hueFraction": 0.9045642625230054,
         "ring": 1,
+        "hueFraction": 0.11289759585633874,
         "moved": true
       },
       "10": {
-        "hueFraction": 0.30564172232213116,
         "ring": 0,
+        "hueFraction": 0.3368917223221312,
         "moved": true
       },
       "11": {
-        "hueFraction": 0.7189938297960907,
         "ring": 1,
+        "hueFraction": 0.2919104964627574,
         "moved": true
       },
       "12": {
-        "hueFraction": 0.9139307009366651,
-        "ring": 0,
+        "ring": 1,
+        "hueFraction": 0.8305973676033318,
         "moved": true
       },
       "13": {
-        "hueFraction": 0.11605926346965134,
         "ring": 0,
+        "hueFraction": 0.157725930136318,
         "moved": true
       },
       "14": {
-        "hueFraction": 0.81048897607252,
         "ring": 1,
+        "hueFraction": 0.99798897607252,
         "moved": true
       },
       "15": {
-        "hueFraction": 0.7608765782788396,
         "ring": 1,
+        "hueFraction": 0.3337932449455063,
         "moved": true
       },
       "16": {
-        "hueFraction": 0.8576319731461505,
         "ring": 1,
+        "hueFraction": 0.6284653064794838,
         "moved": true
       },
       "17": {
-        "hueFraction": 0.5320268529467285,
+        "hueFraction": 0.5111935196133951,
         "ring": 0,
         "moved": true
       },
       "18": {
-        "hueFraction": 0.7251792907870064,
-        "ring": 0,
+        "ring": 1,
+        "hueFraction": 0.41267929078700644,
         "moved": true
       },
       "19": {
-        "hueFraction": 0.4446856459447493,
         "ring": 0,
+        "hueFraction": 0.6842689792780827,
         "moved": true
       },
       "20": {
@@ -343,23 +343,23 @@
         "moved": true
       },
       "21": {
-        "hueFraction": 0.9550201788855096,
         "ring": 1,
+        "hueFraction": 0.21543684555217624,
         "moved": true
       },
       "22": {
-        "hueFraction": 0.8691903640671322,
-        "ring": 0,
+        "hueFraction": 0.7025236974004656,
+        "ring": 1,
         "moved": true
       },
       "23": {
-        "hueFraction": 0.5825478301849216,
         "ring": 0,
+        "hueFraction": 0.8325478301849216,
         "moved": true
       },
       "24": {
-        "hueFraction": 0.6252103894948959,
         "ring": 0,
+        "hueFraction": 0.9168770561615627,
         "moved": true
       },
       "25": {
@@ -368,68 +368,68 @@
         "moved": true
       },
       "26": {
-        "hueFraction": 0.16744736853676537,
+        "hueFraction": 0.11536403520343204,
         "ring": 0,
         "moved": true
       },
       "27": {
-        "hueFraction": 0.34895636878597236,
         "ring": 0,
+        "hueFraction": 0.4635397021193057,
         "moved": true
       },
       "28": {
-        "hueFraction": 0.6770075401291251,
+        "hueFraction": 0.6353408734624585,
         "ring": 0,
         "moved": true
       },
       "29": {
-        "hueFraction": 0.3963551566315194,
         "ring": 0,
+        "hueFraction": 0.5838551566315194,
         "moved": true
       }
     },
     "report": {
-      "minDistance": 0.015671035262535757,
+      "minDistance": 0.040714043134069684,
       "closestPairs": [
         [
-          "13",
-          "2"
+          "12",
+          "7"
         ]
       ],
       "withinRingCapacity": true,
       "distinctFills": true
     },
     "lightFills": {
-      "0": "#da8def",
-      "1": "#ecc0b3",
-      "2": "#f3bd97",
-      "3": "#a7b05f",
-      "4": "#6dc5b2",
-      "5": "#c6abe5",
-      "6": "#c8b45a",
-      "7": "#f0bcc1",
+      "0": "#4dc179",
+      "1": "#7ed6de",
+      "2": "#d2c0f3",
+      "3": "#abaf5f",
+      "4": "#c0ade7",
+      "5": "#81e1be",
+      "6": "#cdb35a",
+      "7": "#f0badb",
       "8": "#ea9e9b",
-      "9": "#f1c8e4",
-      "10": "#a0c36b",
-      "11": "#d4d5f7",
-      "12": "#eca2d4",
-      "13": "#eeb98e",
-      "14": "#e8c6f6",
-      "15": "#d3c0f1",
-      "16": "#f2b4f0",
-      "17": "#6cbebf",
-      "18": "#b9b6f2",
-      "19": "#71cca3",
+      "9": "#efcbb0",
+      "10": "#8cc86b",
+      "11": "#c0e565",
+      "12": "#edc9f2",
+      "13": "#eeba70",
+      "14": "#f6c6cc",
+      "15": "#96da6b",
+      "16": "#9ccdf0",
+      "17": "#6cbfb6",
+      "18": "#71ee9e",
+      "19": "#a8bbe7",
       "20": "#f0ad94",
-      "21": "#f1c8d7",
-      "22": "#efa5e7",
-      "23": "#68bbd5",
-      "24": "#7ebbe5",
+      "21": "#e4d175",
+      "22": "#cfd6f4",
+      "23": "#dc97e6",
+      "24": "#e99dcf",
       "25": "#f084a6",
-      "26": "#d2a24f",
-      "27": "#89d271",
-      "28": "#8aa9e2",
-      "29": "#6cd183"
+      "26": "#e8974f",
+      "27": "#78d0b1",
+      "28": "#6daee1",
+      "29": "#6dc8e5"
     }
   },
   {

@@ -81,19 +81,69 @@ impl CompiledRenderer<'_> {
         let mut colors = BTreeMap::new();
         let mut points = Vec::new();
         let mut fills = BTreeSet::new();
-        for (_, name, mut mapped) in entries {
-            let p = assignments
-                .get(&name)
-                .copied()
-                .unwrap_or_else(|| place(mapped.fraction, &assignments, separation));
-            assignments.insert(name.clone(), p);
+        let placed = |mut mapped: super::Mapping, p: Placement| {
             mapped.ring = (p.ring % 5) as usize;
             if mapped.fixed.is_none() {
                 mapped.source = "assigned";
                 mapped.fraction = p.hue_fraction;
                 mapped.hue = self.mapped_hue(p.hue_fraction);
             }
-            let palette = self.renderer.render_mapping(mapped);
+            self.renderer.render_mapping(mapped)
+        };
+        let project = |palette: &RenderedPalette| {
+            [
+                oklab(palette.light["fill"].rgb),
+                oklab(palette.dark["fill"].rgb),
+            ]
+        };
+        let mut occupied = Vec::new();
+        for (name, p) in &assignments {
+            occupied.push(project(&placed(self.renderer.mapping(name, self)?, *p)));
+        }
+        for (_, name, mapped) in entries {
+            let existing = assignments.get(&name).copied();
+            let initial =
+                existing.unwrap_or_else(|| place(mapped.fraction, &assignments, separation));
+            let mut palette = placed(mapped, initial);
+            if existing.is_none() {
+                let score = |pair: &[[f64; 3]; 2]| {
+                    occupied
+                        .iter()
+                        .flat_map(|prior| pair.iter().zip(prior))
+                        .map(|(a, b)| (a[0] - b[0]).hypot(a[1] - b[1]).hypot(a[2] - b[2]))
+                        .fold(f64::INFINITY, f64::min)
+                };
+                let mut selected = initial;
+                let mut pair = project(&palette);
+                let mut best = score(&pair);
+                for step in 1..120u32 {
+                    if best >= 0.04 {
+                        break;
+                    }
+                    let hue_fraction = (initial.hue_fraction + f64::from(step % 24) / 24.0).fract();
+                    let ring = initial.ring + u64::from(step / 24);
+                    if assignments.values().any(|p| {
+                        let d = (p.hue_fraction - hue_fraction).abs();
+                        p.ring == ring && d.min(1.0 - d) < separation
+                    }) {
+                        continue;
+                    }
+                    let candidate = Placement {
+                        hue_fraction,
+                        ring,
+                        moved: true,
+                    };
+                    let rendered = placed(mapped, candidate);
+                    let projected = project(&rendered);
+                    let distance = score(&projected);
+                    if distance > best {
+                        (selected, palette, pair, best) =
+                            (candidate, rendered, projected, distance);
+                    }
+                }
+                assignments.insert(name.clone(), selected);
+                occupied.push(pair);
+            }
             let rgb = palette.light["fill"].rgb;
             fills.insert(rgb);
             points.push((name.clone(), oklab(rgb)));
