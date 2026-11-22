@@ -37,8 +37,11 @@ Every color has `Hex`, `RGB`, `HSL`, and `OKLCH`. RGB channels are integers 0–
 ## API and complete options
 
 ```go
-func Resolve(text string, options *Options) (ColorSet, error)
-func ParseOptions(data []byte) (*Options, error)
+func Resolve(text string, options ...Option) (ColorSet, error)
+func NewResolver(options ...Option) (*Resolver, error)
+func ParseOptions(data []byte) ([]Option, error)
+func WithPalette(values []PaletteEntry) Option
+func WithOverrides(values map[string]Override) Option
 func Ptr[T any](value T) *T
 ```
 
@@ -117,7 +120,7 @@ Use `ParseOptions` when accepting the shared JSON format. It rejects null, unkno
 ```go
 options, err := texthue.ParseOptions([]byte(`{"namespace":"projects","contrastTarget":4.5}`))
 if err != nil { panic(err) }
-colors, err := texthue.Resolve("project-id:42", options)
+colors, err := texthue.Resolve("project-id:42", options...)
 if err != nil { panic(err) }
 data, err := json.Marshal(colors) // Import encoding/json.
 if err != nil { panic(err) }

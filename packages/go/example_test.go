@@ -7,6 +7,23 @@ import (
 	texthue "github.com/HusteDev/texthue/packages/go"
 )
 
+func ExampleResolve_brand() {
+	options := []texthue.Option{
+		texthue.WithPalette([]texthue.PaletteEntry{{ID: "ocean", BrandPair: texthue.BrandPair{Light: "#117799"}}}),
+		texthue.WithOverrides(map[string]texthue.Override{"urgent": {Light: "#aa3311", Dark: "#ffaa99"}}),
+	}
+	for _, label := range []string{"research", "urgent"} {
+		color, err := texthue.Resolve(label, options...)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(color.Source, color.Light.Fill.Hex)
+	}
+	// Output:
+	// palette #117799
+	// override #aa3311
+}
+
 // ExampleResolve prints every output format for the default options.
 func ExampleResolve() {
 	colors, err := texthue.Resolve("research", nil)

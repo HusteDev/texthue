@@ -9,6 +9,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 	"maps"
 	"math"
+	"slices"
 	"strings"
 	"unicode/utf8"
 )
@@ -217,7 +218,18 @@ func WithBackgrounds(light, dark string) Option {
 }
 func WithProfile(value Profiles) Option { return optionFunc(func(o *Options) { o.Profiles = &value }) }
 
-// Resolver holds validated settings and precomputed background formats.
+// WithOverrides pins normalized labels to supplied brand colors.
+func WithOverrides(values map[string]Override) Option {
+	snapshot := maps.Clone(values)
+	return optionFunc(func(o *Options) { o.Overrides = maps.Clone(snapshot) })
+}
+
+// WithPalette restricts brand selection to the supplied palette entries.
+func WithPalette(values []PaletteEntry) Option {
+	snapshot := slices.Clone(values)
+	return optionFunc(func(o *Options) { o.Palette = slices.Clone(snapshot) })
+}
+
 func WithNormalize(value NormalizeOptions) Option {
 	return optionFunc(func(o *Options) { o.Normalize = &value })
 }
