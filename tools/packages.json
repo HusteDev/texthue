@@ -87,7 +87,7 @@
         { "source": "root:conformance/tone-repair-v1.tsv", "dest": "Tests/TextHueTests/Fixtures/tone-repair-v1.tsv" },
         { "source": "root:conformance/vectors.json", "dest": "Tests/TextHueTests/Fixtures/vectors.json" }
       ],
-      "verifyCommands": [["swift", "test", "--force-resolved-versions"]],
+      "verifyCommands": [["swift", "test", "--force-resolved-versions"], ["python", "../../tools/check-swift-example.py"]],
       "conformanceRunner": null
     },
     {
