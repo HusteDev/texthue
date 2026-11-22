@@ -77,6 +77,21 @@ The shared assignment corpus includes two pairs from the original review. The ta
 
 Collection assignment moved one member of the first pair. The redesigned hash renderer already placed the second pair far enough apart to retain both placements. These measurements cover two pairs and normal vision. They do not establish a general perceptual threshold.
 
+### Vision previews for the original review collections
+
+The inspector regression uses the nine issue labels and twelve names in `tools/check-inspector.py`. For each collection, the table gives the smallest pairwise OKLab distance across both themes after full-severity simulation. The default column uses `resolver.assign(labels)`. The optimized column selects `vision: ['normal', profile]` as the inspector does when “Optimize new placements” is selected. Both columns use `analyzePalette` on the emitted fill hexes for each theme.
+
+| Collection | Profile | Default | Optimized |
+| --- | --- | ---: | ---: |
+| Issue labels | Protan | 0.0124 | 0.0165 |
+| Issue labels | Deutan | 0.0088 | 0.0195 |
+| Issue labels | Tritan | 0.0236 | 0.0216 |
+| First names | Protan | 0.0114 | 0.0118 |
+| First names | Deutan | 0.0066 | 0.0183 |
+| First names | Tritan | 0.0151 | 0.0174 |
+
+For the first names, the closest default deutan pair was Mallory and Grace in the dark theme. Optimization improved the minimum in five of six comparisons. The issue-label tritan minimum decreased. The greedy search scores each new placement against previously placed colors and keeps earlier placements fixed. All six optimized minima remained below the 0.04 threshold used in the normal-vision ten-label regression.
+
 ### Compiled Rust renderer
 
 Rust's unit tests count gamut fits, cusp evaluations and identity hashes on the
