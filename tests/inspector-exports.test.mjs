@@ -29,7 +29,9 @@ test('native P3 previews and SVG retain fallback paint and separate simulated co
     assert.ok(native.includes(`${name}: ${color};`));
   }
   const sheet = swatchSheet(rows,input.theme,input.vision);
-  row.swatches.forEach((hex,i) => assert.ok(sheet.includes(`fill="${hex}" style="fill:${row.nativeSwatches[i]}"`)));
+  for (const [i, hex] of row.swatches.entries()) {
+    assert.ok(sheet.includes(`fill="${hex}" style="fill:${row.nativeSwatches[i]}"`));
+  }
   const simulated = inspect({...input,vision:'deutan'}).rows;
   assert.equal(simulated[0].nativeSwatches,undefined);
   assert.equal(registryCss(simulated),css);
