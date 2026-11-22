@@ -86,6 +86,12 @@ jobs:
       - run: npm ci
       - run: python -m pip install -r requirements-dev.txt
       - run: python tools/check-version.py
+      - name: Run Swift conformance on the host runtime
+        if: matrix.os == 'macos-latest' || (matrix.os == 'ubuntu-latest' && matrix.node == '22')
+        working-directory: packages/swift
+        run: |
+          swift --version
+          swift test --force-resolved-versions
       - run: python tools/verify.py
       - name: Verify CSS fallback and rendered pixels in Chrome
         if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
