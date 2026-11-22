@@ -1,5 +1,7 @@
 # TextHue for JavaScript and TypeScript
 
+![Light and dark label colors, collection assignments, and tonal roles](assets/gallery.svg)
+
 `texthue` turns exact text into repeatable light/dark color sets. One npm package supplies compiled ESM JavaScript and TypeScript declarations, with no runtime dependencies. It supports Node.js 20+ and browsers with TextEncoder. Resolution and input validation are synchronous.
 
 ```bash

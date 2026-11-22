@@ -14,7 +14,7 @@
         "import{resolveTextColors}from'./packages/npm/dist/index.js';import{readFileSync}from'node:fs';const cases=JSON.parse(readFileSync(0,'utf8'));const out=[];for(const c of cases)out.push(await resolveTextColors(c.text,c.options));process.stdout.write(JSON.stringify(out));"],
       "coverageFlag": "javascript",
       "archiveRequiredFiles": [
-        "dist/index.js", "dist/index.d.ts", "src/index.ts", "README.md",
+        "assets/gallery.svg", "dist/index.js", "dist/index.d.ts", "src/index.ts", "README.md",
         "SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md",
         "examples/browser.html", "examples/typescript.ts"
       ],

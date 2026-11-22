@@ -9,7 +9,7 @@
     ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" },
     "./package.json": "./package.json"
   },
-  "files": ["dist", "src", "examples", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md", "SPECIFICATION.md"],
+  "files": ["assets", "dist", "src", "examples", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md", "SPECIFICATION.md"],
   "sideEffects": false,
   "engines": { "node": ">=20" },
   "license": "MIT AND W3C-20150513",

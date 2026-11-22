@@ -123,6 +123,7 @@ def main():
         env=env,
     )
     run("TypeScript compilation", [npm, "run", "build"], env=env)
+    run("swatch gallery", ["node", "tools/render-gallery.mjs", "--check"], env=env)
     run("assignment vectors", ["node", "tools/build-assign-vectors.mjs", "--check"], env=env)
     run(
         "normalization vectors",

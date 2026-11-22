@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 376" role="img" aria-labelledby="title" font-family="system-ui, sans-serif">
+<title id="title">TextHue label colors in both themes, collection assignment, and tonal roles</title>
+<rect y="0" width="900" height="94" fill="#ffffff"/>
+<text x="18" y="23" fill="#171717" font-size="16" font-weight="600">Independent labels · light</text>
+<rect x="18" y="33" width="139" height="29" rx="3" fill="#73c9c3"/>
+<text x="18" y="81" fill="#171717" font-size="13">Design</text>
+<rect x="162" y="33" width="139" height="29" rx="3" fill="#53c4ac"/>
+<text x="162" y="81" fill="#171717" font-size="13">Research</text>
+<rect x="306" y="33" width="139" height="29" rx="3" fill="#dab256"/>
+<text x="306" y="81" fill="#171717" font-size="13">Platform</text>
+<rect x="450" y="33" width="139" height="29" rx="3" fill="#8cc255"/>
+<text x="450" y="81" fill="#171717" font-size="13">Support</text>
+<rect x="594" y="33" width="139" height="29" rx="3" fill="#a8bb66"/>
+<text x="594" y="81" fill="#171717" font-size="13">Finance</text>
+<rect x="738" y="33" width="139" height="29" rx="3" fill="#deb75d"/>
+<text x="738" y="81" fill="#171717" font-size="13">Operations</text>
+<rect y="94" width="900" height="94" fill="#121212"/>
+<text x="18" y="117" fill="#fafafa" font-size="16" font-weight="600">Independent labels · dark</text>
+<rect x="18" y="127" width="139" height="29" rx="3" fill="#36625f"/>
+<text x="18" y="175" fill="#fafafa" font-size="13">Design</text>
+<rect x="162" y="127" width="139" height="29" rx="3" fill="#235c50"/>
+<text x="162" y="175" fill="#fafafa" font-size="13">Research</text>
+<rect x="306" y="127" width="139" height="29" rx="3" fill="#6a5526"/>
+<text x="306" y="175" fill="#fafafa" font-size="13">Platform</text>
+<rect x="450" y="127" width="139" height="29" rx="3" fill="#405c24"/>
+<text x="450" y="175" fill="#fafafa" font-size="13">Support</text>
+<rect x="594" y="127" width="139" height="29" rx="3" fill="#4f582d"/>
+<text x="594" y="175" fill="#fafafa" font-size="13">Finance</text>
+<rect x="738" y="127" width="139" height="29" rx="3" fill="#6e592a"/>
+<text x="738" y="175" fill="#fafafa" font-size="13">Operations</text>
+<rect y="188" width="900" height="94" fill="#ffffff"/>
+<text x="18" y="211" fill="#171717" font-size="16" font-weight="600">Collection assignment · light</text>
+<rect x="18" y="221" width="139" height="29" rx="3" fill="#96bfe5"/>
+<text x="18" y="269" fill="#171717" font-size="13">Design</text>
+<rect x="162" y="221" width="139" height="29" rx="3" fill="#53c1cc"/>
+<text x="162" y="269" fill="#171717" font-size="13">Research</text>
+<rect x="306" y="221" width="139" height="29" rx="3" fill="#b0c056"/>
+<text x="306" y="269" fill="#171717" font-size="13">Platform</text>
+<rect x="450" y="221" width="139" height="29" rx="3" fill="#5cc599"/>
+<text x="450" y="269" fill="#171717" font-size="13">Support</text>
+<rect x="594" y="221" width="139" height="29" rx="3" fill="#71c765"/>
+<text x="594" y="269" fill="#171717" font-size="13">Finance</text>
+<rect x="738" y="221" width="139" height="29" rx="3" fill="#deb75d"/>
+<text x="738" y="269" fill="#171717" font-size="13">Operations</text>
+<rect y="282" width="900" height="94" fill="#ffffff"/>
+<text x="18" y="305" fill="#171717" font-size="16" font-weight="600">Design · light theme roles</text>
+<rect x="18" y="315" width="91" height="29" rx="3" fill="#ffffff"/>
+<text x="18" y="363" fill="#171717" font-size="13">background</text>
+<rect x="114" y="315" width="91" height="29" rx="3" fill="#d8faf7"/>
+<text x="114" y="363" fill="#171717" font-size="13">subtle</text>
+<rect x="210" y="315" width="91" height="29" rx="3" fill="#8df3ec"/>
+<text x="210" y="363" fill="#171717" font-size="13">muted</text>
+<rect x="306" y="315" width="91" height="29" rx="3" fill="#73c9c3"/>
+<text x="306" y="363" fill="#171717" font-size="13">fill</text>
+<rect x="402" y="315" width="91" height="29" rx="3" fill="#6ec0ba"/>
+<text x="402" y="363" fill="#171717" font-size="13">fillHover</text>
+<rect x="498" y="315" width="91" height="29" rx="3" fill="#69b8b2"/>
+<text x="498" y="363" fill="#171717" font-size="13">fillActive</text>
+<rect x="594" y="315" width="91" height="29" rx="3" fill="#51908c"/>
+<text x="594" y="363" fill="#171717" font-size="13">border</text>
+<rect x="690" y="315" width="91" height="29" rx="3" fill="#3b6b68"/>
+<text x="690" y="363" fill="#171717" font-size="13">text</text>
+<rect x="786" y="315" width="91" height="29" rx="3" fill="#294d4b"/>
+<text x="786" y="363" fill="#171717" font-size="13">strong</text>
+</svg>
