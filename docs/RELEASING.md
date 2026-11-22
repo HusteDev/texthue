@@ -40,6 +40,10 @@ tarball. To replay those consumer tests against a downloaded bundle, run
 `python tools/check-tailwind-consumer.py --archives artifacts`.
 
 New draft bundles also contain `TextHue.<version>.nupkg` and `texthue-<version>.crate`.
+Select `nuget` to upload the staged .NET archive. Provide `NUGET_API_KEY` in
+the `nuget` environment. A retry downloads the existing package and compares
+NuGet content hashes, which account for repository signing. A different hash
+or a failed lookup stops the job.
 The build job exercises the NuGet consumer and runs the unpacked crate's tests
 and example before recording the archive digests.
 Resuming an older bundle preserves its original archive set.

@@ -42,6 +42,10 @@ on:
         description: Publish the npm package
         type: boolean
         default: true
+      nuget:
+        description: Publish the staged .NET package to NuGet.org
+        type: boolean
+        default: false
       rust:
         description: Publish the staged Rust crate to crates.io
         type: boolean
@@ -378,6 +382,44 @@ jobs:
         if: steps.state.outputs.state == 'matching'
         run: echo "npm already has @texthue/$ADAPTER@${{ needs.build.outputs.version }} with matching bytes; skipping."
 
+  publish-nuget:
+    name: Publish NuGet package
+    if: inputs.nuget && !inputs.dry_run
+    needs: build
+    runs-on: ubuntu-latest
+    environment: nuget
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: tools
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: distributions
+          path: artifacts
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: '9.0.x'
+      - name: Compare NuGet package content hashes
+        id: state
+        run: |
+          set -euo pipefail
+          dotnet build tools/NuGetState --configuration Release
+          STATE=$(dotnet tools/NuGetState/bin/Release/net9.0/NuGetState.dll "$VERSION" "artifacts/TextHue.${VERSION}.nupkg")
+          echo "state=$STATE" >> "$GITHUB_OUTPUT"
+      - name: Push the tested archive
+        if: steps.state.outputs.state == 'absent'
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: dotnet nuget push "artifacts/TextHue.${VERSION}.nupkg" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY"
+      - name: Already published with matching content
+        if: steps.state.outputs.state == 'matching'
+        run: echo "The staged package is already published."
+
   publish-rust:
     name: Publish Rust crate
     if: inputs.rust && !inputs.dry_run
@@ -532,7 +574,7 @@ jobs:
   github-release:
     name: Promote the draft GitHub release
     if: inputs.github_release && !inputs.dry_run && !failure() && !cancelled()
-    needs: [build, publish-npm, publish-adapters, publish-rust, publish-wasm, publish-pypi, publish-go]
+    needs: [build, publish-npm, publish-adapters, publish-nuget, publish-rust, publish-wasm, publish-pypi, publish-go]
     runs-on: ubuntu-latest
     permissions:
       contents: write
