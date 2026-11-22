@@ -2,6 +2,23 @@ import 'package:texthue/texthue.dart';
 
 void main() {
   for (final model in ContrastModel.values) {
+    final fixed = Renderer(
+        contrastModel: model,
+        foregrounds: ['#777777'],
+        overrides: {'gray': (light: '#777777', dark: '#777777')});
+    for (final role in ['fill', 'onFill']) {
+      if (fixed.hex('gray', role: role) != '#777777')
+        throw StateError('Fallback changed');
+      try {
+        fixed.hex('gray', role: role, strict: true);
+      } on StateError {
+        continue;
+      }
+      throw StateError('Accepted unmet $model $role target');
+    }
+    if (fixed.hex('gray', role: 'background', strict: true) != '#ffffff') {
+      throw StateError('Unconstrained background changed');
+    }
     for (final policy in ForegroundPolicy.values) {
       for (final high in [false, true]) {
         final renderer = Renderer(

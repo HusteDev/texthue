@@ -223,12 +223,15 @@ final class Renderer {
   RenderedPalette resolve(String text) =>
       _resolveNormalized(normalization.apply(text));
 
-  List<int> _selected(String text, bool dark, String role) =>
-      _theme(dark, _mapping(normalization.apply(text)), role)[role] ??
+  List<int> _selected(String text, bool dark, String role,
+          {bool strict = false}) =>
+      _theme(
+          dark, _mapping(normalization.apply(text)), role, 0, strict)[role] ??
       (throw ArgumentError.value(role, 'role', 'Unknown color role'));
 
-  String hex(String text, {bool dark = false, String role = 'fill'}) =>
-      rgbHex(_selected(text, dark, role));
+  String hex(String text,
+          {bool dark = false, String role = 'fill', bool strict = false}) =>
+      rgbHex(_selected(text, dark, role, strict: strict));
 
   Color color(String text, {bool dark = false, String role = 'fill'}) {
     final bytes = _selected(text, dark, role);
@@ -293,7 +296,7 @@ final class Renderer {
   }
 
   Map<String, List<int>> _theme(bool dark, _Mapping mapping,
-      [String? selected, int ring = 0]) {
+      [String? selected, int ring = 0, bool strict = false]) {
     final fixed = dark ? mapping.fixed?.$2 : mapping.fixed?.$1;
     final hue = fixed?.hue ?? mapping.hue, uL = mapping.uL, uC = mapping.uC;
     final base = dark ? _dark : _light, direction = dark ? 1 : -1;
@@ -374,7 +377,7 @@ final class Renderer {
     late final subtle = tone(lb + direction * 0.04, true, unconstrained);
     late final fill = fixed?.bytes ?? tone(lf, true, target('fill')),
         onFill = foreground(fill, target('fill'));
-    return {
+    final colors = {
       if (selected == null || selected == 'background')
         'background': base.bytes,
       if (selected == null || selected == 'subtle') 'subtle': subtle,
@@ -398,5 +401,26 @@ final class Renderer {
         'strong': tone(lt + direction * 0.10, false, target('strong'),
             background: base.bytes)
     };
+    if (strict && selected != null && colors.containsKey(selected)) {
+      final value = colors[selected]!;
+      void require(String pair, List<int> front, List<int> back) {
+        if (score(front, back) < target(pair)) {
+          throw StateError('Contrast target for $pair was not met');
+        }
+      }
+
+      switch (selected) {
+        case 'onFill':
+          require('fill', value, fill);
+        case 'fill' || 'fillHover' || 'fillActive':
+          require(selected, onFill, value);
+        case 'text':
+          require('text', value, base.bytes);
+          require('textOnSubtle', value, subtle);
+        case 'strong' || 'border':
+          require(selected, value, base.bytes);
+      }
+    }
+    return colors;
   }
 }
