@@ -93,13 +93,16 @@ impl From<[u8; 3]> for FixedTone {
     }
 }
 
-struct Prepared {
+struct Prepared<'a> {
+    palette: Vec<(&'a str, BrandColors)>,
     domain: HueDomain,
     overrides: HashMap<String, BrandColors>,
 }
 
 pub struct Renderer {
     pub preset: Preset,
+    /// Stable entry IDs mapped to their approved light and dark fills.
+    pub palette: Option<BTreeMap<String, BrandColors>>,
     pub overrides: BTreeMap<String, BrandColors>,
     pub foregrounds: Vec<[u8; 3]>,
     pub foreground_policy: ForegroundPolicy,
@@ -121,6 +124,7 @@ impl Default for Renderer {
     fn default() -> Self {
         Self {
             preset: Preset::Labels,
+            palette: None,
             overrides: Default::default(),
             namespace: String::new(),
             foregrounds: vec![[0; 3], [255; 3]],
@@ -175,7 +179,16 @@ impl Renderer {
         Ok(result)
     }
 
-    fn validate(&self) -> Result<Prepared, &'static str> {
+    fn default_target(&self) -> f64 {
+        self.contrast_target
+            .unwrap_or(match (self.contrast_model, self.preset) {
+                (ContrastModel::Apca, _) => 60.0,
+                (_, Preset::Controls) => 7.0,
+                _ => 4.5,
+            })
+    }
+
+    fn validate(&self) -> Result<Prepared<'_>, &'static str> {
         if self.foregrounds.is_empty() {
             return Err("At least one foreground is required");
         }
@@ -210,16 +223,45 @@ impl Renderer {
                 return Err("Duplicate normalized override");
             }
         }
-        Ok(Prepared { domain, overrides })
+        let mut palette = Vec::new();
+        if let Some(entries) = &self.palette {
+            if entries.is_empty() {
+                return Err("Empty approved palette");
+            }
+            let target = self
+                .contrast_targets
+                .get("fill")
+                .copied()
+                .unwrap_or_else(|| self.default_target());
+            let passes = |rgb| {
+                self.foregrounds
+                    .iter()
+                    .any(|fg| self.contrast_model.measure(*fg, rgb, Gamut::Srgb).abs() >= target)
+            };
+            palette.extend(
+                entries
+                    .iter()
+                    .filter(|(_, c)| passes(c.light) && passes(c.dark))
+                    .map(|(id, c)| (id.as_str(), *c)),
+            );
+            if palette.is_empty() {
+                palette.extend(entries.iter().map(|(id, c)| (id.as_str(), *c)));
+            }
+        }
+        Ok(Prepared {
+            domain,
+            overrides,
+            palette,
+        })
     }
 
     fn resolve_normalized(
         &self,
         text: &str,
         scope: &str,
-        prepared: &Prepared,
+        prepared: &Prepared<'_>,
     ) -> Result<RenderedPalette, &'static str> {
-        if let Some(colors) = prepared.overrides.get(text) {
+        let fixed = |colors: BrandColors, source| {
             let light = FixedTone::from(colors.light);
             let dark = FixedTone::from(colors.dark);
             let angle = if light.hue < ANCHORS[0] {
@@ -229,16 +271,34 @@ impl Renderer {
             };
             let i = ANCHORS.partition_point(|&a| a <= angle) - 1;
             let fraction = (i as f64 + (angle - ANCHORS[i]) / (ANCHORS[i + 1] - ANCHORS[i])) / 12.0;
-            return Ok(RenderedPalette {
+            RenderedPalette {
                 version: "text-to-color-v1",
-                source: "override",
+                source,
                 hue_fraction: fraction,
                 hue: light.hue,
                 light: self.theme(false, light.hue, 0.5, 0.5, Some(light)),
                 dark: self.theme(true, dark.hue, 0.5, 0.5, Some(dark)),
-            });
+            }
+        };
+        if let Some(colors) = prepared.overrides.get(text) {
+            return Ok(fixed(*colors, "override"));
         }
         let digest = identity_digest(text, scope, self.seed).map_err(|_| "Namespace too long")?;
+        let mut winner = None;
+        for &(id, colors) in &prepared.palette {
+            use sha2::{Digest, Sha256};
+            let rank: [u8; 32] = Sha256::new()
+                .chain_update(digest)
+                .chain_update(id.as_bytes())
+                .finalize()
+                .into();
+            if winner.as_ref().is_none_or(|(best, _)| rank > *best) {
+                winner = Some((rank, colors));
+            }
+        }
+        if let Some((_, colors)) = winner {
+            return Ok(fixed(colors, "palette"));
+        }
         let [u_h, u_l, u_c] = identity_fractions(&digest);
         let position = u_h * 12.0;
         let i = position as usize;
@@ -269,13 +329,7 @@ impl Renderer {
         };
         let profile = |fill: bool| if fill { theme.fill } else { theme.text };
         let wcag = self.contrast_model == ContrastModel::Wcag2;
-        let default_target =
-            self.contrast_target
-                .unwrap_or(match (self.contrast_model, self.preset) {
-                    (ContrastModel::Apca, _) => 60.0,
-                    (_, Preset::Controls) => 7.0,
-                    _ => 4.5,
-                });
+        let default_target = self.default_target();
         let unconstrained = if wcag { 1.0 } else { 0.0 };
         let required = |role: &str| {
             self.contrast_targets
@@ -432,6 +486,75 @@ mod tests {
     use super::*;
     use serde::Deserialize;
     use serde_json::Value;
+    #[test]
+    fn approved_palette() {
+        let red = BrandColors {
+            light: [0xab, 0x12, 0x34],
+            dark: [0xab, 0x12, 0x34],
+        };
+        let gray = BrandColors {
+            light: [0x77; 3],
+            dark: [0x77; 3],
+        };
+        let blue = BrandColors {
+            light: [0x10, 0x20, 0xab],
+            dark: [0x22, 0x33, 0xcd],
+        };
+        let mut renderer = Renderer {
+            palette: Some(
+                [
+                    ("red".into(), red),
+                    ("gray".into(), gray),
+                    ("blue".into(), blue),
+                ]
+                .into(),
+            ),
+            ..Default::default()
+        };
+        let labels = ["apple", "pear", "a", "b", "x", "z"];
+        for (p, expected) in renderer
+            .batch(labels)
+            .unwrap()
+            .iter()
+            .zip([blue, red, blue, blue, red, gray])
+        {
+            assert_eq!(p.source, "palette");
+            assert_eq!(p.light["fill"].rgb, expected.light);
+            assert_eq!(p.dark["fill"].rgb, expected.dark);
+        }
+        renderer.foregrounds = vec![[255; 3]];
+        renderer.contrast_target = Some(21.0);
+        assert_eq!(
+            renderer.resolve("pear").unwrap().light["fill"].rgb,
+            red.light
+        );
+        let black = BrandColors {
+            light: [0; 3],
+            dark: [0; 3],
+        };
+        renderer.palette = Some(
+            [
+                (
+                    "red".into(),
+                    BrandColors {
+                        light: [0; 3],
+                        dark: [255; 3],
+                    },
+                ),
+                ("gray".into(), black),
+            ]
+            .into(),
+        );
+        assert_eq!(
+            renderer.resolve("pear").unwrap().dark["fill"].rgb,
+            black.dark
+        );
+        renderer.overrides.insert("pear".into(), blue);
+        assert_eq!(renderer.resolve("pear").unwrap().source, "override");
+        renderer.palette = Some(BTreeMap::new());
+        assert!(renderer.resolve("pear").is_err());
+    }
+
     #[test]
     fn normalized_overrides() {
         let colors = BrandColors {
