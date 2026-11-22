@@ -31,7 +31,9 @@ The resolver benchmarks also exercise APCA at a target of 75 Lc on white and Dis
 | Scenario | JavaScript median / p95 (µs) | Python | Go | Kotlin/JVM |
 | --- | ---: | ---: | ---: | ---: |
 | APCA, sRGB | 605 / 1,516 | 7,104 / 11,363 | 277 / 538 | 259 / 569 |
-| Display P3 | 207 / 429 | 3,961 / 5,144 | 168 / 214 | sRGB resolver only |
+| Display P3 | 207 / 429 | 3,961 / 5,144 | 168 / 214 | 339 / 721 |
+
+The Kotlin P3 measurement used the 100-label corpus on the Windows JVM after commit `dcdc463`.
 
 Python counted 11,133 fits for APCA and 1,600 for Display P3. Each scenario performed 1,600 cusp evaluations and 100 hashes.
 

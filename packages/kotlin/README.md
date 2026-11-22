@@ -84,3 +84,12 @@ Use `resolver.hex(text, role = "text", strict = true)` to enforce contrast again
 Read `resolver.resolve(text).light.contrast.getValue("textOnSubtle")` to inspect the rendered text against the subtle surface. Both themes report seven relationships. Each includes the WCAG ratio, the selected model and its measured value (signed Lc for APCA), target status, lightness and chroma adjustments, and any fallback reason.
 
 Use `resolver.assign(labels)` to assign a collection. Pass `pinned = previous.assignments` to retain prior placements. The report measures closest pairs by rendered light-fill OKLab distance.
+
+
+Use `Resolver(gamut = Gamut.DISPLAY_P3)` for wide-gamut output. For example,
+`resolver.color("sample", dark = true, role = "text")` returns the native
+`p3` channels and `css` alongside the sRGB `hex` fallback. The resolver
+measures contrast on the native rendition. The Kotlin suite at commit
+`dcdc463` passed on the API 34 x86-64 emulator, including 108 P3 rendition
+vectors and the public resolver check for strict APCA text on a supplied
+background.
