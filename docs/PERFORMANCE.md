@@ -23,3 +23,7 @@ Median / p95 in microseconds on Windows x64, AMD Ryzen 7 PRO 7840U. Each harness
 | #777777, 21 | 1,137 / 1,962 | 9,406 / 13,273 | 456 / 524 |
 
 Reproduce with `npm run build`, `node tools/bench.mjs`, `python tools/bench.py`, and `go -C packages/go test -run '^$' -bench BenchmarkResolverContrast -benchtime=100x`. Go's standard ns/op column measures a batch of 100. The custom median-us and p95-us columns report per-resolution costs.
+
+### JavaScript renderer work budgets
+
+The JavaScript benchmark collects V8 function-entry counts separately from latency measurements. Each row covers the full 100-label corpus. The default run made 1,600 gamut fits. The 7:1 and 21:1 white-background runs made 5,732 and 12,725. The gray-background runs made 2,868 fits at 4.5:1 and 11,452 at 21:1. Every scenario made 1,600 cusp evaluations and 100 identity hashes. The JavaScript test suite enforces these fit and cusp ceilings and checks for one hash per label.

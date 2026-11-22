@@ -1,5 +1,6 @@
 import {performance} from 'node:perf_hooks';
 import {createResolver} from '../packages/npm/dist/index.js';
+import {contrastWork} from './renderer-work.mjs';
 
 for (const [scenario,target,light] of [
   ['default',4.5,'#ffffff'], ['aaa',7,'#ffffff'], ['maximum',21,'#ffffff'],
@@ -15,3 +16,4 @@ for (const [scenario,target,light] of [
   samples.sort((a,b) => a-b);
   console.log(JSON.stringify({scenario,medianUs:(samples[49]+samples[50])/2,p95Us:samples[94]}));
 }
+console.log(JSON.stringify({workPer100Labels:await contrastWork()}));
