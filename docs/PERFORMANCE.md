@@ -91,3 +91,19 @@ affect comparisons between rows. Android device timing requires a separate run.
 | White, 21 | 296 | 425 |
 | #777777, 4.5 | 97 | 153 |
 | #777777, 21 | 274 | 359 |
+
+### Dart renderer
+
+From `packages/dart`, run `dart pub get --enforce-lockfile` and
+`dart tool/benchmark.dart`. On Windows x64 with Dart 3.12.2 in JIT mode,
+each row measures 100 individual two-theme resolutions after 20 warm-up
+labels. All five scenarios run sequentially in one process, so later rows
+can benefit from compilation during earlier scenarios.
+
+| Light background and target | Median (µs) | p95 (µs) |
+| --- | ---: | ---: |
+| White, 4.5 | 316 | 701 |
+| White, 7 | 250 | 1,055 |
+| White, 21 | 640 | 994 |
+| #777777, 4.5 | 172 | 295 |
+| #777777, 21 | 600 | 1,013 |
