@@ -91,6 +91,22 @@ type fitted struct {
 // Lightness and hue are preserved. Out-of-gamut chroma is reduced with
 // exactly 24 binary-search iterations. Lightness 0 and 1 short-circuit to
 // black and white. Channels are gamma-encoded, clamped, and rounded half up.
+func cusp(l, h float64) float64 {
+	if l == 0 || l == 1 {
+		return 0
+	}
+	low, high := 0.0, 0.4
+	for i := 0; i < 20; i++ {
+		mid := (low + high) / 2
+		if inside(linear(l, mid, h)) {
+			low = mid
+		} else {
+			high = mid
+		}
+	}
+	return low
+}
+
 func fit(l, c, h float64) fitted {
 	if l == 0 || l == 1 {
 		channel := int(l * 255)
@@ -189,22 +205,31 @@ func formats(rgb rgb8) Color {
 
 // choose selects the final color for one role, enforcing the contrast target.
 //
-// The sampled color is fitted first. If it fails the target, an accent whose
+// The sampled color is fitted first. If it fails the target, an text whose
 // background cannot reach the target with any sRGB color falls back to the
 // better of black and white and reports "unattainable-contrast". Otherwise a
 // search over lightness values k/1000 for k = 0..1000 picks the passing
 // candidate nearest to the sampled lightness; an exact distance tie chooses
 // the lower lightness. Every candidate is fitted from the sampled chroma.
 //
-// background is the theme background for an accent, or nil for a fill, which
+// background is the theme background for an text, or nil for a fill, which
 // is measured against its own black or white foreground at each step.
 //
 // choose panics if no candidate passes for a fill; the black and white
 // endpoints guarantee this cannot happen for a valid target.
-func choose(l, c, h float64, background *rgb8, target float64) (rgb8, ContrastResult) {
+type surfaceConstraint struct {
+	rgb    rgb8
+	target float64
+}
+
+func choose(l, c, h float64, background *rgb8, target float64, second ...surfaceConstraint) (rgb8, ContrastResult) {
 	measure := func(rgb rgb8) float64 {
 		if background != nil {
-			return contrast(rgb, *background)
+			ratio := contrast(rgb, *background)
+			if len(second) > 0 {
+				ratio = math.Min(ratio, contrast(rgb, second[0].rgb)*(target/second[0].target))
+			}
+			return ratio
 		}
 		return contrast(rgb, foreground(rgb))
 	}
@@ -212,24 +237,40 @@ func choose(l, c, h float64, background *rgb8, target float64) (rgb8, ContrastRe
 	ratio := measure(chosen.rgb)
 	var fallback *string
 	if ratio < target {
-		if background != nil && math.Max(contrast(rgb8{0, 0, 0}, *background), contrast(rgb8{255, 255, 255}, *background)) < target {
-			rgb := foreground(*background)
+		if background != nil && math.Max(measure(rgb8{}), measure(rgb8{255, 255, 255})) < target {
+			rgb := rgb8{}
+			if measure(rgb8{255, 255, 255}) > measure(rgb) {
+				rgb = rgb8{255, 255, 255}
+			}
 			chosen = fitted{rgb, float64(rgb[0]) / 255, 0}
 			ratio = measure(rgb)
 			fallback = Ptr("unattainable-contrast")
 		} else {
 			bestDistance := math.Inf(1)
-			for k := 0; k <= 1000; k++ {
-				candidateL := float64(k) / 1000
-				distance := math.Abs(candidateL - l)
-				// Ascending order preserves the lower-lightness candidate on exact ties.
-				if distance >= bestDistance {
+			for _, endpoint := range []int{0, 4096} {
+				pass := endpoint
+				fail := int(math.Ceil(l * 4096))
+				if endpoint != 0 {
+					fail = int(math.Floor(l * 4096))
+				}
+				candidate := fit(float64(pass)/4096, c, h)
+				score := measure(candidate.rgb)
+				if score < target {
 					continue
 				}
-				candidate := fit(candidateL, c, h)
-				candidateRatio := measure(candidate.rgb)
-				if candidateRatio >= target {
-					chosen, ratio, bestDistance = candidate, candidateRatio, distance
+				for pass-fail > 1 || fail-pass > 1 {
+					mid := (pass + fail) / 2
+					probe := fit(float64(mid)/4096, c, h)
+					measured := measure(probe.rgb)
+					if measured >= target {
+						pass, candidate, score = mid, probe, measured
+					} else {
+						fail = mid
+					}
+				}
+				distance := math.Abs(candidate.l - l)
+				if distance < bestDistance {
+					chosen, ratio, bestDistance = candidate, score, distance
 				}
 			}
 			if math.IsInf(bestDistance, 1) {

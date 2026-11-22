@@ -13,7 +13,9 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolveTextColors, VERSION } from '../packages/npm/dist/index.js';
 
 const cases = [
+  { id: 'relationship-targets', text: 'label', options: {contrastTargets: {fill:7,text:3,textOnSubtle:7,fillHover:6,fillActive:5,border:4,strong:9}} },
   { id: 'empty', text: '' },
+  { id: 'seeded', text: 'research', options: { seed: 4294967295 } },
   { id: 'ascii', text: 'research' },
   { id: 'case', text: 'Research' },
   { id: 'leading-space', text: ' research' },
@@ -34,14 +36,14 @@ const cases = [
   { id: 'framing-nul-b', text: 'b\0c', options: { namespace: 'a' } },
   { id: 'custom-backgrounds', text: 'project:atlas', options: { backgrounds: { light: '#e8dfd0', dark: '#253047' } } },
   { id: 'uppercase-background', text: 'project:atlas', options: { backgrounds: { light: '#FFFFFF' } } },
-  { id: 'adjusted-accent', text: 'category:books', options: { profiles: { light: { accent: { lightness: [0.9, 0.9] } } } } },
-  { id: 'adjusted-fill', text: 'category:books', options: { contrastTarget: 7, profiles: { light: { fill: { lightness: [0.6, 0.6], chroma: [0, 0] } } } } },
+  { id: 'adjusted-text', text: 'category:books', options: { profiles: { light: { text: { lightness: [0.9, 0.9] } } } } },
+  { id: 'adjusted-fill', text: 'category:books', options: { contrastTarget: 7, profiles: { light: { fill: { lightness: [0.6, 0.6], chromaScale: [0, 0] } } } } },
   { id: 'unattainable', text: 'status:pending', options: { contrastTarget: 7, backgrounds: { light: '#777777', dark: '#777777' } } },
   { id: 'maximum-contrast', text: 'build:42', options: { contrastTarget: 21 } },
   { id: 'minimum-contrast', text: 'build:42', options: { contrastTarget: 1 } },
-  { id: 'gamut-reduction', text: 'tag:design', options: { profiles: { light: { fill: { chroma: [0.4, 0.4] } } } } },
-  { id: 'zero-width-ranges', text: 'tag:design', options: { profiles: { dark: { fill: { lightness: [0.375, 0.375], chroma: [0.125, 0.125] } } } } },
-  { id: 'grayscale', text: 'tag:plain', options: { profiles: { light: { fill: { chroma: [0, 0] }, accent: { chroma: [0, 0] } }, dark: { fill: { chroma: [0, 0] }, accent: { chroma: [0, 0] } } } } },
+  { id: 'capped', text: 'tag:design', options: { profiles: { light: { fill: { chromaScale: [1, 1], chromaCap: 0.01 } } } } },
+  { id: 'zero-width-ranges', text: 'tag:design', options: { profiles: { dark: { fill: { lightness: [0.375, 0.375], chromaScale: [0.125, 0.125] } } } } },
+  { id: 'grayscale', text: 'tag:plain', options: { profiles: { light: { fill: { chromaScale: [0, 0] }, text: { chromaScale: [0, 0] } }, dark: { fill: { chromaScale: [0, 0] }, text: { chromaScale: [0, 0] } } } } },
   { id: 'black-white-endpoints', text: 'endpoints', options: { profiles: { light: { fill: { lightness: [0, 0] } }, dark: { fill: { lightness: [1, 1] } } } } },
 ];
 
@@ -53,7 +55,7 @@ const invalid = [
   { id: 'low-surrogate', text: '\udfff', code: 'INVALID_TEXT' },
   { id: 'null-options', text: 'x', options: null, code: 'INVALID_OPTIONS' },
   { id: 'array-options', text: 'x', options: [], code: 'INVALID_OPTIONS' },
-  { id: 'unknown-option', text: 'x', options: { seed: 42 }, code: 'INVALID_OPTIONS' },
+  { id: 'unknown-option', text: 'x', options: { unknown: 42 }, code: 'INVALID_OPTIONS' },
   { id: 'null-namespace', text: 'x', options: { namespace: null }, code: 'INVALID_OPTIONS' },
   { id: 'invalid-namespace', text: 'x', options: { namespace: '\ud800' }, code: 'INVALID_OPTIONS' },
   { id: 'null-backgrounds', text: 'x', options: { backgrounds: null }, code: 'INVALID_OPTIONS' },
@@ -69,9 +71,9 @@ const invalid = [
   { id: 'unknown-role', text: 'x', options: { profiles: { light: { border: {} } } }, code: 'INVALID_OPTIONS' },
   { id: 'unknown-range', text: 'x', options: { profiles: { light: { fill: { saturation: [0, 1] } } } }, code: 'INVALID_OPTIONS' },
   { id: 'reversed-range', text: 'x', options: { profiles: { light: { fill: { lightness: [0.8, 0.2] } } } }, code: 'INVALID_OPTIONS' },
-  { id: 'negative-range', text: 'x', options: { profiles: { light: { fill: { chroma: [-0.1, 0.2] } } } }, code: 'INVALID_OPTIONS' },
-  { id: 'excessive-chroma', text: 'x', options: { profiles: { dark: { accent: { chroma: [0, 0.401] } } } }, code: 'INVALID_OPTIONS' },
-  { id: 'excessive-lightness', text: 'x', options: { profiles: { dark: { accent: { lightness: [0, 1.1] } } } }, code: 'INVALID_OPTIONS' },
+  { id: 'negative-range', text: 'x', options: { profiles: { light: { fill: { chromaScale: [-0.1, 0.2] } } } }, code: 'INVALID_OPTIONS' },
+  { id: 'excessive-chroma', text: 'x', options: { profiles: { dark: { text: { chromaScale: [0, 1.001] } } } }, code: 'INVALID_OPTIONS' },
+  { id: 'excessive-lightness', text: 'x', options: { profiles: { dark: { text: { lightness: [0, 1.1] } } } }, code: 'INVALID_OPTIONS' },
   { id: 'short-range', text: 'x', options: { profiles: { light: { fill: { lightness: [0.5] } } } }, code: 'INVALID_OPTIONS' },
   { id: 'boolean-range', text: 'x', options: { profiles: { light: { fill: { lightness: [false, true] } } } }, code: 'INVALID_OPTIONS' },
 ];
@@ -81,27 +83,15 @@ for (const item of cases) {
   const options = item.options ?? {};
   const namespace = Buffer.from(options.namespace ?? '', 'utf8');
   const text = Buffer.from(item.text, 'utf8');
-  const length = Buffer.alloc(4);
-  length.writeUInt32BE(namespace.length);
+  const length = Buffer.alloc(8);
+  length.writeUInt32BE(options.seed ?? 0);
+  length.writeUInt32BE(namespace.length, 4);
   const payload = Buffer.concat([Buffer.from(`${VERSION}\0`), length, namespace, text]);
   const hash = createHash('sha256').update(payload).digest();
   const fractions = [0, 4, 8].map(index => hash.readUInt32BE(index) / 4294967296);
-  const requested = {};
-  for (const theme of ['light', 'dark']) {
-    requested[theme] = {};
-    for (const role of ['fill', 'accent']) {
-      const profile = options.profiles?.[theme]?.[role] ?? {};
-      const ls = profile.lightness ?? (theme === 'light'
-        ? (role === 'fill' ? [0.72, 0.82] : [0.45, 0.55])
-        : (role === 'fill' ? [0.4, 0.5] : [0.72, 0.82]));
-      const cs = profile.chroma ?? [0.1, 0.16];
-      requested[theme][role] = { l: ls[0] + (ls[1] - ls[0]) * fractions[1],
-        c: cs[0] + (cs[1] - cs[0]) * fractions[2], h: fractions[0] * 360 };
-    }
-  }
   vectors.push({ ...item, options, encoding: { namespaceUtf8Hex: namespace.toString('hex'),
     textUtf8Hex: text.toString('hex'), payloadHex: payload.toString('hex'), sha256: hash.toString('hex') },
-  fractions, requested, expected: await resolveTextColors(item.text, options) });
+  fractions, expected: resolveTextColors(item.text, options) });
 }
 const document = { version: VERSION, numericTolerance: 0.000001, vectors, invalid };
 const content = `${JSON.stringify(document, null, 2)}\n`;

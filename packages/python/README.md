@@ -16,12 +16,12 @@ theme = colors["light"]  # Your application can select colors["dark"].
 fill = theme["fill"]
 rgb, hsl, oklch = fill["rgb"], fill["hsl"], fill["oklch"]
 
-print(fill["hex"])  # #bf97fc
+print(fill["hex"])  # #59b8d8
 print(f"rgb({rgb['r']} {rgb['g']} {rgb['b']})")
 print(f"hsl({hsl['h']} {hsl['s']}% {hsl['l']}%)")
 print(f"oklch({oklch['l']} {oklch['c']} {oklch['h']})")
 print(theme["onFill"]["hex"])      # Text on fill.
-print(theme["accent"]["hex"])      # Text/marks on background.
+print(theme["text"]["hex"])      # Text/marks on background.
 print(theme["background"]["hex"])
 print(theme["contrast"]["fill"]["ratio"])
 ```
@@ -55,12 +55,12 @@ options: TextColorOptions = {
     "contrastTarget": 7,
     "profiles": {
         "light": {
-            "fill": {"lightness": [0.74, 0.84], "chroma": [0.08, 0.14]},
-            "accent": {"lightness": [0.40, 0.52], "chroma": [0.10, 0.16]},
+            "fill": {"lightness": [0.74, 0.84], "chromaScale": [0.08, 0.14]},
+            "text": {"lightness": [0.40, 0.52], "chromaScale": [0.60, 0.80]},
         },
         "dark": {
-            "fill": {"lightness": [0.38, 0.48], "chroma": [0.08, 0.14]},
-            "accent": {"lightness": [0.74, 0.86], "chroma": [0.10, 0.16]},
+            "fill": {"lightness": [0.38, 0.48], "chromaScale": [0.08, 0.14]},
+            "text": {"lightness": [0.74, 0.86], "chromaScale": [0.60, 0.80]},
         },
     },
 }
@@ -75,28 +75,28 @@ print(colors["light"]["contrast"], colors["dark"]["contrast"])
 | `backgrounds.dark` | `"#121212"` | Opaque six-digit hex color |
 | `contrastTarget` | `4.5` | Finite number in 1–21 inclusive; booleans are rejected |
 | `profiles.light.fill.lightness` | `[0.72, 0.82]` | Ordered two-item list, values 0–1 |
-| `profiles.light.accent.lightness` | `[0.45, 0.55]` | Ordered two-item list, values 0–1 |
+| `profiles.light.text.lightness` | `[0.43, 0.53]` | Ordered two-item list, values 0–1 |
 | `profiles.dark.fill.lightness` | `[0.40, 0.50]` | Ordered two-item list, values 0–1 |
-| `profiles.dark.accent.lightness` | `[0.72, 0.82]` | Ordered two-item list, values 0–1 |
-| Every role's `chroma` | `[0.10, 0.16]` | Ordered two-item list, values 0–0.4 |
+| `profiles.dark.text.lightness` | `[0.72, 0.82]` | Ordered two-item list, values 0–1 |
+| Every role's `chroma` | `[0.60, 0.80]` | Ordered two-item list, values 0–0.4 |
 
 Omitted nested fields use defaults. A supplied range replaces both endpoints. Equal endpoints request a fixed value; `[0, 0]` chroma requests grayscale. Lightness is a preference that contrast enforcement can override; gamut fitting can lower chroma. These are all v1 options. Both themes and all formats are always returned.
 
 ```python
 gray = resolve_text_colors("plain", {
-    "profiles": {"light": {"fill": {"lightness": [0.75, 0.75], "chroma": [0, 0]}}},
+    "profiles": {"light": {"fill": {"lightness": [0.75, 0.75], "chromaScale": [0, 0]}}},
 })
 assert gray["light"]["fill"]["oklch"]["c"] == 0
 
 impossible = resolve_text_colors("project:atlas", {
     "backgrounds": {"light": "#777777"}, "contrastTarget": 7,
 })
-status = impossible["light"]["contrast"]["accent"]
+status = impossible["light"]["contrast"]["text"]
 assert status["meetsTarget"] is False
 assert status["fallback"] == "unattainable-contrast"
 ```
 
-Both `contrast.fill` and `contrast.accent` contain `ratio`, `meetsTarget`, `lightnessAdjusted`, `chromaReduced`, and `fallback` (`None` or `"unattainable-contrast"`). Fill contrast is against its selected black/white `onFill`; accent contrast is against the theme's `background`. An impossible accent target returns the better black/white endpoint and reports failure. Color-pair contrast is not an assessment of an entire interface.
+Both `contrast.fill` and `contrast.text` contain `ratio`, `meetsTarget`, `lightnessAdjusted`, `chromaReduced`, and `fallback` (`None` or `"unattainable-contrast"`). Fill contrast is against its selected black/white `onFill`; text contrast is against the theme's `background`. An impossible text target returns the better black/white endpoint and reports failure. Color-pair contrast is not an assessment of an entire interface.
 
 ## Exact identity and error handling
 
@@ -118,7 +118,7 @@ except TextColorError as error:
 
 ## Algorithm and cross-language contract
 
-The algorithm frames a version string, NUL, unsigned 32-bit big-endian UTF-8 namespace length, namespace bytes, and text bytes. SHA-256 supplies three 32-bit fractions for hue, lightness, and chroma. Four OKLCH profiles share these fractions. Conversion to sRGB uses the specification's pinned matrices and a 24-iteration chroma-reduction search when needed. Contrast is measured after half-up rounding to RGB bytes. Failing pairs search 1,001 lightness values and choose the nearest passing value with a defined tie break. All output representations are derived from the final RGB bytes.
+The renderer hashes a seeded UTF-8 payload, interpolates between pinned hue anchors and samples gamut-relative chroma. Each theme returns ten roles. Contrast repair bisects a 1/4096 lightness grid and measures the final RGB bytes. See [the specification](SPECIFICATION.md) for tables, defaults and tie rules.
 
 The [full included specification](SPECIFICATION.md) provides formulas, matrices, validation, bounds, tie breaks, and fallback behavior. The algorithm identifier `text-to-color-v1` is part of the hashed payload and is independent of the package version; it changes only when the color mapping changes. Hex/RGB are exact across supported implementations; derived HSL/OKLCH values permit a one-unit tolerance in the sixth decimal place.
 

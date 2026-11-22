@@ -7,8 +7,10 @@
  *
  * @packageDocumentation
  */
+
+import { chooseColor, contrast, cusp, foreground, formats } from './color-math.js';
 import { sha256 } from './sha256.js';
-import { chooseColor, foreground, formats } from './color-math.js';
+import { anchors, biases } from './tables.js';
 import type { ChosenColor, ColorSet, Range, ResolvedOptions, TextColorErrorCode, TextColorOptions, ThemeColors, Triple } from './types.js';
 
 export type { Color, ColorProfile, ColorSet, ContrastResult, HSL, OKLCH, Range, RGB, TextColorErrorCode, TextColorOptions, ThemeColors, ThemeProfiles } from './types.js';
@@ -124,11 +126,21 @@ function range(value: unknown, maximum: number, path: string): Range {
  * @returns Resolved settings with every field present.
  */
 function optionsValue(options: unknown): ResolvedOptions {
-  const source = record(options, ['namespace', 'backgrounds', 'contrastTarget', 'profiles'], 'options');
+  const source = record(options, ['namespace', 'seed', 'backgrounds', 'contrastTarget', 'contrastTargets', 'profiles'], 'options');
+  const seed = own(source, 'seed', 0);
+  if (!finite(seed) || !Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) fail('INVALID_OPTIONS', 'seed must be uint32');
   const namespace = textValue(own(source, 'namespace', ''), 'namespace', 'INVALID_OPTIONS');
   const contrastTarget = own(source, 'contrastTarget', 4.5);
   if (!finite(contrastTarget) || contrastTarget < 1 || contrastTarget > 21) {
     fail('INVALID_OPTIONS', 'contrastTarget must be a finite number from 1 through 21');
+  }
+  const roles = ['fill','fillHover','fillActive','border','text','textOnSubtle','strong'] as const;
+  const overrides = record(own(source,'contrastTargets',{}), roles, 'contrastTargets');
+  const targets = {} as ResolvedOptions['targets'];
+  for (const role of roles) {
+    const target = own(overrides,role,role === 'border' ? Math.min(3,contrastTarget) : contrastTarget);
+    if (!finite(target) || target < 1 || target > 21) fail('INVALID_OPTIONS', `invalid contrastTargets.${role}`);
+    targets[role] = target;
   }
   const backgroundsSource = record(own(source, 'backgrounds', {}), ['light', 'dark'], 'backgrounds');
   const profilesSource = record(own(source, 'profiles', {}), ['light', 'dark'], 'profiles');
@@ -140,21 +152,24 @@ function optionsValue(options: unknown): ResolvedOptions {
       fail('INVALID_OPTIONS', `backgrounds.${theme} must be opaque #RRGGBB`);
     }
     backgrounds[theme] = [1, 3, 5].map(index => parseInt(background.slice(index, index + 2), 16)) as Triple;
-    const themeSource = record(own(profilesSource, theme, {}), ['fill', 'accent'], `profiles.${theme}`);
+    const themeSource = record(own(profilesSource, theme, {}), ['fill', 'text'], `profiles.${theme}`);
     profiles[theme] = {} as ResolvedOptions['profiles']['light'];
-    for (const role of ['fill', 'accent'] as const) {
+    for (const role of ['fill', 'text'] as const) {
       const path = `profiles.${theme}.${role}`;
-      const profile = record(own(themeSource, role, {}), ['lightness', 'chroma'], path);
+      const profile = record(own(themeSource, role, {}), ['lightness', 'chromaScale', 'chromaCap'], path);
       const defaultLightness = theme === 'light'
-        ? (role === 'fill' ? [0.72, 0.82] : [0.45, 0.55])
+        ? (role === 'fill' ? [0.72, 0.82] : [0.43, 0.53])
         : (role === 'fill' ? [0.4, 0.5] : [0.72, 0.82]);
+      const cap = own(profile, 'chromaCap', role === 'fill' ? 0.16 : 0.19);
+      if (!finite(cap) || cap < 0 || cap > 0.4) fail('INVALID_OPTIONS', 'invalid chromaCap');
       profiles[theme][role] = {
         lightness: range(own(profile, 'lightness', defaultLightness), 1, `${path}.lightness`),
-        chroma: range(own(profile, 'chroma', [0.1, 0.16]), 0.4, `${path}.chroma`),
+        chromaCap: cap,
+        chromaScale: range(own(profile, 'chromaScale', [0.6, 0.8]), 1, `${path}.chromaScale`),
       };
     }
   }
-  return { namespace, backgrounds, contrastTarget, profiles };
+  return { targets, seed, namespace, backgrounds, contrastTarget, profiles };
 }
 
 /**
@@ -176,8 +191,8 @@ function optionsValue(options: unknown): ResolvedOptions {
  * @example
  * ```ts
  * const colors = await resolveTextColors('research');
- * colors.light.fill.hex; // '#bf97fc'
- * colors.dark.fill.hex;  // '#5f3692'
+ * colors.light.fill.hex; // '#59b8d8'
+ * colors.dark.fill.hex;  // '#255464'
  * ```
  */
 export function resolveTextColors(text: string, options: TextColorOptions = {}): ColorSet {
@@ -189,34 +204,59 @@ export function resolveTextColors(text: string, options: TextColorOptions = {}):
   const input = encoder.encode(text);
   if (namespace.length > 0xffffffff) fail('INVALID_OPTIONS', 'namespace exceeds the v1 byte-length limit');
   // Payload: VERSION, NUL, namespace byte length (uint32 big-endian), namespace, text.
-  const header = new DataView(new ArrayBuffer(4));
-  header.setUint32(0, namespace.length);
+  const header = new DataView(new ArrayBuffer(8));
+  header.setUint32(0, settings.seed);
+  header.setUint32(4, namespace.length);
   const digest = sha256(prefix, new Uint8Array(header.buffer), namespace, input);
   // The first three big-endian 32-bit digest words become fractions in [0, 1) for hue, lightness, and chroma.
   const fractions = [0, 4, 8].map(offset => digest.getUint32(offset, false) / 4294967296) as Triple;
-  const hue = fractions[0] * 360;
+  const position = fractions[0] * 12;
+  const index = Math.floor(position);
+  const hue = (Number(anchors[index]) + (Number(anchors[index+1]) - Number(anchors[index])) * (position-index)) % 360;
   const themes = {} as Record<'light' | 'dark', ThemeColors>;
   for (const theme of ['light', 'dark'] as const) {
-    const colors = {} as Record<'fill' | 'accent', ChosenColor>;
-    for (const role of ['fill', 'accent'] as const) {
+    const direction = theme === 'light' ? -1 : 1;
+    const background = settings.backgrounds[theme];
+    const base = formats(background);
+    const lb = Math.round(base.oklch.l * 4096) / 4096;
+    const sample = (role: 'fill' | 'text') => {
       const profile = settings.profiles[theme][role];
-      const lightness = profile.lightness[0] + (profile.lightness[1] - profile.lightness[0]) * fractions[1];
-      const chroma = profile.chroma[0] + (profile.chroma[1] - profile.chroma[0]) * fractions[2];
-      // A fill is measured against its own black/white foreground; an accent against the theme background.
-      colors[role] = chooseColor(lightness, chroma, hue,
-        role === 'accent' ? settings.backgrounds[theme] : null, settings.contrastTarget);
-    }
-    themes[theme] = {
-      background: formats(settings.backgrounds[theme]),
-      fill: formats(colors.fill.rgb),
-      onFill: formats(foreground(colors.fill.rgb)),
-      accent: formats(colors.accent.rgb),
-      contrast: {
-        target: settings.contrastTarget,
-        fill: colors.fill.metadata,
-        accent: colors.accent.metadata,
-      },
+      const sampled = profile.lightness[0] + (profile.lightness[1] - profile.lightness[0]) * fractions[1];
+      const bias = biases[(theme === 'light' ? 0 : 2) + (role === 'fill' ? 0 : 1)];
+      if (!bias) throw new Error('Missing profile bias table');
+      const segment = Math.floor(hue / 30);
+      const correction = Number(bias[segment]) + (Number(bias[(segment+1)%12]) - Number(bias[segment])) * (hue/30-segment);
+      return { l: Math.max(0, Math.min(1, sampled + correction)),
+        scale: profile.chromaScale[0] + (profile.chromaScale[1]-profile.chromaScale[0])*fractions[2], cap: profile.chromaCap };
     };
+    const fillProfile = sample('fill'), textProfile = sample('text');
+    const tone = (l: number, profile: typeof fillProfile, backdrop: Triple | null, target: number, second?: Triple, secondTarget = target) => {
+      const lightness = Math.max(0, Math.min(1, l));
+      const chroma = cusp(lightness, hue) * profile.scale;
+      const result = chooseColor(lightness, Math.min(chroma, profile.cap), hue, backdrop, target, second, secondTarget);
+      result.metadata.chromaCapped = chroma > profile.cap;
+      return result;
+    };
+    const target = settings.contrastTarget, targets = settings.targets;
+    const subtle = tone(lb + direction*0.04, fillProfile, null, 1);
+    const muted = tone(lb + direction*0.10, fillProfile, null, 1);
+    const fill = tone(fillProfile.l, fillProfile, null, targets.fill);
+    const onFill = foreground(fill.rgb);
+    const hover = tone(fillProfile.l + direction*0.025, fillProfile, onFill, targets.fillHover);
+    const active = tone(fillProfile.l + direction*0.05, fillProfile, onFill, targets.fillActive);
+    const border = tone(lb + direction*0.39, fillProfile, background, targets.border);
+    const text = tone(textProfile.l, textProfile, background, targets.text, subtle.rgb, targets.textOnSubtle);
+    const strong = tone(textProfile.l + direction*0.10, textProfile, background, targets.strong);
+    const relationship = (color: ChosenColor, backdrop: Triple, required: number) => {
+      const ratio = contrast(color.rgb, backdrop);
+      return {...color.metadata, ratio, meetsTarget: ratio >= required};
+    };
+    themes[theme] = {background: base, subtle: formats(subtle.rgb), muted: formats(muted.rgb),
+      fill: formats(fill.rgb), onFill: formats(onFill), fillHover: formats(hover.rgb), fillActive: formats(active.rgb),
+      border: formats(border.rgb), text: formats(text.rgb), strong: formats(strong.rgb),
+      contrast: {target, fill: fill.metadata, fillHover: hover.metadata, fillActive: active.metadata, border: border.metadata,
+        text: relationship(text,background,targets.text), textOnSubtle: relationship(text,subtle.rgb,targets.textOnSubtle), strong: strong.metadata}};
+
   }
-  return { version: VERSION, hue, light: themes.light, dark: themes.dark };
+  return { version: VERSION, hueFraction: fractions[0], hue, light: themes.light, dark: themes.dark };
 }

@@ -9,8 +9,8 @@ Example::
     from texthue import resolve_text_colors
 
     colors = resolve_text_colors("research")
-    colors["light"]["fill"]["hex"]  # '#bf97fc'
-    colors["dark"]["fill"]["hex"]   # '#5f3692'
+    colors["light"]["fill"]["hex"]  # '#59b8d8'
+    colors["dark"]["fill"]["hex"]   # '#255464'
 
 The package has no runtime dependencies and performs no I/O.
 """

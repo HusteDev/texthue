@@ -7,7 +7,7 @@ cases = [
     ("\ud800", {}),
     ("research", {"contrastTarget": 22}),
     ("research", {"backgrounds": {"light": "#fff"}}),
-    ("research", {"profiles": {"light": {"fill": {"chroma": [0.2, 0.1]}}}}),
+    ("research", {"profiles": {"light": {"fill": {"chromaScale": [0.2, 0.1]}}}}),
 ]
 for text, options in cases:
     try:

@@ -11,7 +11,7 @@
   },
   "files": ["dist", "src", "examples", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md", "SPECIFICATION.md"],
   "sideEffects": false,
-  "engines": { "node": ">=22" },
+  "engines": { "node": ">=20" },
   "license": "MIT AND W3C-20150513",
   "repository": { "type": "git", "url": "git+https://github.com/HusteDev/texthue.git", "directory": "packages/npm" },
   "keywords": ["color", "hash", "deterministic", "oklch", "contrast", "typescript", "palette"],

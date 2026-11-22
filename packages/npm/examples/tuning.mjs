@@ -8,19 +8,19 @@ const colors = await resolveTextColors('project:atlas', {
   contrastTarget: 7,
   profiles: {
     light: {
-      fill: { lightness: [0.74, 0.84], chroma: [0.08, 0.14] },
-      accent: { lightness: [0.40, 0.52], chroma: [0.10, 0.16] },
+      fill: { lightness: [0.74, 0.84], chromaScale: [0.08, 0.14] },
+      text: { lightness: [0.40, 0.52], chromaScale: [0.10, 0.16] },
     },
     dark: {
-      fill: { lightness: [0.38, 0.48], chroma: [0.08, 0.14] },
-      accent: { lightness: [0.74, 0.86], chroma: [0.10, 0.16] },
+      fill: { lightness: [0.38, 0.48], chromaScale: [0.08, 0.14] },
+      text: { lightness: [0.74, 0.86], chromaScale: [0.10, 0.16] },
     },
   },
 });
 console.log('Customized colors:', JSON.stringify(colors, null, 2));
 
 const grayscale = await resolveTextColors('plain', {
-  profiles: { light: { fill: { lightness: [0.75, 0.75], chroma: [0, 0] } } },
+  profiles: { light: { fill: { lightness: [0.75, 0.75], chromaScale: [0, 0] } } },
 });
 console.log('Fixed preferred lightness, zero chroma:', grayscale.light.fill);
 
@@ -28,7 +28,7 @@ console.log('Fixed preferred lightness, zero chroma:', grayscale.light.fill);
 const impossible = await resolveTextColors('project:atlas', {
   backgrounds: { light: '#777777' }, contrastTarget: 7,
 });
-if (!impossible.light.contrast.accent.meetsTarget) {
+if (!impossible.light.contrast.text.meetsTarget) {
   console.log('Use the returned fallback or change the background/target:',
-    impossible.light.accent.hex, impossible.light.contrast.accent);
+    impossible.light.text.hex, impossible.light.contrast.text);
 }

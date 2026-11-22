@@ -92,6 +92,17 @@ export function oklchToLinear(lightness: number, chroma: number, hue: number): T
  * @param hue - OKLCH hue in degrees.
  * @returns Final RGB bytes plus the retained chroma and the input lightness.
  */
+export function cusp(lightness: number, hue: number): number {
+  if (lightness === 0 || lightness === 1) return 0;
+  let low = 0, high = 0.4;
+  for (let i = 0; i < 20; i++) {
+    const mid = (low + high) / 2;
+    if (inside(oklchToLinear(lightness, mid, hue))) low = mid;
+    else high = mid;
+  }
+  return low;
+}
+
 export function fitColor(lightness: number, chroma: number, hue: number): FittedColor {
   if (lightness === 0 || lightness === 1) {
     return { rgb: [lightness * 255, lightness * 255, lightness * 255], chroma: 0, lightness };
@@ -197,7 +208,7 @@ export function formats(rgb: Triple): Color {
 /**
  * Selects the final color for one role, enforcing the contrast target.
  *
- * The sampled color is fitted first. If it fails the target, an accent whose
+ * The sampled color is fitted first. If it fails the target, an text whose
  * background cannot reach the target with any sRGB color falls back to the
  * better of black and white and reports `unattainable-contrast`. Otherwise a
  * search over lightness values `k / 1000` for `k = 0..1000` picks the passing
@@ -208,36 +219,47 @@ export function formats(rgb: Triple): Color {
  * @param lightness - Sampled OKLCH lightness.
  * @param chroma - Sampled OKLCH chroma; every candidate is fitted from this value.
  * @param hue - Identity hue in degrees.
- * @param background - Theme background for an accent, or `null` for a fill.
+ * @param background - Theme background for an text, or `null` for a fill.
  * @param target - Required WCAG contrast ratio.
  * @returns Final RGB bytes with contrast metadata.
  * @throws {Error} If no lightness candidate passes for a fill. The endpoints guarantee this cannot happen for valid targets.
  */
-export function chooseColor(lightness: number, chroma: number, hue: number, background: Triple | null, target: number): ChosenColor {
-  const measure = (rgb: Triple) => contrast(rgb, background ?? foreground(rgb));
+export function chooseColor(lightness: number, chroma: number, hue: number, background: Triple | null, target: number, second?: Triple, secondTarget = target): ChosenColor {
+  const measure = (rgb: Triple) => Math.min(contrast(rgb, background ?? foreground(rgb)), second ? contrast(rgb, second) * (target / secondTarget) : Infinity);
   const initial = fitColor(lightness, chroma, hue);
   let chosen = initial;
   let ratio = measure(initial.rgb);
   let fallback: ChosenColor['metadata']['fallback'] = null;
   if (ratio < target) {
-    if (background && Math.max(contrast([0, 0, 0], background),
-      contrast([255, 255, 255], background)) < target) {
-      const rgb = foreground(background);
+    if (background && Math.max(measure([0, 0, 0]), measure([255, 255, 255])) < target) {
+      const rgb: Triple = measure([0,0,0]) >= measure([255,255,255]) ? [0,0,0] : [255,255,255];
       chosen = { rgb, lightness: rgb[0] / 255, chroma: 0 };
       ratio = measure(rgb);
       fallback = 'unattainable-contrast';
     } else {
       let bestDistance = Infinity;
-      for (let k = 0; k <= 1000; k++) {
-        const candidateLightness = k / 1000;
-        const distance = Math.abs(candidateLightness - lightness);
-        // Ascending order preserves the lower-lightness candidate on exact ties.
-        if (distance >= bestDistance) continue;
-        const candidate = fitColor(candidateLightness, chroma, hue);
-        const candidateRatio = measure(candidate.rgb);
-        if (candidateRatio >= target) {
+      for (const endpoint of [0, 4096]) {
+        let pass = endpoint;
+        let fail = endpoint === 0 ? Math.ceil(lightness * 4096) : Math.floor(lightness * 4096);
+        let candidate = fitColor(pass / 4096, chroma, hue);
+        let score = measure(candidate.rgb);
+        if (score < target) continue;
+        while (Math.abs(pass - fail) > 1) {
+          const mid = Math.floor((pass + fail) / 2);
+          const probe = fitColor(mid / 4096, chroma, hue);
+          const measured = measure(probe.rgb);
+          if (measured >= target) {
+            pass = mid;
+            candidate = probe;
+            score = measured;
+          } else {
+            fail = mid;
+          }
+        }
+        const distance = Math.abs(candidate.lightness - lightness);
+        if (distance < bestDistance) {
           chosen = candidate;
-          ratio = candidateRatio;
+          ratio = score;
           bestDistance = distance;
         }
       }
@@ -250,6 +272,7 @@ export function chooseColor(lightness: number, chroma: number, hue: number, back
       ratio,
       meetsTarget: ratio >= target,
       lightnessAdjusted: chosen.lightness !== lightness,
+      chromaCapped: false,
       chromaReduced: chosen.chroma < chroma,
       fallback,
     },

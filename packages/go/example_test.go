@@ -19,11 +19,11 @@ func ExampleResolve() {
 	fmt.Printf("hsl(%g %g%% %g%%)\n", colors.Light.Fill.HSL.H, colors.Light.Fill.HSL.S, colors.Light.Fill.HSL.L)
 	fmt.Printf("oklch(%g %g %g)\n", colors.Light.Fill.OKLCH.L, colors.Light.Fill.OKLCH.C, colors.Light.Fill.OKLCH.H)
 	// Output:
-	// #bf97fc
-	// #5f3692
-	// rgb(191 151 252)
-	// hsl(263.762376 94.392523% 79.019608%)
-	// oklch(0.752216 0.146392 301.214339)
+	// #59b8d8
+	// #255464
+	// rgb(89 184 216)
+	// hsl(195.11811 61.95122% 59.803922%)
+	// oklch(0.737459 0.100435 222.843011)
 }
 
 // ExampleResolve_tuning sets every option with independent ranges per theme and role.
@@ -34,12 +34,12 @@ func ExampleResolve_tuning() {
 		ContrastTarget: texthue.Ptr(7.0),
 		Profiles: &texthue.Profiles{
 			Light: &texthue.ThemeProfiles{
-				Fill:   &texthue.Profile{Lightness: &texthue.Range{.74, .84}, Chroma: &texthue.Range{.08, .14}},
-				Accent: &texthue.Profile{Lightness: &texthue.Range{.40, .52}, Chroma: &texthue.Range{.10, .16}},
+				Fill: &texthue.Profile{Lightness: &texthue.Range{.74, .84}, ChromaScale: &texthue.Range{.08, .14}},
+				Text: &texthue.Profile{Lightness: &texthue.Range{.40, .52}, ChromaScale: &texthue.Range{.10, .16}},
 			},
 			Dark: &texthue.ThemeProfiles{
-				Fill:   &texthue.Profile{Lightness: &texthue.Range{.38, .48}, Chroma: &texthue.Range{.08, .14}},
-				Accent: &texthue.Profile{Lightness: &texthue.Range{.74, .86}, Chroma: &texthue.Range{.10, .16}},
+				Fill: &texthue.Profile{Lightness: &texthue.Range{.38, .48}, ChromaScale: &texthue.Range{.08, .14}},
+				Text: &texthue.Profile{Lightness: &texthue.Range{.74, .86}, ChromaScale: &texthue.Range{.10, .16}},
 			},
 		},
 	}
@@ -47,7 +47,7 @@ func ExampleResolve_tuning() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(colors.Light.Contrast.Fill.MeetsTarget, colors.Dark.Contrast.Accent.MeetsTarget)
+	fmt.Println(colors.Light.Contrast.Fill.MeetsTarget, colors.Dark.Contrast.Text.MeetsTarget)
 	// Output: true true
 }
 
@@ -55,7 +55,7 @@ func ExampleResolve_tuning() {
 func ExampleResolve_grayscale() {
 	colors, err := texthue.Resolve("plain", &texthue.Options{
 		Profiles: &texthue.Profiles{Light: &texthue.ThemeProfiles{Fill: &texthue.Profile{
-			Lightness: &texthue.Range{.75, .75}, Chroma: &texthue.Range{0, 0},
+			Lightness: &texthue.Range{.75, .75}, ChromaScale: &texthue.Range{0, 0},
 		}}},
 	})
 	if err != nil {
@@ -65,7 +65,7 @@ func ExampleResolve_grayscale() {
 	// Output: 0
 }
 
-// ExampleResolve_impossibleContrast shows the explicit fallback when no accent
+// ExampleResolve_impossibleContrast shows the explicit fallback when no text
 // can reach the target against a mid-gray background.
 func ExampleResolve_impossibleContrast() {
 	colors, err := texthue.Resolve("project:atlas", &texthue.Options{
@@ -74,8 +74,8 @@ func ExampleResolve_impossibleContrast() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(colors.Light.Contrast.Accent.MeetsTarget)
-	fmt.Println(*colors.Light.Contrast.Accent.Fallback)
+	fmt.Println(colors.Light.Contrast.Text.MeetsTarget)
+	fmt.Println(*colors.Light.Contrast.Text.Fallback)
 	// Output:
 	// false
 	// unattainable-contrast
@@ -93,7 +93,7 @@ func ExampleResolve_errors() {
 
 // ExampleParseOptions loads the shared JSON options document and serializes a result.
 func ExampleParseOptions() {
-	options, err := texthue.ParseOptions([]byte(`{"namespace":"labels","profiles":{"light":{"fill":{"chroma":[0,0]}}}}`))
+	options, err := texthue.ParseOptions([]byte(`{"namespace":"labels","profiles":{"light":{"fill":{"chromaScale":[0,0]}}}}`))
 	if err != nil {
 		panic(err)
 	}

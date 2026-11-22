@@ -16,7 +16,7 @@ for name in ("light", "dark"):
             "hsl": f'hsl({hsl["h"]} {hsl["s"]}% {hsl["l"]}%)',
             "oklch": f'oklch({oklch["l"]} {oklch["c"]} {oklch["h"]})',
             "onFill": theme["onFill"]["hex"],
-            "accent": theme["accent"]["hex"],
+            "text": theme["text"]["hex"],
             "background": theme["background"]["hex"],
         },
     )

@@ -72,15 +72,17 @@ type jsonShape struct {
 var stringShape = &jsonShape{kind: "string"}
 var numberShape = &jsonShape{kind: "number"}
 var rangeShape = &jsonShape{kind: "range"}
-var profileShape = &jsonShape{fields: map[string]*jsonShape{"lightness": rangeShape, "chroma": rangeShape}}
-var themeShape = &jsonShape{fields: map[string]*jsonShape{"fill": profileShape, "accent": profileShape}}
+var profileShape = &jsonShape{fields: map[string]*jsonShape{"lightness": rangeShape, "chromaScale": rangeShape, "chromaCap": numberShape}}
+var themeShape = &jsonShape{fields: map[string]*jsonShape{"fill": profileShape, "text": profileShape}}
 
 // optionsShape is the complete schema for the language-neutral options document.
 var optionsShape = &jsonShape{fields: map[string]*jsonShape{
-	"namespace":      stringShape,
-	"contrastTarget": numberShape,
-	"backgrounds":    {fields: map[string]*jsonShape{"light": stringShape, "dark": stringShape}},
-	"profiles":       {fields: map[string]*jsonShape{"light": themeShape, "dark": themeShape}},
+	"namespace":       stringShape,
+	"seed":            numberShape,
+	"contrastTarget":  numberShape,
+	"contrastTargets": {fields: map[string]*jsonShape{"fill": numberShape, "fillHover": numberShape, "fillActive": numberShape, "border": numberShape, "text": numberShape, "textOnSubtle": numberShape, "strong": numberShape}},
+	"backgrounds":     {fields: map[string]*jsonShape{"light": stringShape, "dark": stringShape}},
+	"profiles":        {fields: map[string]*jsonShape{"light": themeShape, "dark": themeShape}},
 }}
 
 // checkShape validates a decoded JSON value against shape, rejecting unknown

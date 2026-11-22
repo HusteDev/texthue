@@ -2,7 +2,7 @@
 
 Algorithm identifier: `text-to-color-v1`.
 
-This specification maps exact text to deterministic sRGB colors for any application domain. It defines light-theme and dark-theme fill/foreground pairs and accents. It does not allocate unique colors or inspect the meaning of the input.
+This specification maps exact text to deterministic sRGB colors for any application domain. It defines light-theme and dark-theme fill/foreground pairs and texts. It does not allocate unique colors or inspect the meaning of the input.
 
 ## 1. Interface
 
@@ -12,7 +12,7 @@ Language-neutral operation:
 resolveTextColors(text, options = {}) -> ColorSet
 ```
 
-The TypeScript/npm library uses this name and returns a Promise to both JavaScript and TypeScript consumers. Python uses `resolve_text_colors` and returns directly. Go uses `Resolve(text string, options *Options) (ColorSet, error)`. Language-specific naming and synchronous/asynchronous execution do not alter the mapping. Each library's README documents native types, examples, and installation.
+The TypeScript/npm library uses this name and returns ColorSet synchronously. Python uses `resolve_text_colors` and returns directly. Go uses `Resolve(text string, options *Options) (ColorSet, error)`. Language-specific naming and synchronous/asynchronous execution do not alter the mapping. Each library's README documents native types, examples, and installation.
 
 Package versions are independent of the `text-to-color-v1` identifier. The identifier is part of the hashed payload, so it is fixed for as long as this mapping is in use.
 
@@ -34,9 +34,12 @@ Options are JSON-style records with these keys. Omission selects a default; expl
 | `contrastTarget` | `4.5` | Inclusive range 1–21 |
 | `profiles.light.fill.lightness` | `[0.72, 0.82]` | `0 <= min <= max <= 1` |
 | `profiles.dark.fill.lightness` | `[0.40, 0.50]` | `0 <= min <= max <= 1` |
-| `profiles.light.accent.lightness` | `[0.45, 0.55]` | `0 <= min <= max <= 1` |
-| `profiles.dark.accent.lightness` | `[0.72, 0.82]` | `0 <= min <= max <= 1` |
-| Each profile's `chroma` | `[0.10, 0.16]` | `0 <= min <= max <= 0.4` |
+| `profiles.light.text.lightness` | `[0.43, 0.53]` | `0 <= min <= max <= 1` |
+| `profiles.dark.text.lightness` | `[0.72, 0.82]` | `0 <= min <= max <= 1` |
+| Each profile's `chromaScale` | [0.6,0.8] | ordered range in [0,1] |
+| Each profile's `chromaCap` | fill 0.16, text 0.19 | [0,0.4] |
+| seed | 0 | uint32 |
+| contrastTargets | contrastTarget, except border min(3, contrastTarget) | fill, fillHover, fillActive, border, text, textOnSubtle, strong (each 1 to 21) |
 
 The chroma bound of 0.4 is this API's input limit, not a universal limit on OKLCH. The theme names identify output slots; a supplied background is always used as supplied, even if its brightness differs from its theme name. Background parsing does not accept shorthand, alpha, named colors, or other CSS expressions.
 
@@ -51,20 +54,22 @@ Go's typed interface uses nil optional pointers to represent omission and a nil 
 ```text
 ColorSet = {
   version: "text-to-color-v1",
+  hueFraction: number,
   hue: number,
   light: ThemeColors,
   dark: ThemeColors
 }
 
 ThemeColors = {
-  background: Color,
+  background: Color, subtle: Color, muted: Color, fillHover: Color, fillActive: Color, border: Color, strong: Color,
   fill: Color,
   onFill: Color,
-  accent: Color,
+  text: Color,
   contrast: {
     target: number,
+    fillHover: ContrastResult, fillActive: ContrastResult, border: ContrastResult, strong: ContrastResult, textOnSubtle: ContrastResult,
     fill: ContrastResult,
-    accent: ContrastResult
+    text: ContrastResult
   }
 }
 
@@ -79,6 +84,7 @@ ContrastResult = {
   ratio: number,
   meetsTarget: boolean,
   lightnessAdjusted: boolean,
+  chromaCapped: boolean,
   chromaReduced: boolean,
   fallback: null | "unattainable-contrast"
 }
@@ -86,7 +92,7 @@ ContrastResult = {
 
 The result excludes input text, namespace, and digest. `hue` is the sampled OKLCH identity hue before conversion, with no decimal rounding. All colors are opaque sRGB. RGB channels are integers in 0–255. HSL hue uses degrees and saturation/lightness use percentages. OKLCH lightness uses 0–1, chroma is a number, and hue uses degrees.
 
-`onFill` is either black or white. `contrast.fill` measures fill against onFill. `contrast.accent` measures accent against background. The ratio is retained at computational precision; `meetsTarget` uses that ratio without display rounding. A fallback only represents an unattainable accent contrast target. `chromaReduced` compares the final retained pre-quantization chroma with the requested chroma; it does not compare rounded output OKLCH values. `lightnessAdjusted` compares the selected pre-quantization lightness with the original sampled lightness.
+`onFill` is either black or white. `contrast.fill` measures fill against onFill. `contrast.text` measures text against background. The ratio is retained at computational precision; `meetsTarget` uses that ratio without display rounding. A fallback only represents an unattainable text contrast target. `chromaReduced` compares the final retained pre-quantization chroma with the requested chroma; it does not compare rounded output OKLCH values. `lightnessAdjusted` compares the selected pre-quantization lightness with the original sampled lightness.
 
 ## 2. Text to sampling fractions
 
@@ -97,6 +103,7 @@ The result excludes input text, namespace, and digest. `hue` is the sampled OKLC
 ```text
 UTF8("text-to-color-v1")
 one zero byte
+seed as uint32 big-endian
 namespace UTF-8 byte length as four unsigned big-endian bytes
 namespace UTF-8 bytes
 text UTF-8 bytes
@@ -108,15 +115,31 @@ The length describes bytes, not characters. The input occupies the remainder, so
 5. Interpret digest bytes `[0,4)`, `[4,8)`, and `[8,12)` as unsigned big-endian 32-bit integers. Do not parse a platform-native signed hash.
 6. Divide each integer by exactly `4294967296`, producing `uH`, `uL`, and `uC` in `[0,1)`.
 
-For each fill/accent profile:
+### Hue and tone sampling
+
+The pinned bias rows correspond to light fill, light text, dark fill and dark text.
 
 ```text
-h = uH * 360
-l = lMin + (lMax - lMin) * uL
-c = cMin + (cMax - cMin) * uC
+anchors = [10, 48.3199, 78.2602, 111.4561, 134.6058, 154.0668, 181.1972, 220.7925, 257.1497, 299.695, 322.6721, 340.0645, 370];
+biases = [
+  [0.0124, 0.0098, 0.0073, 0.0003, -0.0077, -0.016, -0.0121, -0.0091, -0.0038, 0.0021, 0.008, 0.0174],
+  [0.0185, 0.016, 0.0053, 0.0002, -0.0048, -0.01, -0.0076, -0.0057, -0.0028, 0.0128, 0.0215, 0.0206],
+  [0.0173, 0.015, 0.005, 0.0002, -0.0045, -0.0094, -0.0071, -0.0053, -0.0026, 0.0098, 0.0177, 0.0193],
+  [0.0124, 0.0098, 0.0073, 0.0003, -0.0077, -0.016, -0.0121, -0.0091, -0.0038, 0.0021, 0.008, 0.0174],
+];
+
+x = 12*uH
+k = floor(x)
+h = (anchors[k] + (anchors[k+1]-anchors[k])*(x-k)) modulo 360
+j = floor(h/30)
+bias = row[j] + (row[(j+1) modulo 12]-row[j])*(h/30-j)
+l = clamp((lMin + (lMax-lMin)*uL) + bias, 0, 1)
+scale = sMin + (sMax-sMin)*uC
 ```
 
-All four profiles reuse these same fractions. Palette or background changes never alter the sampled identity hue. Namespace or text changes can alter it. The upper bound of a nonzero-width range is excluded by interpolation; zero-width ranges produce the single endpoint.
+For each clamped tone lightness and hue, find the gamut boundary by 20 bisections on [0,0.4] using the linear sRGB inclusion test. Use the passing lower bound. At lightness 0 or 1 use zero. Multiply by scale and cap the product at chromaCap. Set chromaCapped when the product exceeds the cap. Fit this requested chroma for each contrast candidate.
+
+Let d be -1 for light and +1 for dark. Round the background's six-decimal OKLCH lightness to the nearest multiple of 1/4096, half up, giving Lb. Use the fill profile for subtle (Lb+0.04d), muted (Lb+0.10d), fill (Lf), fillHover (Lf+0.025d), fillActive (Lf+0.05d), and border (Lb+0.39d). Use the text profile for text (Lt) and strong (Lt+0.10d). Clamp all starting lightnesses. Subtle and muted have no contrast constraint. Fill selects onFill. Hover and active use that fixed foreground. Measure border and strong against background. Measure text against both background and subtle. Score text by the minimum of its background ratio and its subtle ratio multiplied by (text target / textOnSubtle target). Report each measured ratio individually.
 
 ## 3. Numerical conversion and gamut fitting
 
@@ -180,26 +203,32 @@ ratio = (max(A, B) + 0.05) / (min(A, B) + 0.05)
 
 This is the [WCAG contrast calculation](https://www.w3.org/WAI/WCAG22/Techniques/general/G18.html). The default 4.5 target is appropriate for normal text in the declared foreground/background pair. It does not certify a complete interface or promise distinctions between generated colors.
 
-For a fill, select the black or white foreground with greater contrast. An exact tie selects black. Measure the fill against that foreground. For an accent, measure it against its declared theme background.
+For a fill, select the black or white foreground with greater contrast. An exact tie selects black. Measure the fill against that foreground. For an text, measure it against its declared theme background.
 
 ```text
 initial = fit(originalLightness, requestedChroma, identityHue)
 if measured ratio >= target: return initial
 
-for an accent only:
+for an text only:
     if neither black nor white reaches the target against the background:
         select whichever has greater contrast; ties select black
         return it with meetsTarget=false and fallback="unattainable-contrast"
 
-candidates = fit(k/1000, requestedChroma, identityHue), for integer k=0..1000
-retain candidates whose final RGB contrast is >= target
-choose minimum abs(candidateLightness - originalLightness)
-break an exact distance tie by choosing the lower lightness
+for endpoint in [0, 4096]:
+    pass = endpoint
+    fail = ceil(originalLightness*4096) for black, floor(originalLightness*4096) for white
+    skip this side if its endpoint fails
+    while abs(pass-fail) > 1:
+        mid = floor((pass+fail)/2)
+        evaluate fit(mid/4096, requestedChroma, identityHue)
+        move pass to mid on success, else move fail to mid
+    retain evaluated passing candidate
+choose the retained candidate closest to originalLightness, ties lower
 ```
 
-Recompute the black/white foreground for every fill candidate. Chroma fitting runs at the new lightness; do not reuse an earlier reduced chroma. Endpoints guarantee a passing candidate for every valid fill target. For an accent, the precheck establishes whether any sRGB color can meet its target; black and white give the extremal luminances. No further chroma or hue search is performed.
+Recompute the black/white foreground for every fill candidate. Chroma fitting runs at the new lightness; do not reuse an earlier reduced chroma. Endpoints guarantee a passing candidate for every valid fill target. For an text, the precheck establishes whether any sRGB color can meet its target; black and white give the extremal luminances. No further chroma or hue search is performed.
 
-The full sampled initial lightness is checked before searching the 0.001 grid. This rule defines a deterministic nearby adjustment; it does not claim a continuous mathematical optimum. Compare distances and contrast at computational precision without epsilon or display rounding. An exact threshold passes.
+The full sampled initial lightness is checked before searching the 1/4096 grid. This rule defines a deterministic nearby adjustment; it does not claim a continuous mathematical optimum. Compare distances and contrast at computational precision without epsilon or display rounding. An exact threshold passes.
 
 The initially sampled hue remains in the top-level result even when fitting/quantization slightly changes the returned color hue or a black/white fallback removes visible hue entirely.
 
@@ -239,7 +268,7 @@ The four formats describe the same final eight-bit RGB color, within the defined
 
 ## 6. Conformance and versioning
 
-`conformance/vectors.json` records version, tolerance, valid examples, and invalid examples. Each valid vector contains exact input/options, encoded bytes, digest, fractions, requested OKLCH values, and the complete expected result. Encoding fields and digest use lowercase hexadecimal without `#`. An invalid vector contains an expected error code. These diagnostics are fixture data, not fields exposed by the application function.
+`conformance/vectors.json` records version, tolerance, valid examples, and invalid examples. Each valid vector contains exact input/options, encoded bytes, digest, fractions, and the complete expected result. Encoding fields and digest use lowercase hexadecimal without `#`. An invalid vector contains an expected error code. These diagnostics are fixture data, not fields exposed by the application function.
 
 Ports must match payload bytes, digest, final Hex/RGB, flags, and fallback strings exactly. Compare HSL/OKLCH numeric fields within `0.000001`; the supplied runners allow `1.000001e-6` solely for floating-point representation of that tolerance. The reference cross-language runner compares unrounded hue and contrast within `1e-12`. All published HSL/OKLCH representations must round-trip to the same eight-bit RGB values.
 

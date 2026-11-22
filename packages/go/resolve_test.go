@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -150,7 +151,7 @@ func TestRuntimeErrors(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	}
-	for _, data := range []string{`{"contrastTarget":4.5} true`, `{"profiles":{"light":{"fill":{"chroma":[0,0.1,0.2]}}}}`, `{"Namespace":"x"}`} {
+	for _, data := range []string{`{"contrastTarget":4.5} true`, `{"profiles":{"light":{"fill":{"chromaScale":[0,0.1,0.2]}}}}`, `{"Namespace":"x"}`} {
 		if _, err := ParseOptions([]byte(data)); err == nil {
 			t.Fatal("accepted", data)
 		}
@@ -181,7 +182,7 @@ func TestConcurrentDeterminism(t *testing.T) {
 // TestJSONDuplicateObjectsReplaceRatherThanMerge checks that a repeated object
 // key replaces the earlier object entirely, as JSON.parse and json.loads do.
 func TestJSONDuplicateObjectsReplaceRatherThanMerge(t *testing.T) {
-	options, err := ParseOptions([]byte(`{"profiles":{"light":{"fill":{"chroma":[0,0]}}},"profiles":{}}`))
+	options, err := ParseOptions([]byte(`{"profiles":{"light":{"fill":{"chromaScale":[0,0]}}},"profiles":{}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,5 +222,34 @@ func TestDefaultRangeSweep(t *testing.T) {
 	}
 	if count != 25920 {
 		t.Fatal(count)
+	}
+}
+
+func TestDefaultScaleRepairRate(t *testing.T) {
+	const count = 25920
+	var repairs [2][7]int
+	for i := 0; i < count; i++ {
+		result, err := Resolve("sweep:"+strconv.Itoa(i), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for j, theme := range []ThemeColors{result.Light, result.Dark} {
+			m := theme.Contrast
+			for k, v := range []ContrastResult{m.Fill, m.FillHover, m.FillActive, m.Border, m.Text, m.TextOnSubtle, m.Strong} {
+				if !v.MeetsTarget {
+					t.Fatalf("sample %d theme %d relationship %d failed", i, j, k)
+				}
+				if v.LightnessAdjusted {
+					repairs[j][k]++
+				}
+			}
+		}
+	}
+	for j, row := range repairs {
+		for k, v := range row {
+			if v > count/20 {
+				t.Errorf("theme %d relationship %d repaired %d of %d", j, k, v, count)
+			}
+		}
 	}
 }

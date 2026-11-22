@@ -15,7 +15,7 @@ const rgb = color => [color.rgb.r, color.rgb.g, color.rgb.b];
 test('frozen v1 fixture file matches its pinned SHA-256 digest', async () => {
   const bytes = await readFile(new URL('../conformance/vectors.json', import.meta.url));
   assert.equal(createHash('sha256').update(bytes).digest('hex'),
-    '1040510eff822342a195f9d304a5d19496a74b8ff6b79ad1c18815b168461f29');
+    '9ed248dc3b016c69aafc076fbc6e4d070305bd9e190c449315d9094e960109d2');
 });
 
 /** Independent HSL-to-RGB conversion used to confirm published HSL round-trips to the canonical bytes. */
@@ -54,15 +54,19 @@ for (const item of fixture.vectors) {
     assert.deepEqual(actual, item.expected);
     const payload = Buffer.from(item.encoding.payloadHex, 'hex');
     assert.equal(createHash('sha256').update(payload).digest('hex'), item.encoding.sha256);
-    assert.equal(actual.hue, item.fractions[0] * 360);
+    assert.equal(actual.hueFraction, item.fractions[0]);
     for (const theme of ['light', 'dark']) {
-      for (const role of ['background', 'fill', 'onFill', 'accent']) checkFormats(actual[theme][role]);
+      for (const role of ['background','subtle','muted','fill','fillHover','fillActive','onFill','border','text','strong']) checkFormats(actual[theme][role]);
       const result = actual[theme];
-      for (const role of ['fill', 'accent']) {
-        const pair = role === 'fill' ? result.onFill : result.background;
-        const ratio = contrast(rgb(result[role]), rgb(pair));
+      for (const [role, color, pair] of [
+        ['fill',result.fill,result.onFill], ['fillHover',result.fillHover,result.onFill],
+        ['fillActive',result.fillActive,result.onFill], ['border',result.border,result.background],
+        ['text',result.text,result.background], ['textOnSubtle',result.text,result.subtle],
+        ['strong',result.strong,result.background]]) {
+        const target = item.options.contrastTargets?.[role] ?? (role === 'border' ? Math.min(3,result.contrast.target) : result.contrast.target);
+        const ratio = contrast(rgb(color), rgb(pair));
         assert.equal(result.contrast[role].ratio, ratio);
-        assert.equal(result.contrast[role].meetsTarget, ratio >= result.contrast.target);
+        assert.equal(result.contrast[role].meetsTarget, ratio >= target);
       }
       assert.ok(result.contrast.fill.meetsTarget);
     }
@@ -83,7 +87,7 @@ test('reject runtime-only non-finite values and malformed option records', async
   for (const value of [new Date(), new Map(), { [Symbol('typo')]: true }]) {
     assert.throws(() => resolveTextColors('x', value), { code: 'INVALID_OPTIONS' });
   }
-  assert.throws(() => resolveTextColors('x', { profiles: { light: { fill: { chroma: [0, NaN] } } } }), { code: 'INVALID_OPTIONS' });
+  assert.throws(() => resolveTextColors('x', { profiles: { light: { fill: { chromaScale: [0, NaN] } } } }), { code: 'INVALID_OPTIONS' });
   assert.throws(() => resolveTextColors(undefined), { code: 'INVALID_TEXT' });
 });
 
@@ -107,11 +111,11 @@ test('palette and background changes preserve identity hue', async () => {
 
 test('documented failure and adjustment paths are exercised', () => {
   const byId = id => fixture.vectors.find(item => item.id === id).expected;
-  assert.equal(byId('adjusted-accent').light.contrast.accent.lightnessAdjusted, true);
+  assert.equal(byId('adjusted-text').light.contrast.text.lightnessAdjusted, true);
   assert.equal(byId('adjusted-fill').light.contrast.fill.lightnessAdjusted, true);
-  assert.equal(byId('gamut-reduction').light.contrast.fill.chromaReduced, true);
-  assert.equal(byId('unattainable').light.contrast.accent.meetsTarget, false);
-  assert.equal(byId('unattainable').light.contrast.accent.fallback, 'unattainable-contrast');
+  assert.equal(byId('capped').light.contrast.fill.chromaCapped, true);
+  assert.equal(byId('unattainable').light.contrast.text.meetsTarget, false);
+  assert.equal(byId('unattainable').light.contrast.text.fallback, 'unattainable-contrast');
   assert.equal(byId('black-white-endpoints').light.fill.hex, '#000000');
   assert.equal(byId('black-white-endpoints').dark.fill.hex, '#ffffff');
 });
@@ -150,4 +154,21 @@ test('25,920 default-range samples remain valid and readable after RGB rounding'
     }
   }
   assert.equal(count, 25920);
+});
+test('25,920 identities meet every default relationship with at most 5% repair per role', () => {
+  const count = 25920;
+  const repairs = new Map();
+  for (let i = 0; i < count; i++) {
+    const result = resolveTextColors(`sweep:${i}`);
+    for (const theme of ['light', 'dark']) {
+      const { target, ...relationships } = result[theme].contrast;
+      assert.equal(target, 4.5);
+      for (const [role, pair] of Object.entries(relationships)) {
+        assert.ok(pair.meetsTarget, `${theme}.${role}: ${i}`);
+        const key = `${theme}.${role}`;
+        repairs.set(key, (repairs.get(key) ?? 0) + Number(pair.lightnessAdjusted));
+      }
+    }
+  }
+  for (const [role, repaired] of repairs) assert.ok(repaired <= count * 0.05, `${role}: ${repaired}`);
 });

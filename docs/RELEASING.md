@@ -64,4 +64,4 @@ Do not commit tokens or place them in package metadata.
 
 ## Post-publication verification
 
-Install each registry version into a clean consumer, without local replacements, and verify the known `research` output (`#bf97fc` light fill, `#5f3692` dark fill). Check that the READMEs, licenses, declarations and typing markers, and source links render correctly. Record the registry URLs and the release commit.
+Install each registry version into a clean consumer, without local replacements, and verify the known `research` output (`#59b8d8` light fill, `#255464` dark fill). Check that the READMEs, licenses, declarations and typing markers, and source links render correctly. Record the registry URLs and the release commit.

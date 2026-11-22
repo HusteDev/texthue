@@ -97,6 +97,7 @@ def main():
         env=env,
     )
     run("TypeScript compilation", [npm, "run", "build"], env=env)
+    run("pinned color tables", ["node", "tools/tune-tables.mjs", "--check"], env=env)
     run("TypeScript public API and examples", [npm, "run", "test:types"], env=env)
     run(
         "JavaScript conformance and color sweeps",

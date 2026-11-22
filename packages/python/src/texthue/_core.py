@@ -10,6 +10,8 @@ This module is private. Use :func:`texthue.resolve_text_colors`.
 import hashlib
 import math
 
+from ._tables import ANCHORS, BIASES
+
 #: Algorithm identifier, written into every hashed payload and returned as ``version``.
 VERSION = "text-to-color-v1"
 
@@ -102,6 +104,19 @@ def _inside(rgb):
     return all(-1e-12 <= value <= 1 + 1e-12 for value in rgb)
 
 
+def _cusp(lightness, hue):
+    if lightness in (0, 1):
+        return 0
+    low, high = 0, 0.4
+    for _ in range(20):
+        mid = (low + high) / 2
+        if _inside(_linear(lightness, mid, hue)):
+            low = mid
+        else:
+            high = mid
+    return low
+
+
 def _fit(lightness, chroma, hue):
     """Fit an OKLCH color into the sRGB gamut and quantize it to RGB bytes.
 
@@ -186,10 +201,10 @@ def _formats(rgb):
     }
 
 
-def _choose(lightness, chroma, hue, background, target):
+def _choose(lightness, chroma, hue, background, target, second=None, second_target=None):
     """Select the final color for one role, enforcing the contrast target.
 
-    The sampled color is fitted first. If it fails the target, an accent whose
+    The sampled color is fitted first. If it fails the target, an text whose
     background cannot reach the target with any sRGB color falls back to the
     better of black and white and reports ``"unattainable-contrast"``.
     Otherwise a search over lightness values ``k / 1000`` for ``k = 0..1000``
@@ -200,7 +215,7 @@ def _choose(lightness, chroma, hue, background, target):
         lightness: Sampled OKLCH lightness.
         chroma: Sampled OKLCH chroma; every candidate is fitted from this value.
         hue: Identity hue in degrees.
-        background: Theme background RGB bytes for an accent, or ``None`` for
+        background: Theme background RGB bytes for an text, or ``None`` for
             a fill, which is measured against its own black/white foreground.
         target: Required WCAG contrast ratio.
 
@@ -213,33 +228,44 @@ def _choose(lightness, chroma, hue, background, target):
     """
 
     def measure(rgb):
-        return _contrast(rgb, background if background is not None else _foreground(rgb))
+        ratio = _contrast(rgb, background if background is not None else _foreground(rgb))
+        return (
+            min(ratio, _contrast(rgb, second) * (target / (second_target or target)))
+            if second is not None
+            else ratio
+        )
 
     chosen = _fit(lightness, chroma, hue)
     ratio = measure(chosen["rgb"])
     fallback = None
     if ratio < target:
-        if (
-            background is not None
-            and max(_contrast([0, 0, 0], background), _contrast([255, 255, 255], background))
-            < target
-        ):
-            rgb = _foreground(background)
+        if background is not None and max(measure([0, 0, 0]), measure([255, 255, 255])) < target:
+            rgb = max(([0, 0, 0], [255, 255, 255]), key=measure)
             chosen = {"rgb": rgb, "lightness": rgb[0] / 255, "chroma": 0}
             ratio = measure(rgb)
             fallback = "unattainable-contrast"
         else:
             best_distance = math.inf
-            for k in range(1001):
-                candidate_lightness = k / 1000
-                distance = abs(candidate_lightness - lightness)
-                # Ascending order preserves the lower-lightness candidate on exact ties.
-                if distance >= best_distance:
+            for endpoint in (0, 4096):
+                passing = endpoint
+                failing = (
+                    math.ceil(lightness * 4096) if endpoint == 0 else math.floor(lightness * 4096)
+                )
+                candidate = _fit(passing / 4096, chroma, hue)
+                score = measure(candidate["rgb"])
+                if score < target:
                     continue
-                candidate = _fit(candidate_lightness, chroma, hue)
-                candidate_ratio = measure(candidate["rgb"])
-                if candidate_ratio >= target:
-                    chosen, ratio, best_distance = candidate, candidate_ratio, distance
+                while abs(passing - failing) > 1:
+                    mid = (passing + failing) // 2
+                    probe = _fit(mid / 4096, chroma, hue)
+                    measured = measure(probe["rgb"])
+                    if measured >= target:
+                        passing, candidate, score = mid, probe, measured
+                    else:
+                        failing = mid
+                distance = abs(candidate["lightness"] - lightness)
+                if distance < best_distance:
+                    chosen, ratio, best_distance = candidate, score, distance
             if best_distance == math.inf:
                 raise RuntimeError("Contrast search invariant failed")
     return {
@@ -309,13 +335,27 @@ def _options(options):
     Returns an independent, fully resolved settings dict. Backgrounds are
     parsed to RGB byte lists. The caller's mapping is not modified.
     """
-    source = _record(options, ("namespace", "backgrounds", "contrastTarget", "profiles"), "options")
+    source = _record(
+        options,
+        ("namespace", "seed", "contrastTargets", "backgrounds", "contrastTarget", "profiles"),
+        "options",
+    )
     namespace = _text(source.get("namespace", ""), "namespace", "INVALID_OPTIONS")
+    seed = source.get("seed", 0)
+    if not _number(seed) or not 0 <= seed <= 0xFFFFFFFF or int(seed) != seed:
+        raise TextColorError("INVALID_OPTIONS", "seed must be uint32")
     target = source.get("contrastTarget", 4.5)
     if not _number(target) or not 1 <= target <= 21:
         raise TextColorError(
             "INVALID_OPTIONS", "contrastTarget must be a finite number from 1 through 21"
         )
+    roles = ("fill", "fillHover", "fillActive", "border", "text", "textOnSubtle", "strong")
+    overrides = _record(source.get("contrastTargets", {}), roles, "contrastTargets")
+    targets = {
+        role: overrides.get(role, min(3, target) if role == "border" else target) for role in roles
+    }
+    if any(not _number(v) or not 1 <= v <= 21 for v in targets.values()):
+        raise TextColorError("INVALID_OPTIONS", "invalid contrastTargets")
     background_source = _record(source.get("backgrounds", {}), ("light", "dark"), "backgrounds")
     profile_source = _record(source.get("profiles", {}), ("light", "dark"), "profiles")
     backgrounds, profiles = {}, {}
@@ -329,25 +369,33 @@ def _options(options):
         ):
             raise TextColorError("INVALID_OPTIONS", f"backgrounds.{theme} must be opaque #RRGGBB")
         backgrounds[theme] = [int(background[index : index + 2], 16) for index in (1, 3, 5)]
-        theme_source = _record(
-            profile_source.get(theme, {}), ("fill", "accent"), f"profiles.{theme}"
-        )
+        theme_source = _record(profile_source.get(theme, {}), ("fill", "text"), f"profiles.{theme}")
         profiles[theme] = {}
-        for role in ("fill", "accent"):
+        for role in ("fill", "text"):
             path = f"profiles.{theme}.{role}"
-            profile = _record(theme_source.get(role, {}), ("lightness", "chroma"), path)
+            profile = _record(
+                theme_source.get(role, {}), ("lightness", "chromaScale", "chromaCap"), path
+            )
             if theme == "light":
-                default_lightness = [0.72, 0.82] if role == "fill" else [0.45, 0.55]
+                default_lightness = [0.72, 0.82] if role == "fill" else [0.43, 0.53]
             else:
                 default_lightness = [0.4, 0.5] if role == "fill" else [0.72, 0.82]
+            cap = profile.get("chromaCap", 0.16 if role == "fill" else 0.19)
+            if not _number(cap) or not 0 <= cap <= 0.4:
+                raise TextColorError("INVALID_OPTIONS", "invalid chromaCap")
             profiles[theme][role] = {
                 "lightness": _range(
                     profile.get("lightness", default_lightness), 1, f"{path}.lightness"
                 ),
-                "chroma": _range(profile.get("chroma", [0.1, 0.16]), 0.4, f"{path}.chroma"),
+                "chromaScale": _range(
+                    profile.get("chromaScale", [0.6, 0.8]), 1, f"{path}.chromaScale"
+                ),
+                "chromaCap": cap,
             }
     return {
         "namespace": namespace,
+        "seed": int(seed),
+        "targets": targets,
         "backgrounds": backgrounds,
         "contrastTarget": float(target),
         "profiles": profiles,
@@ -372,6 +420,7 @@ def resolve_text_colors(text, options=_OMITTED):
     payload = (
         VERSION.encode("ascii")
         + b"\x00"
+        + settings["seed"].to_bytes(4, "big")
         + len(namespace_bytes).to_bytes(4, "big")
         + namespace_bytes
         + text.encode("utf-8")
@@ -381,36 +430,68 @@ def resolve_text_colors(text, options=_OMITTED):
     fractions = [
         int.from_bytes(digest[index : index + 4], "big") / 4294967296 for index in (0, 4, 8)
     ]
-    hue = fractions[0] * 360
-    result = {"version": VERSION, "hue": hue}
+    position = fractions[0] * 12
+    index = int(position)
+    hue = (ANCHORS[index] + (ANCHORS[index + 1] - ANCHORS[index]) * (position - index)) % 360
+    result = {"version": VERSION, "hue": hue, "hueFraction": fractions[0]}
     for theme in ("light", "dark"):
-        colors = {}
-        for role in ("fill", "accent"):
+        background = settings["backgrounds"][theme]
+        base = _formats(background)
+        lb = math.floor(base["oklch"]["l"] * 4096 + 0.5) / 4096
+        direction = -1 if theme == "light" else 1
+
+        def sample(role, theme=theme):
             profile = settings["profiles"][theme][role]
-            lightness = (
-                profile["lightness"][0]
-                + (profile["lightness"][1] - profile["lightness"][0]) * fractions[1]
+            low, high = profile["lightness"]
+            bias = BIASES[(0 if theme == "light" else 2) + (0 if role == "fill" else 1)]
+            segment = int(hue / 30)
+            correction = bias[segment] + (bias[(segment + 1) % 12] - bias[segment]) * (
+                hue / 30 - segment
             )
-            chroma = (
-                profile["chroma"][0] + (profile["chroma"][1] - profile["chroma"][0]) * fractions[2]
+            lightness = max(0, min(1, (low + (high - low) * fractions[1]) + correction))
+            low, high = profile["chromaScale"]
+            return lightness, low + (high - low) * fractions[2], profile["chromaCap"]
+
+        def tone(lightness, profile, backdrop, target, second=None, second_target=None):
+            lightness = max(0, min(1, lightness))
+            chroma = _cusp(lightness, hue) * profile[1]
+            value = _choose(
+                lightness, min(chroma, profile[2]), hue, backdrop, target, second, second_target
             )
-            # A fill is measured against its own black/white foreground; an accent against the theme background.
-            colors[role] = _choose(
-                lightness,
-                chroma,
-                hue,
-                settings["backgrounds"][theme] if role == "accent" else None,
-                settings["contrastTarget"],
-            )
+            value["metadata"]["chromaCapped"] = chroma > profile[2]
+            return value
+
+        fp, tp = sample("fill"), sample("text")
+        target = settings["contrastTarget"]
+        targets = settings["targets"]
+        subtle = tone(lb + direction * 0.04, fp, None, 1)
+        muted = tone(lb + direction * 0.10, fp, None, 1)
+        fill = tone(fp[0], fp, None, targets["fill"])
+        on_fill = _foreground(fill["rgb"])
+        colors = {
+            "subtle": subtle,
+            "muted": muted,
+            "fill": fill,
+            "fillHover": tone(fp[0] + direction * 0.025, fp, on_fill, targets["fillHover"]),
+            "fillActive": tone(fp[0] + direction * 0.05, fp, on_fill, targets["fillActive"]),
+            "border": tone(lb + direction * 0.39, fp, background, targets["border"]),
+            "text": tone(
+                tp[0], tp, background, targets["text"], subtle["rgb"], targets["textOnSubtle"]
+            ),
+            "strong": tone(tp[0] + direction * 0.10, tp, background, targets["strong"]),
+        }
+        meta = {k: v["metadata"] for k, v in colors.items() if k not in ("subtle", "muted")}
+        for name, backdrop in (("text", background), ("textOnSubtle", subtle["rgb"])):
+            ratio = _contrast(colors["text"]["rgb"], backdrop)
+            meta[name] = {
+                **colors["text"]["metadata"],
+                "ratio": ratio,
+                "meetsTarget": ratio >= targets[name],
+            }
         result[theme] = {
-            "background": _formats(settings["backgrounds"][theme]),
-            "fill": _formats(colors["fill"]["rgb"]),
-            "onFill": _formats(_foreground(colors["fill"]["rgb"])),
-            "accent": _formats(colors["accent"]["rgb"]),
-            "contrast": {
-                "target": settings["contrastTarget"],
-                "fill": colors["fill"]["metadata"],
-                "accent": colors["accent"]["metadata"],
-            },
+            **{k: _formats(v["rgb"]) for k, v in colors.items()},
+            "background": base,
+            "onFill": _formats(on_fill),
+            "contrast": {"target": target, **meta},
         }
     return result

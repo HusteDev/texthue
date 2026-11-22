@@ -1,6 +1,6 @@
 # TextHue for JavaScript and TypeScript
 
-`texthue` turns exact text into repeatable light/dark color sets. One npm package supplies compiled ESM JavaScript and TypeScript declarations, with no runtime dependencies. It works in Node.js 22+ and modern browsers with Web Crypto and TextEncoder support. SHA-256 uses `crypto.subtle`, so the API is asynchronous and browsers require a secure context such as HTTPS or localhost.
+`texthue` turns exact text into repeatable light/dark color sets. One npm package supplies compiled ESM JavaScript and TypeScript declarations, with no runtime dependencies. It supports Node.js 20+ and browsers with TextEncoder. Resolution and input validation are synchronous.
 
 ```bash
 npm install texthue
@@ -11,18 +11,18 @@ npm install texthue
 ```typescript
 import { resolveTextColors } from 'texthue';
 
-const colors = await resolveTextColors('research');
+const colors = resolveTextColors('research');
 const theme = colors.light; // Or colors.dark; your app chooses.
 const { hex, rgb, hsl, oklch } = theme.fill;
 
-console.log(hex);                                      // #bf97fc
-console.log(`rgb(${rgb.r} ${rgb.g} ${rgb.b})`);          // rgb(191 151 252)
-console.log(`hsl(${hsl.h} ${hsl.s}% ${hsl.l}%)`);         // hsl(263.762376 94.392523% 79.019608%)
-console.log(`oklch(${oklch.l} ${oklch.c} ${oklch.h})`);   // oklch(0.752216 0.146392 301.214339)
+console.log(hex);                                      // #59b8d8
+console.log(`rgb(${rgb.r} ${rgb.g} ${rgb.b})`);          // rgb(89 184 216)
+console.log(`hsl(${hsl.h} ${hsl.s}% ${hsl.l}%)`);         // hsl(195.11811 61.95122% 59.803922%)
+console.log(`oklch(${oklch.l} ${oklch.c} ${oklch.h})`);   // oklch(0.737459 0.100435 222.843011)
 console.log(theme.onFill.hex); // Text color for a surface using theme.fill.
-console.log(theme.accent.hex); // Text/marks on theme.background.
+console.log(theme.text.hex); // Text/marks on theme.background.
 console.log(theme.background.hex);
-console.log(theme.contrast.fill.ratio, theme.contrast.accent.meetsTarget);
+console.log(theme.contrast.fill.ratio, theme.contrast.text.meetsTarget);
 ```
 
 All four theme colors have these formats. RGB uses integer channels 0–255; HSL uses degrees and percentages; OKLCH uses fractional lightness, numeric chroma, and degrees. HSL/OKLCH describe the final RGB bytes and are rounded to six decimal places. CSS strings above use the right units; multiplying OKLCH lightness by 100 requires adding `%`.
@@ -30,7 +30,7 @@ All four theme colors have these formats. RGB uses integer channels 0–255; HSL
 ## API and types
 
 ```typescript
-function resolveTextColors(text: string, options?: TextColorOptions): Promise<ColorSet>;
+function resolveTextColors(text: string, options?: TextColorOptions): ColorSet;
 ```
 
 The library exports `VERSION` (`"text-to-color-v1"`), `TextColorError`, and the types `Range`, `ColorProfile`, `ThemeProfiles`, `TextColorOptions`, `RGB`, `HSL`, `OKLCH`, `Color`, `ContrastResult`, `ThemeColors`, `ColorSet`, and `TextColorErrorCode`.
@@ -40,9 +40,9 @@ import { resolveTextColors, type TextColorOptions, type ColorSet } from 'texthue
 
 const options: TextColorOptions = {
   namespace: 'projects',
-  profiles: { light: { fill: { chroma: [0.08, 0.12] } } },
+  profiles: { light: { fill: { chromaScale: [0.08, 0.12] } } },
 };
-const result: ColorSet = await resolveTextColors('project-id:42', options);
+const result: ColorSet = resolveTextColors('project-id:42', options);
 console.log(result.version, result.hue, result.light.fill.hex);
 ```
 
@@ -51,18 +51,18 @@ console.log(result.version, result.hue, result.light.fill.hex);
 ## Every option
 
 ```typescript
-const colors = await resolveTextColors('project:atlas', {
+const colors = resolveTextColors('project:atlas', {
   namespace: 'workspace:demo',
   backgrounds: { light: '#f5f0e8', dark: '#20242b' },
   contrastTarget: 7,
   profiles: {
     light: {
-      fill:   { lightness: [0.74, 0.84], chroma: [0.08, 0.14] },
-      accent: { lightness: [0.40, 0.52], chroma: [0.10, 0.16] },
+      fill:   { lightness: [0.74, 0.84], chromaScale: [0.08, 0.14] },
+      text: { lightness: [0.40, 0.52], chromaScale: [0.60, 0.80] },
     },
     dark: {
-      fill:   { lightness: [0.38, 0.48], chroma: [0.08, 0.14] },
-      accent: { lightness: [0.74, 0.86], chroma: [0.10, 0.16] },
+      fill:   { lightness: [0.38, 0.48], chromaScale: [0.08, 0.14] },
+      text: { lightness: [0.74, 0.86], chromaScale: [0.60, 0.80] },
     },
   },
 });
@@ -76,27 +76,27 @@ console.log(colors.light.contrast, colors.dark.contrast);
 | `backgrounds.dark` | `'#121212'` | Six-digit hex `#RRGGBB`, no alpha |
 | `contrastTarget` | `4.5` | Finite number, 1–21 inclusive |
 | `profiles.light.fill.lightness` | `[0.72, 0.82]` | Ordered pair in 0–1 |
-| `profiles.light.accent.lightness` | `[0.45, 0.55]` | Ordered pair in 0–1 |
+| `profiles.light.text.lightness` | `[0.43, 0.53]` | Ordered pair in 0–1 |
 | `profiles.dark.fill.lightness` | `[0.40, 0.50]` | Ordered pair in 0–1 |
-| `profiles.dark.accent.lightness` | `[0.72, 0.82]` | Ordered pair in 0–1 |
-| Each role's `chroma` | `[0.10, 0.16]` | Ordered pair in 0–0.4 |
+| `profiles.dark.text.lightness` | `[0.72, 0.82]` | Ordered pair in 0–1 |
+| Each role's `chroma` | `[0.60, 0.80]` | Ordered pair in 0–0.4 |
 
 Omitted nested fields retain their defaults; supplied ranges replace both endpoints. Equal endpoints request a fixed value, including zero. Lightness can move outside its requested range to satisfy contrast, and chroma can decrease to fit sRGB. There are no other v1 tuning parameters.
 
 ```typescript
-const gray = await resolveTextColors('plain', {
-  profiles: { light: { fill: { lightness: [0.75, 0.75], chroma: [0, 0] } } },
+const gray = resolveTextColors('plain', {
+  profiles: { light: { fill: { lightness: [0.75, 0.75], chromaScale: [0, 0] } } },
 });
 console.log(gray.light.fill.oklch.c); // 0
 
-const impossible = await resolveTextColors('project:atlas', {
+const impossible = resolveTextColors('project:atlas', {
   backgrounds: { light: '#777777' }, contrastTarget: 7,
 });
-console.log(impossible.light.contrast.accent.meetsTarget); // false
-console.log(impossible.light.contrast.accent.fallback);   // unattainable-contrast
+console.log(impossible.light.contrast.text.meetsTarget); // false
+console.log(impossible.light.contrast.text.fallback);   // unattainable-contrast
 ```
 
-`contrast.fill` describes fill versus its black/white `onFill`. `contrast.accent` describes accent versus theme background. Both report `ratio`, `meetsTarget`, `lightnessAdjusted`, `chromaReduced`, and `fallback` (`null` or `"unattainable-contrast"`). A valid but impossible target returns an explicit failure result, not an exception. These pair measurements do not guarantee accessibility of an entire interface.
+`contrast.fill` describes fill versus its black/white `onFill`. `contrast.text` describes text versus theme background. Both report `ratio`, `meetsTarget`, `lightnessAdjusted`, `chromaReduced`, and `fallback` (`null` or `"unattainable-contrast"`). A valid but impossible target returns an explicit failure result, not an exception. These pair measurements do not guarantee accessibility of an entire interface.
 
 ## Identity, normalization, and errors
 
@@ -104,13 +104,13 @@ console.log(impossible.light.contrast.accent.fallback);   // unattainable-contra
 import { resolveTextColors, TextColorError } from 'texthue';
 
 // A stable ID survives changes to a display name.
-const stable = await resolveTextColors('project-id:42', { namespace: 'projects' });
+const stable = resolveTextColors('project-id:42', { namespace: 'projects' });
 // If your product requires NFC normalization, apply it at every entry point.
-const normalized = await resolveTextColors('e\u0301'.normalize('NFC'));
+const normalized = resolveTextColors('e\u0301'.normalize('NFC'));
 console.log(stable.light.fill.hex, normalized.light.fill.hex);
 
 try {
-  await resolveTextColors('research', { contrastTarget: 22 });
+  resolveTextColors('research', { contrastTarget: 22 });
 } catch (error) {
   if (error instanceof TextColorError) console.log(error.code); // INVALID_OPTIONS
   else throw error;
@@ -126,17 +126,17 @@ CommonJS applications can use dynamic import:
 ```javascript
 async function main() {
   const { resolveTextColors } = await import('texthue');
-  const colors = await resolveTextColors('research');
+  const colors = resolveTextColors('research');
   console.log(colors.light.fill.hex);
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
 ```
 
-For a browser application, import `texthue` through your bundler. For the included standalone demo, build from the repository root, then run `python -m http.server 8000 --directory packages/npm`. Open `http://localhost:8000/examples/browser.html`. The demo imports the compiled local ESM files and shows theme selection, namespace, a fill/foreground pair, accent text, and all result fields. It has no CDN dependency. Do not open it as a `file:` URL because browser module and Web Crypto policies differ there.
+For a browser application, import `texthue` through your bundler. For the included standalone demo, build from the repository root, then run `python -m http.server 8000 --directory packages/npm`. Open `http://localhost:8000/examples/browser.html`. The demo imports the compiled local ESM files and shows theme selection, namespace, a fill/foreground pair, text text, and all result fields. It has no CDN dependency. Do not open it as a `file:` URL because browser module policies differ there.
 
 ## Algorithm and compatibility
 
-TextHue validates exact Unicode, hashes a versioned, length-prefixed UTF-8 namespace/text payload with SHA-256, and maps three 32-bit digest fractions into hue, lightness, and chroma. Four OKLCH profiles produce related light/dark fill and accent colors. Out-of-gamut colors lose chroma using a fixed 24-step search. Contrast is checked after rounding to sRGB bytes; a deterministic 1,001-point lightness search repairs failing pairs when possible. Final Hex, HSL, and OKLCH all derive from those RGB bytes.
+The renderer hashes a seeded UTF-8 payload, interpolates between pinned hue anchors and samples gamut-relative chroma. Each theme returns ten roles. Contrast repair bisects a 1/4096 lightness grid and measures the final RGB bytes. See [the specification](SPECIFICATION.md) for tables, defaults and tie rules.
 
 The [complete included specification](SPECIFICATION.md) defines every matrix, rounding rule, tie break, error, and fallback. The algorithm identifier `text-to-color-v1` is part of the hashed payload and is independent of the package version; it changes only when the color mapping changes. Hex/RGB match the Python and Go libraries for identical inputs/options. Derived color components permit a tolerance of one unit in the sixth decimal place across runtimes. The function is not a cryptographic hashing API or a guarantee of unique colors.
 
@@ -144,7 +144,7 @@ The [complete included specification](SPECIFICATION.md) defines every matrix, ro
 
 | File | Coverage |
 | --- | --- |
-| [basic.mjs](examples/basic.mjs) | Both themes, all four formats, fill and accent roles |
+| [basic.mjs](examples/basic.mjs) | Both themes, all four formats, fill and text roles |
 | [tuning.mjs](examples/tuning.mjs) | Every option, fixed ranges, grayscale, impossible contrast |
 | [identity.mjs](examples/identity.mjs) | Stable IDs, namespaces, exact text and normalization |
 | [errors.mjs](examples/errors.mjs) | Invalid values and error codes |

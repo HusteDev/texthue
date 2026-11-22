@@ -12,7 +12,7 @@ for (const themeName of ['light', 'dark']) {
     hsl: `hsl(${hsl.h} ${hsl.s}% ${hsl.l}%)`,
     oklch: `oklch(${oklch.l} ${oklch.c} ${oklch.h})`,
     onFill: theme.onFill.hex,
-    accent: theme.accent.hex,
+    text: theme.text.hex,
     background: theme.background.hex,
   });
 }

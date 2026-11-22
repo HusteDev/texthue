@@ -133,8 +133,8 @@ import { readFileSync } from 'node:fs';
 import { resolveTextColors, TextColorError } from 'texthue';
 const fixture = JSON.parse(readFileSync(new URL('./vectors.json', import.meta.url), 'utf8'));
 for (const item of fixture.vectors) {
-  const actual = await resolveTextColors(item.text, item.options);
-  for (const theme of ['light', 'dark']) for (const role of ['background', 'fill', 'onFill', 'accent']) {
+  const actual = resolveTextColors(item.text, item.options);
+  for (const theme of ['light', 'dark']) for (const role of ['background', 'fill', 'onFill', 'text']) {
     assert.equal(actual[theme][role].hex, item.expected[theme][role].hex);
     assert.deepEqual(actual[theme][role].rgb, item.expected[theme][role].rgb);
   }
@@ -149,8 +149,8 @@ console.log('Packed npm package passed all valid and invalid fixtures.');
         write(
             consumer / "check.ts",
             """import { resolveTextColors, type TextColorOptions, type ColorSet } from 'texthue';
-const options: TextColorOptions = { namespace: 'consumer', profiles: { light: { fill: { chroma: [0, 0] } } } };
-const result: ColorSet = await resolveTextColors('research', options);
+const options: TextColorOptions = { namespace: 'consumer', profiles: { light: { fill: { chromaScale: [0, 0] } } } };
+const result: ColorSet = resolveTextColors('research', options);
 console.log(result.light.fill.hex);
 // @ts-expect-error contrastTarget is numeric, never a string.
 const invalid: TextColorOptions = { contrastTarget: '7' };
@@ -208,7 +208,7 @@ fixture = json.loads(Path('vectors.json').read_text(encoding='utf-8'))
 for item in fixture['vectors']:
     actual = resolve_text_colors(item['text'], item['options'])
     for theme in ('light', 'dark'):
-        for role in ('background', 'fill', 'onFill', 'accent'):
+        for role in ('background', 'fill', 'onFill', 'text'):
             assert actual[theme][role]['hex'] == item['expected'][theme][role]['hex']
             assert actual[theme][role]['rgb'] == item['expected'][theme][role]['rgb']
 for item in fixture['invalid']:
@@ -254,7 +254,7 @@ import (
 func main() {{
     colors, err := texthue.Resolve("research", nil)
     if err != nil {{ panic(err) }}
-    if colors.Light.Fill.Hex != "#bf97fc" {{ panic("unexpected color") }}
+    if colors.Light.Fill.Hex != "#59b8d8" {{ panic("unexpected color") }}
     fmt.Println(colors.Light.Fill.Hex)
 }}
 """,

@@ -19,7 +19,7 @@
 <p id="status" role="status"></p>
 <section id="surface" aria-label="Color preview">
   <span id="fill">Fill with readable foreground</span>
-  <p id="accent">Accent text on the declared background</p>
+  <p id="text">Text text on the declared background</p>
 </section>
 <pre id="output"></pre>
 <script type="module">
@@ -40,7 +40,7 @@
       document.querySelector('#surface').style.backgroundColor = palette.background.hex;
       document.querySelector('#fill').style.backgroundColor = palette.fill.hex;
       document.querySelector('#fill').style.color = palette.onFill.hex;
-      document.querySelector('#accent').style.color = palette.accent.hex;
+      document.querySelector('#text').style.color = palette.text.hex;
       output.textContent = JSON.stringify(palette, null, 2);
       status.textContent = `Generated with ${colors.version}`;
     } catch (error) {

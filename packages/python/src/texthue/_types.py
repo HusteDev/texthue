@@ -19,7 +19,8 @@ class ColorProfile(TypedDict, total=False):
     #: Both endpoints in ``0..1``.
     lightness: Range
     #: Both endpoints in ``0..0.4``. ``[0, 0]`` requests grayscale.
-    chroma: Range
+    chromaScale: Range
+    chromaCap: float
 
 
 class ThemeProfiles(TypedDict, total=False):
@@ -28,7 +29,7 @@ class ThemeProfiles(TypedDict, total=False):
     #: Badge or surface background color.
     fill: ColorProfile
     #: Text or mark color used directly on the theme background.
-    accent: ColorProfile
+    text: ColorProfile
 
 
 class Profiles(TypedDict, total=False):
@@ -55,10 +56,12 @@ class TextColorOptions(TypedDict, total=False):
     """
 
     #: Domain separator mixed into the hash. Default ``""``. Exact Unicode text; not a secret.
+    seed: int
     namespace: str
-    #: Theme backgrounds used for accent contrast.
+    #: Theme backgrounds used for text contrast.
     backgrounds: Backgrounds
     #: WCAG contrast ratio required for both pairs in both themes; ``1..21`` inclusive. Default ``4.5``.
+    contrastTargets: dict[str, float]
     contrastTarget: float
     #: Per-theme, per-role lightness and chroma preferences.
     profiles: Profiles
@@ -112,7 +115,8 @@ class ContrastResult(TypedDict):
     lightnessAdjusted: bool
     #: Whether chroma was reduced below the requested value to fit the sRGB gamut.
     chromaReduced: bool
-    #: ``"unattainable-contrast"`` when no sRGB accent can reach the target; otherwise ``None``.
+    chromaCapped: bool
+    #: ``"unattainable-contrast"`` when no sRGB text can reach the target; otherwise ``None``.
     fallback: Literal["unattainable-contrast"] | None
 
 
@@ -122,8 +126,13 @@ class ThemeContrast(TypedDict):
     target: float
     #: ``fill`` measured against ``onFill``.
     fill: ContrastResult
-    #: ``accent`` measured against ``background``.
-    accent: ContrastResult
+    #: ``text`` measured against ``background``.
+    fillHover: ContrastResult
+    fillActive: ContrastResult
+    border: ContrastResult
+    strong: ContrastResult
+    textOnSubtle: ContrastResult
+    text: ContrastResult
 
 
 class ThemeColors(TypedDict):
@@ -136,7 +145,13 @@ class ThemeColors(TypedDict):
     #: Black or white, whichever contrasts more with ``fill``.
     onFill: Color
     #: Text or mark color for use on ``background``.
-    accent: Color
+    subtle: Color
+    muted: Color
+    fillHover: Color
+    fillActive: Color
+    border: Color
+    strong: Color
+    text: Color
     contrast: ThemeContrast
 
 
@@ -146,6 +161,7 @@ class ColorSet(TypedDict):
     #: Algorithm identifier that produced this result.
     version: Literal["text-to-color-v1"]
     #: Hash-derived identity hue in degrees, unrounded. Shared by all four roles before gamut fitting.
+    hueFraction: float
     hue: float
     light: ThemeColors
     dark: ThemeColors

@@ -10,6 +10,8 @@ const K = new Uint32Array([
   0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 ]);
 
+const wordAt = (words: ArrayLike<number>, index: number) => Number(words[index]);
+
 const rotate = (word: number, bits: number) => (word >>> bits) | (word << (32 - bits));
 
 /** Hash a sequence of byte strings without allocating a concatenated payload. */
@@ -22,20 +24,20 @@ export function sha256(...parts: Uint8Array[]): DataView {
   function compress() {
     for (let i = 0; i < 16; i++) words[i] = input.getUint32(i * 4);
     for (let i = 16; i < 64; i++) {
-      const x = words[i - 15]!, y = words[i - 2]!;
-      words[i] = words[i - 16]! + (rotate(x, 7) ^ rotate(x, 18) ^ (x >>> 3)) +
-        words[i - 7]! + (rotate(y, 17) ^ rotate(y, 19) ^ (y >>> 10));
+      const x = wordAt(words, i - 15), y = wordAt(words, i - 2);
+      words[i] = wordAt(words, i - 16) + (rotate(x, 7) ^ rotate(x, 18) ^ (x >>> 3)) +
+        wordAt(words, i - 7) + (rotate(y, 17) ^ rotate(y, 19) ^ (y >>> 10));
     }
     let [a,b,c,d,e,f,g,h] = state as unknown as [number,number,number,number,number,number,number,number];
     for (let i = 0; i < 64; i++) {
       const t1 = h + (rotate(e, 6) ^ rotate(e, 11) ^ rotate(e, 25)) +
-        ((e & f) ^ (~e & g)) + K[i]! + words[i]!;
+        ((e & f) ^ (~e & g)) + wordAt(K, i) + wordAt(words, i);
       const t2 = (rotate(a, 2) ^ rotate(a, 13) ^ rotate(a, 22)) + ((a & b) ^ (a & c) ^ (b & c));
       h = g; g = f; f = e; e = (d + t1) >>> 0;
       d = c; c = b; b = a; a = (t1 + t2) >>> 0;
     }
     const result = [a,b,c,d,e,f,g,h];
-    for (let i = 0; i < 8; i++) state[i] = state[i]! + result[i]!;
+    for (let i = 0; i < 8; i++) state[i] = wordAt(state, i) + wordAt(result, i);
   }
   let used = 0, length = 0;
   for (const part of parts) {
@@ -54,6 +56,6 @@ export function sha256(...parts: Uint8Array[]): DataView {
   input.setBigUint64(56, BigInt(length) * 8n);
   compress();
   const digest = new DataView(new ArrayBuffer(32));
-  state.forEach((word, i) => digest.setUint32(i * 4, word));
+  state.forEach((word, i) => { digest.setUint32(i * 4, word); });
   return digest;
 }

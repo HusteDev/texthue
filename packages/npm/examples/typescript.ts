@@ -5,7 +5,7 @@ const options = {
   namespace: 'labels',
   backgrounds: { light: '#ffffff', dark: '#121212' },
   contrastTarget: 4.5,
-  profiles: { light: { fill: { lightness: [0.72, 0.82], chroma: [0.10, 0.16] } } },
+  profiles: { light: { fill: { lightness: [0.72, 0.82], chromaScale: [0.10, 0.16] } } },
 } satisfies TextColorOptions;
 
 /** Formats a color as a CSS `oklch()` value. */

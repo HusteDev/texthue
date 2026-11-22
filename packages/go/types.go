@@ -9,8 +9,8 @@
 //	if err != nil {
 //		return err
 //	}
-//	fmt.Println(colors.Light.Fill.Hex) // #bf97fc
-//	fmt.Println(colors.Dark.Fill.Hex)  // #5f3692
+//	fmt.Println(colors.Light.Fill.Hex) // #59b8d8
+//	fmt.Println(colors.Dark.Fill.Hex)  // #255464
 package texthue
 
 import "fmt"
@@ -33,15 +33,16 @@ type Profile struct {
 	// Lightness bounds, both in 0..1.
 	Lightness *Range `json:"lightness,omitempty"`
 	// Chroma bounds, both in 0..0.4. {0, 0} requests grayscale.
-	Chroma *Range `json:"chroma,omitempty"`
+	ChromaScale *Range   `json:"chromaScale,omitempty"`
+	ChromaCap   *float64 `json:"chromaCap,omitempty"`
 }
 
 // ThemeProfiles holds the profiles for the two color roles of one theme.
 type ThemeProfiles struct {
 	// Fill is the badge or surface background color.
 	Fill *Profile `json:"fill,omitempty"`
-	// Accent is the text or mark color used directly on the theme background.
-	Accent *Profile `json:"accent,omitempty"`
+	// Text is the text or mark color used directly on the theme background.
+	Text *Profile `json:"text,omitempty"`
 }
 
 // Profiles holds per-theme profiles.
@@ -64,10 +65,12 @@ type Backgrounds struct {
 // modified by this package, but callers must not mutate them concurrently
 // with a call.
 type Options struct {
+	ContrastTargets map[string]float64 `json:"contrastTargets,omitempty"`
+	Seed            uint32             `json:"seed,omitempty"`
 	// Namespace is a domain separator mixed into the hash. It is exact
 	// Unicode text, not a secret, and must be valid UTF-8.
 	Namespace string `json:"namespace,omitempty"`
-	// Backgrounds are used for accent contrast measurement.
+	// Backgrounds are used for text contrast measurement.
 	Backgrounds *Backgrounds `json:"backgrounds,omitempty"`
 	// ContrastTarget is the WCAG ratio required for both pairs in both
 	// themes, 1..21 inclusive. Default 4.5.
@@ -125,8 +128,9 @@ type ContrastResult struct {
 	LightnessAdjusted bool `json:"lightnessAdjusted"`
 	// ChromaReduced reports whether chroma was reduced below the requested
 	// value to fit the sRGB gamut.
+	ChromaCapped  bool `json:"chromaCapped"`
 	ChromaReduced bool `json:"chromaReduced"`
-	// Fallback is "unattainable-contrast" when no sRGB accent can reach the
+	// Fallback is "unattainable-contrast" when no sRGB text can reach the
 	// target against the background; otherwise nil.
 	Fallback *string `json:"fallback"`
 }
@@ -137,8 +141,13 @@ type ThemeContrast struct {
 	Target float64 `json:"target"`
 	// Fill is measured against OnFill.
 	Fill ContrastResult `json:"fill"`
-	// Accent is measured against Background.
-	Accent ContrastResult `json:"accent"`
+	// Text is measured against Background.
+	FillHover    ContrastResult `json:"fillHover"`
+	FillActive   ContrastResult `json:"fillActive"`
+	Border       ContrastResult `json:"border"`
+	Text         ContrastResult `json:"text"`
+	TextOnSubtle ContrastResult `json:"textOnSubtle"`
+	Strong       ContrastResult `json:"strong"`
 }
 
 // ThemeColors holds all colors and contrast measurements for one theme.
@@ -149,14 +158,21 @@ type ThemeColors struct {
 	Fill Color `json:"fill"`
 	// OnFill is black or white, whichever contrasts more with Fill.
 	OnFill Color `json:"onFill"`
-	// Accent is the text or mark color for use on Background.
-	Accent   Color         `json:"accent"`
-	Contrast ThemeContrast `json:"contrast"`
+	// Text is the text or mark color for use on Background.
+	Subtle     Color         `json:"subtle"`
+	Muted      Color         `json:"muted"`
+	FillHover  Color         `json:"fillHover"`
+	FillActive Color         `json:"fillActive"`
+	Border     Color         `json:"border"`
+	Text       Color         `json:"text"`
+	Strong     Color         `json:"strong"`
+	Contrast   ThemeContrast `json:"contrast"`
 }
 
 // ColorSet is the complete result of Resolve. Its JSON encoding uses the same
 // camelCase field names as the other TextHue libraries.
 type ColorSet struct {
+	HueFraction float64 `json:"hueFraction"`
 	// Version is the algorithm identifier that produced this result.
 	Version string `json:"version"`
 	// Hue is the hash-derived identity hue in degrees, unrounded. All four

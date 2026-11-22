@@ -21,7 +21,8 @@ export interface ColorProfile {
   /** Preferred OKLCH lightness range; both endpoints in `0..1`. */
   lightness?: Range;
   /** Preferred OKLCH chroma range; both endpoints in `0..0.4`. `[0, 0]` requests grayscale. */
-  chroma?: Range;
+  chromaCap?: number;
+  chromaScale?: Range;
 }
 
 /** Profiles for the two color roles of one theme. */
@@ -29,7 +30,7 @@ export interface ThemeProfiles {
   /** Badge or surface background color. */
   fill?: ColorProfile;
   /** Text or mark color used directly on the theme background. */
-  accent?: ColorProfile;
+  text?: ColorProfile;
 }
 
 /**
@@ -38,7 +39,9 @@ export interface ThemeProfiles {
  * Every field is optional and omitted fields keep their defaults. Explicit
  * `null` and unknown keys are invalid at every level. Options are never mutated.
  */
+export type ContrastRole = 'fill' | 'fillHover' | 'fillActive' | 'border' | 'text' | 'textOnSubtle' | 'strong';
 export interface TextColorOptions {
+  contrastTargets?: Partial<Record<ContrastRole,number>>;
   /**
    * Domain separator mixed into the hash. Default `''`.
    *
@@ -46,7 +49,8 @@ export interface TextColorOptions {
    * sharing colors. It is exact Unicode text and is not a secret.
    */
   namespace?: string;
-  /** Theme backgrounds used for accent contrast, as opaque `#RRGGBB` strings. Defaults `#ffffff` and `#121212`. */
+  seed?: number;
+  /** Theme backgrounds used for text contrast, as opaque `#RRGGBB` strings. Defaults `#ffffff` and `#121212`. */
   backgrounds?: { light?: string; dark?: string };
   /** WCAG contrast ratio required for both contrast pairs in both themes; `1..21` inclusive. Default `4.5`. */
   contrastTarget?: number;
@@ -86,7 +90,8 @@ export interface ContrastResult {
   lightnessAdjusted: boolean;
   /** Whether chroma was reduced below the requested value to fit the sRGB gamut. */
   chromaReduced: boolean;
-  /** `'unattainable-contrast'` when no sRGB accent can reach the target against the background; otherwise `null`. */
+  chromaCapped: boolean;
+  /** `'unattainable-contrast'` when no sRGB text can reach the target against the background; otherwise `null`. */
   fallback: 'unattainable-contrast' | null;
 }
 
@@ -99,9 +104,15 @@ export interface ThemeColors {
   /** Black or white, whichever contrasts more with `fill`. */
   onFill: Color;
   /** Text or mark color for use on `background`. */
-  accent: Color;
-  /** The configured target plus measurements for the fill/onFill and accent/background pairs. */
-  contrast: { target: number; fill: ContrastResult; accent: ContrastResult };
+  subtle: Color;
+  muted: Color;
+  fillHover: Color;
+  fillActive: Color;
+  border: Color;
+  text: Color;
+  strong: Color;
+  /** The configured target plus measurements for the fill/onFill and text/background pairs. */
+  contrast: { target: number } & Record<'fill'|'fillHover'|'fillActive'|'border'|'text'|'textOnSubtle'|'strong', ContrastResult>;
 }
 
 /** Complete result of `resolveTextColors`. */
@@ -110,6 +121,7 @@ export interface ColorSet {
   version: 'text-to-color-v1';
   /** Hash-derived identity hue in degrees, unrounded. Shared by all four roles before gamut fitting. */
   hue: number;
+  hueFraction: number;
   light: ThemeColors;
   dark: ThemeColors;
 }
@@ -132,12 +144,14 @@ export interface FittedColor { rgb: Triple; chroma: number; lightness: number }
 export interface ChosenColor { rgb: Triple; metadata: ContrastResult }
 
 /** A profile with both ranges present. */
-export interface ResolvedProfile { lightness: Range; chroma: Range }
+export interface ResolvedProfile { lightness: Range; chromaCap: number; chromaScale: Range }
 
 /** Options after validation, with defaults applied and backgrounds parsed to RGB bytes. */
 export interface ResolvedOptions {
+  targets: Record<ContrastRole,number>;
   namespace: string;
+  seed: number;
   backgrounds: Record<'light' | 'dark', Triple>;
   contrastTarget: number;
-  profiles: Record<'light' | 'dark', Record<'fill' | 'accent', ResolvedProfile>>;
+  profiles: Record<'light' | 'dark', Record<'fill' | 'text', ResolvedProfile>>;
 }

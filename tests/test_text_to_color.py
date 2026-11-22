@@ -58,7 +58,11 @@ class ConformanceTests(unittest.TestCase):
                 namespace = item["options"].get("namespace", "").encode("utf-8")
                 text = item["text"].encode("utf-8")
                 payload = (
-                    b"text-to-color-v1\x00" + len(namespace).to_bytes(4, "big") + namespace + text
+                    b"text-to-color-v1\x00"
+                    + item["options"].get("seed", 0).to_bytes(4, "big")
+                    + len(namespace).to_bytes(4, "big")
+                    + namespace
+                    + text
                 )
                 self.assertEqual(namespace.hex(), encoded["namespaceUtf8Hex"])
                 self.assertEqual(text.hex(), encoded["textUtf8Hex"])
@@ -108,7 +112,7 @@ class ConformanceTests(unittest.TestCase):
                         },
                         "contrastTarget": [1, 4.5, 7, 21][i % 4],
                         "profiles": {
-                            "light": {"accent": {"lightness": [a, b], "chroma": [0.3, 0.4]}}
+                            "light": {"text": {"lightness": [a, b], "chromaScale": [0.3, 0.4]}}
                         },
                     },
                 }

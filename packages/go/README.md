@@ -21,14 +21,14 @@ func main() {
     if err != nil { panic(err) }
     theme := colors.Light // Or colors.Dark; the application chooses.
     fill := theme.Fill
-    fmt.Println(fill.Hex) // #bf97fc
+    fmt.Println(fill.Hex) // #59b8d8
     fmt.Printf("rgb(%d %d %d)\n", fill.RGB.R, fill.RGB.G, fill.RGB.B)
     fmt.Printf("hsl(%g %g%% %g%%)\n", fill.HSL.H, fill.HSL.S, fill.HSL.L)
     fmt.Printf("oklch(%g %g %g)\n", fill.OKLCH.L, fill.OKLCH.C, fill.OKLCH.H)
     fmt.Println(theme.OnFill.Hex)      // Text on Fill.
-    fmt.Println(theme.Accent.Hex)      // Text/marks on Background.
+    fmt.Println(theme.Text.Hex)      // Text/marks on Background.
     fmt.Println(theme.Background.Hex)
-    fmt.Println(theme.Contrast.Fill.Ratio, theme.Contrast.Accent.MeetsTarget)
+    fmt.Println(theme.Contrast.Fill.Ratio, theme.Contrast.Text.MeetsTarget)
 }
 ```
 
@@ -54,18 +54,18 @@ options := &texthue.Options{
     Profiles: &texthue.Profiles{
         Light: &texthue.ThemeProfiles{
             Fill: &texthue.Profile{
-                Lightness: &texthue.Range{0.74, 0.84}, Chroma: &texthue.Range{0.08, 0.14},
+                Lightness: &texthue.Range{0.74, 0.84}, ChromaScale: &texthue.Range{0.08, 0.14},
             },
-            Accent: &texthue.Profile{
-                Lightness: &texthue.Range{0.40, 0.52}, Chroma: &texthue.Range{0.10, 0.16},
+            Text: &texthue.Profile{
+                Lightness: &texthue.Range{0.40, 0.52}, ChromaScale: &texthue.Range{0.60, 0.80},
             },
         },
         Dark: &texthue.ThemeProfiles{
             Fill: &texthue.Profile{
-                Lightness: &texthue.Range{0.38, 0.48}, Chroma: &texthue.Range{0.08, 0.14},
+                Lightness: &texthue.Range{0.38, 0.48}, ChromaScale: &texthue.Range{0.08, 0.14},
             },
-            Accent: &texthue.Profile{
-                Lightness: &texthue.Range{0.74, 0.86}, Chroma: &texthue.Range{0.10, 0.16},
+            Text: &texthue.Profile{
+                Lightness: &texthue.Range{0.74, 0.86}, ChromaScale: &texthue.Range{0.60, 0.80},
             },
         },
     },
@@ -82,17 +82,17 @@ fmt.Println(colors.Light.Contrast, colors.Dark.Contrast)
 | `Backgrounds.Dark` | `"#121212"` | Opaque six-digit `#RRGGBB` |
 | `ContrastTarget` | `4.5` | Finite float64 in 1–21 inclusive |
 | `Profiles.Light.Fill.Lightness` | `{0.72, 0.82}` | Ordered range in 0–1 |
-| `Profiles.Light.Accent.Lightness` | `{0.45, 0.55}` | Ordered range in 0–1 |
+| `Profiles.Light.Text.Lightness` | `{0.45, 0.55}` | Ordered range in 0–1 |
 | `Profiles.Dark.Fill.Lightness` | `{0.40, 0.50}` | Ordered range in 0–1 |
-| `Profiles.Dark.Accent.Lightness` | `{0.72, 0.82}` | Ordered range in 0–1 |
-| Each role's `Chroma` | `{0.10, 0.16}` | Ordered range in 0–0.4 |
+| `Profiles.Dark.Text.Lightness` | `{0.72, 0.82}` | Ordered range in 0–1 |
+| Each role's `Chroma` | `{0.60, 0.80}` | Ordered range in 0–0.4 |
 
 Nil nested fields retain defaults. A provided range replaces both endpoints. Equal endpoints fix a requested value; `&texthue.Range{0, 0}` chroma requests grayscale. Contrast can move lightness outside the requested range, and gamut fitting can reduce chroma. There are no other v1 tuning parameters.
 
 ```go
 gray, err := texthue.Resolve("plain", &texthue.Options{
     Profiles: &texthue.Profiles{Light: &texthue.ThemeProfiles{Fill: &texthue.Profile{
-        Lightness: &texthue.Range{0.75, 0.75}, Chroma: &texthue.Range{0, 0},
+        Lightness: &texthue.Range{0.75, 0.75}, ChromaScale: &texthue.Range{0, 0},
     }}},
 })
 if err != nil { panic(err) }
@@ -103,12 +103,12 @@ impossible, err := texthue.Resolve("project:atlas", &texthue.Options{
     ContrastTarget: texthue.Ptr(7.0),
 })
 if err != nil { panic(err) }
-status := impossible.Light.Contrast.Accent
+status := impossible.Light.Contrast.Text
 fmt.Println(status.MeetsTarget) // false
 if status.Fallback != nil { fmt.Println(*status.Fallback) } // unattainable-contrast
 ```
 
-`Contrast.Fill` compares fill to its chosen black/white `OnFill`. `Contrast.Accent` compares accent to the theme background. Each has `Ratio`, `MeetsTarget`, `LightnessAdjusted`, `ChromaReduced`, and `Fallback` (`nil` or a reason string). A valid but impossible accent target returns the better black/white endpoint and reports failure, not an input error. Pair contrast alone does not establish accessibility of an entire interface.
+`Contrast.Fill` compares fill to its chosen black/white `OnFill`. `Contrast.Text` compares text to the theme background. Each has `Ratio`, `MeetsTarget`, `LightnessAdjusted`, `ChromaReduced`, and `Fallback` (`nil` or a reason string). A valid but impossible text target returns the better black/white endpoint and reports failure, not an input error. Pair contrast alone does not establish accessibility of an entire interface.
 
 ## JSON, errors, and exact identity
 
@@ -136,7 +136,7 @@ if errors.As(err, &invalid) { // Import errors.
 
 ## Algorithm and versioning
 
-`Version` is `"text-to-color-v1"`, independent of the module release version. The algorithm SHA-256-hashes a versioned UTF-8 payload with a length-prefixed namespace. Three 32-bit digest fractions supply shared hue, lightness variation, and chroma variation. Four OKLCH profiles yield related light/dark fill and accent roles. Conversion to sRGB uses pinned matrices; out-of-gamut colors reduce chroma through 24 binary-search iterations. Contrast is measured on rounded RGB bytes, then repaired if possible by searching 1,001 lightness values with a deterministic nearest-value rule. Every output format derives from the final RGB bytes.
+The renderer hashes a seeded UTF-8 payload, interpolates between pinned hue anchors and samples gamut-relative chroma. Each theme returns ten roles. Contrast repair bisects a 1/4096 lightness grid and measures the final RGB bytes. See [the specification](SPECIFICATION.md) for tables, defaults and tie rules.
 
 The [complete included specification](SPECIFICATION.md) defines the matrices, byte framing, precision, validation, tie breaks, and fallback rules. Go uses explicit float64 conversions to preserve specified arithmetic ordering where fused operations could change boundary rounding. Hex/RGB match the other implementations exactly; derived components allow one unit in the sixth decimal place. The algorithm identifier is part of the hashed payload and changes only when the color mapping changes. This library is not a cryptographic hash API, an anonymizer, or a guarantee of unique colors.
 
