@@ -25,6 +25,7 @@ public struct RenderOptions: Decodable {
     public var normalize: Normalization?
     public var namespace: String?
     public var seed: UInt32?
+    public var contrastModel: ContrastModel?
     public var contrastTarget: Double?
     public var contrastTargets: [String: Double]?
     public var backgrounds: [String: String]?
@@ -66,8 +67,9 @@ public struct Renderer {
     public init(options: RenderOptions) throws {
         let themes = ["light", "dark"]
         let roles = ["fill", "fillHover", "fillActive", "border", "text", "textOnSubtle", "strong"]
-        guard (1...21).contains(options.contrastTarget ?? 4.5),
-              (options.contrastTargets ?? [:]).allSatisfy({ roles.contains($0.key) && (1...21).contains($0.value) }),
+        let range: ClosedRange<Double> = options.contrastModel == .apca ? 0...106 : 1...21
+        guard range.contains(options.contrastTarget ?? range.lowerBound),
+              (options.contrastTargets ?? [:]).allSatisfy({ roles.contains($0.key) && range.contains($0.value) }),
               (options.backgrounds ?? [:]).keys.allSatisfy(themes.contains) else { throw RenderError.invalidOptions }
         for (theme, profiles) in options.profiles ?? [:] {
             guard themes.contains(theme) else { throw RenderError.invalidOptions }
@@ -129,9 +131,11 @@ public struct Renderer {
         let dark = name == "dark", direction: Double = dark ? 1 : -1
         let base = dark ? darkBackground : lightBackground
         let bg = base.bytes, lb = base.lightness
-        let target = options.contrastTarget ?? 4.5
+        let model = options.contrastModel ?? .wcag2
+        let target = options.contrastTarget ?? (model == .apca ? 60 : 4.5)
+        let unconstrained: Double = model == .apca ? 0 : 1
         func required(_ role: String) -> Double {
-            options.contrastTargets?[role] ?? (role == "border" ? min(target, 3) : target)
+            options.contrastTargets?[role] ?? (role == "border" && model == .wcag2 ? min(target, 3) : target)
         }
         func sampled(_ role: String) -> (l: Double, scale: Double, cap: Double) {
             let profile = options.profiles?[name]?[role]
@@ -146,30 +150,35 @@ public struct Renderer {
                     scale[0] + (scale[1] - scale[0]) * uC, cap)
         }
         let fillP = sampled("fill"), textP = sampled("text")
-        func ratio(_ a: [UInt8], _ b: [UInt8]) -> Double {
-            ContrastModel.wcag2.measure(text: a, background: b, gamut: .sRGB)
+        func score(_ a: [UInt8], _ b: [UInt8]) -> Double {
+            abs(model.measure(text: a, background: b, gamut: .sRGB))
         }
         func foreground(_ bytes: [UInt8]) -> [UInt8] {
             let black: [UInt8] = [0,0,0], white: [UInt8] = [255,255,255]
-            return ratio(black, bytes) >= ratio(white, bytes) ? black : white
+            return score(black, bytes) >= score(white, bytes) ? black : white
         }
         func tone(_ value: Double, _ profile: (l: Double, scale: Double, cap: Double),
-                  _ target: Double, _ back: [UInt8]? = nil, _ second: [UInt8]? = nil) -> [UInt8] {
+                  _ target: Double, _ back: [UInt8]? = nil, _ second: [UInt8]? = nil, surface: Bool = false) -> [UInt8] {
             let l = min(1, max(0, value))
             let c = min(profile.cap, Gamut.sRGB.cusp(lightness: l, hue: hue) * profile.scale)
-            return Gamut.sRGB.repair(lightness: l, chroma: c, hue: hue, target: target) { bytes in
-                let primary = ratio(bytes, back ?? foreground(bytes))
-                guard let second else { return primary }
-                return min(primary, ratio(bytes, second) * (target / required("textOnSubtle")))
+            let secondary = second == nil ? 0 : required("textOnSubtle")
+            let threshold = target == 0 ? secondary : target
+            return Gamut.sRGB.repair(lightness: l, chroma: c, hue: hue, target: threshold) { bytes in
+                let primary: Double
+                if let back { primary = surface ? score(back, bytes) : score(bytes, back) }
+                else { primary = score(foreground(bytes), bytes) }
+                guard let second, secondary > 0 else { return primary }
+                let secondScore = score(bytes, second)
+                return target == 0 ? secondScore : min(primary, secondScore * (target / secondary))
             }.color.bytes
         }
-        let subtle = tone(lb + direction * 0.04, fillP, 1)
+        let subtle = tone(lb + direction * 0.04, fillP, unconstrained)
         let fill = tone(fillP.l, fillP, required("fill")), onFill = foreground(fill)
         let roles = [
-            "background": bg, "subtle": subtle, "muted": tone(lb + direction * 0.10, fillP, 1),
+            "background": bg, "subtle": subtle, "muted": tone(lb + direction * 0.10, fillP, unconstrained),
             "fill": fill, "onFill": onFill,
-            "fillHover": tone(fillP.l + direction * 0.025, fillP, required("fillHover"), onFill),
-            "fillActive": tone(fillP.l + direction * 0.05, fillP, required("fillActive"), onFill),
+            "fillHover": tone(fillP.l + direction * 0.025, fillP, required("fillHover"), onFill, surface: true),
+            "fillActive": tone(fillP.l + direction * 0.05, fillP, required("fillActive"), onFill, surface: true),
             "border": tone(lb + direction * 0.39, fillP, required("border"), bg),
             "text": tone(textP.l, textP, required("text"), bg, subtle),
             "strong": tone(textP.l + direction * 0.10, textP, required("strong"), bg)

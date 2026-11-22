@@ -18,7 +18,7 @@ enum Gamut {
     }
 }
 
-enum ContrastModel {
+public enum ContrastModel: String, Decodable {
     case wcag2, apca
 
     func measure(text: [UInt8], background: [UInt8], gamut: Gamut) -> Double {
