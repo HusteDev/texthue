@@ -1,4 +1,6 @@
 using System.Collections.Frozen;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace TextHue;
 
@@ -6,7 +8,7 @@ public sealed record RenderedPalette(double HueFraction, double Hue,
     IReadOnlyDictionary<string, Color> Light, IReadOnlyDictionary<string, Color> Dark)
 {
     public string Version => "text-to-color-v1";
-    public string Source => "hash";
+    public string Source { get; internal init; } = "hash";
 }
 
 public sealed record RoleProfile((double Low, double High)? Lightness = null,
@@ -27,8 +29,22 @@ public sealed record ThemeProfile(RoleProfile? Fill = null, RoleProfile? Text = 
 public enum ForegroundPolicy { Best, FirstPassing }
 public enum Preset { Labels, Controls, Chart, Subdued, Mono }
 
+public readonly record struct BrandColors(Rgb Light, Rgb Dark);
+public sealed record PaletteEntry(string Id, Rgb? Light = null, Rgb? Dark = null);
+
 public sealed class Renderer
 {
+    private sealed class FixedTone(Rgb rgb)
+    {
+        private readonly Color color = new(rgb);
+        public Rgb Bytes => color.Rgb;
+        public bool Neutral => color.Oklch.C == 0;
+        public double Hue => Math.Floor(color.Oklch.H * 1024 + 0.5) / 1024 % 360;
+        public double Lightness => Math.Floor(color.Oklch.L * 4096 + 0.5) / 4096;
+    }
+
+    private readonly FrozenDictionary<string, (FixedTone Light, FixedTone Dark)> overrides;
+    private readonly List<(byte[] Id, FixedTone Light, FixedTone Dark)> palette = [];
     private readonly string scope;
     private readonly HueDomain hueDomain;
     private readonly uint seed;
@@ -47,7 +63,8 @@ public sealed class Renderer
                     IReadOnlyDictionary<string, double>? contrastTargets = null,
                     ContrastModel contrastModel = ContrastModel.Wcag2, Preset preset = Preset.Labels,
                     IEnumerable<Rgb>? foregrounds = null, ForegroundPolicy foregroundPolicy = ForegroundPolicy.Best,
-                    HueArc? hueRange = null, IReadOnlyList<HueArc>? excludeHues = null)
+                    HueArc? hueRange = null, IReadOnlyList<HueArc>? excludeHues = null,
+                    IReadOnlyDictionary<string, BrandColors>? overrides = null, IEnumerable<PaletteEntry>? palette = null)
     {
         if (!Enum.IsDefined(contrastModel)) throw new ArgumentOutOfRangeException(nameof(contrastModel));
         if (!Enum.IsDefined(foregroundPolicy)) throw new ArgumentOutOfRangeException(nameof(foregroundPolicy));
@@ -78,6 +95,26 @@ public sealed class Renderer
             profile.Fill?.Validate();
             profile.Text?.Validate();
         }
+        var utf8 = new UTF8Encoding(false, true);
+        this.overrides = (overrides ?? new Dictionary<string, BrandColors>()).ToFrozenDictionary(
+            pair => { utf8.GetByteCount(pair.Key); return pair.Key; },
+            pair => (new FixedTone(pair.Value.Light), new FixedTone(pair.Value.Dark)), StringComparer.Ordinal);
+        if (palette is not null)
+        {
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var entry in palette)
+            {
+                if (!ids.Add(entry.Id)) throw new ArgumentException("Duplicate palette ID.", nameof(palette));
+                var light = entry.Light ?? entry.Dark ?? throw new ArgumentException("Missing palette color.", nameof(palette));
+                this.palette.Add((utf8.GetBytes(entry.Id), new(light), new(entry.Dark ?? light)));
+            }
+            if (this.palette.Count == 0) throw new ArgumentException("Empty palette.", nameof(palette));
+            double threshold = targets.GetValueOrDefault("fill", this.contrastTarget);
+            bool Passes(FixedTone tone) => candidates.Any(candidate =>
+                Math.Abs(Contrast.Measure(candidate, tone.Bytes, contrastModel)) >= threshold);
+            var passing = this.palette.FindAll(entry => Passes(entry.Light) && Passes(entry.Dark));
+            if (passing.Count > 0) this.palette = passing;
+        }
         this.scope = scope;
         this.seed = seed;
         this.lightBackground = new(lightBackground ?? new Rgb(255, 255, 255));
@@ -103,7 +140,22 @@ public sealed class Renderer
 
     public RenderedPalette Resolve(string text)
     {
-        var (uH, uL, uC) = Identity.Fractions(Identity.Digest(text, scope, seed));
+        if (overrides.TryGetValue(text, out var pinned)) return Fixed(pinned.Light, pinned.Dark, "override");
+        var digest = Identity.Digest(text, scope, seed);
+        if (palette.Count > 0)
+        {
+            byte[] best = [];
+            var winner = palette[0];
+            foreach (var entry in palette)
+            {
+                var rank = SHA256.HashData((byte[])[.. digest, .. entry.Id]);
+                if (rank.AsSpan().SequenceCompareTo(best) <= 0) continue;
+                best = rank;
+                winner = entry;
+            }
+            return Fixed(winner.Light, winner.Dark, "palette");
+        }
+        var (uH, uL, uC) = Identity.Fractions(digest);
         double position = uH * 12;
         int i = (int)position;
         var anchors = Tables.Anchors;
@@ -111,7 +163,17 @@ public sealed class Renderer
         return new(uH, hue, Theme(false, hue, uL, uC), Theme(true, hue, uL, uC));
     }
 
-    private IReadOnlyDictionary<string, Color> Theme(bool dark, double hue, double uL, double uC)
+    private RenderedPalette Fixed(FixedTone light, FixedTone dark, string source)
+    {
+        var anchors = Tables.Anchors;
+        double angle = light.Hue < anchors[0] ? light.Hue + 360 : light.Hue;
+        int i = Array.FindLastIndex(anchors, anchor => anchor <= angle);
+        double fraction = (i + (angle - anchors[i]) / (anchors[i + 1] - anchors[i])) / 12;
+        return new(fraction, light.Hue, Theme(false, light.Hue, 0.5, 0.5, light),
+            Theme(true, dark.Hue, 0.5, 0.5, dark)) { Source = source };
+    }
+
+    private IReadOnlyDictionary<string, Color> Theme(bool dark, double hue, double uL, double uC, FixedTone? fixedTone = null)
     {
         var background = dark ? darkBackground : lightBackground;
         double lb = Math.Floor(background.Oklch.L * 4096 + 0.5) / 4096;
@@ -153,7 +215,7 @@ public sealed class Renderer
             double l = Math.Clamp(value, 0, 1);
             var role = fill ? profile.Fill : profile.Text;
             var (low, high) = role?.ChromaScale ?? chromaScale;
-            double c = Math.Min(role?.ChromaCap ?? (fill ? 0.16 : 0.19), Gamut.SRgb.Cusp(l, hue) * (low + (high - low) * uC));
+            double c = fixedTone?.Neutral == true ? 0 : Math.Min(role?.ChromaCap ?? (fill ? 0.16 : 0.19), Gamut.SRgb.Cusp(l, hue) * (low + (high - low) * uC));
             double secondary = second.HasValue ? Target("textOnSubtle") : 0;
             return Gamut.SRgb.Repair(l, c, hue, target == 0 ? secondary : target, rgb =>
             {
@@ -164,10 +226,10 @@ public sealed class Renderer
             }).Color.Bytes;
         }
 
-        double lf = Sample(true), lt = Sample(false);
+        double lf = fixedTone?.Lightness ?? Sample(true), lt = Sample(false);
         double unconstrained = contrastModel == ContrastModel.Apca ? 0 : 1;
         var subtle = Tone(lb + direction * 0.04, true, unconstrained);
-        var fill = Tone(lf, true, Target("fill"));
+        var fill = fixedTone?.Bytes ?? Tone(lf, true, Target("fill"));
         var onFill = Foreground(fill, Target("fill"));
         return new Dictionary<string, Rgb>
         {

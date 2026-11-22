@@ -279,3 +279,32 @@ foreach (var test in invalidDomains)
     throw new InvalidDataException("Accepted invalid hue domain.");
 }
 Console.WriteLine("Passed five reference hue assignments and six invalid domains.");
+
+PaletteEntry[] entries = [new("red", new(171,18,52)), new("gray", Dark: new(119,119,119)),
+    new("blue", new(16,32,171), new(34,51,205))];
+foreach (var order in new[] { entries, entries.Reverse().ToArray() })
+{
+    var results = new Renderer(palette: order).Batch(["apple","pear","a","b","x","z"]);
+    string[] expected = ["#1020ab","#ab1234","#1020ab","#1020ab","#ab1234","#777777"];
+    if (!results.Select(p => p.Light["fill"].Hex).SequenceEqual(expected) ||
+        results[0].Dark["fill"].Hex != "#2233cd" || results.Any(p => p.Source != "palette"))
+        throw new InvalidDataException("Approved palette rank mismatch.");
+}
+var brand = new Renderer(palette: entries, overrides: new Dictionary<string, BrandColors> {
+    ["team"] = new(new(171,18,52), new(119,119,119)) }).Resolve("team");
+if (brand.Source != "override" || brand.HueFraction != 0.01669445425766595 ||
+    brand.Light["fillHover"].Hex != "#8e313b" || brand.Dark["fillActive"].Hex != "#868686")
+    throw new InvalidDataException("Brand override mismatch.");
+var filtered = new Renderer(contrastTarget: 21, foregrounds: [new(255,255,255)],
+    palette: [new("red",new(0,0,0),new(255,255,255)),new("gray",new(0,0,0))]);
+if (filtered.Resolve("pear").Dark["fill"].Hex != "#000000" ||
+    new Renderer(contrastTarget: 21, foregrounds: [new(255,255,255)], palette: entries)
+    .Resolve("pear").Light["fill"].Hex != "#ab1234")
+    throw new InvalidDataException("Palette contrast filter mismatch.");
+foreach (var invalid in new PaletteEntry[][] { [], [entries[0], entries[0]], [new("missing")] })
+{
+    try { _ = new Renderer(palette: invalid); }
+    catch (ArgumentException) { continue; }
+    throw new InvalidDataException("Invalid palette accepted.");
+}
+Console.WriteLine("Passed approved palette ranks, contrast filtering, fixed overrides and validation.");
