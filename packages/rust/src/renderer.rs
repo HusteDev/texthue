@@ -13,7 +13,33 @@ pub struct RenderedPalette {
     pub dark: Theme,
 }
 
+#[derive(Clone, Copy, Default)]
+pub struct RoleProfile {
+    pub lightness: Option<(f64, f64)>,
+    pub chroma_scale: Option<(f64, f64)>,
+    pub chroma_cap: Option<f64>,
+}
+
+impl RoleProfile {
+    fn valid(self) -> bool {
+        [self.lightness, self.chroma_scale]
+            .into_iter()
+            .flatten()
+            .all(|(a, b)| a >= 0.0 && a <= b && b <= 1.0)
+            && self.chroma_cap.is_none_or(|cap| (0.0..=0.4).contains(&cap))
+    }
+}
+
+#[derive(Clone, Copy, Default)]
+pub struct ThemeProfile {
+    pub fill: RoleProfile,
+    pub text: RoleProfile,
+}
+
 pub struct Renderer {
+    pub light_profile: ThemeProfile,
+    pub dark_profile: ThemeProfile,
+    pub contrast_targets: BTreeMap<String, f64>,
     pub namespace: String,
     pub seed: u32,
     pub normalization: Normalization,
@@ -27,6 +53,9 @@ impl Default for Renderer {
         Self {
             namespace: String::new(),
             seed: 0,
+            contrast_targets: Default::default(),
+            light_profile: Default::default(),
+            dark_profile: Default::default(),
             normalization: Normalization::default(),
             light_background: [255; 3],
             dark_background: [18; 3],
@@ -39,6 +68,20 @@ impl Renderer {
     pub fn resolve(&self, text: &str) -> Result<RenderedPalette, &'static str> {
         if !(1.0..=21.0).contains(&self.contrast_target) {
             return Err("Invalid contrast target");
+        }
+        for (role, value) in &self.contrast_targets {
+            if !matches!(
+                role.as_str(),
+                "fill" | "fillHover" | "fillActive" | "border" | "text" | "textOnSubtle" | "strong"
+            ) || !(1.0..=21.0).contains(value)
+            {
+                return Err("Invalid relationship target");
+            }
+        }
+        for theme in [self.light_profile, self.dark_profile] {
+            if !theme.fill.valid() || !theme.text.valid() {
+                return Err("Invalid role profile");
+            }
         }
         let digest = identity_digest(
             &self.normalization.apply(text),
@@ -68,12 +111,28 @@ impl Renderer {
         };
         let lb = (Color::from(bg).oklch.l * 4096.0).round() / 4096.0;
         let direction = if dark { 1.0 } else { -1.0 };
+        let theme = if dark {
+            self.dark_profile
+        } else {
+            self.light_profile
+        };
+        let profile = |fill: bool| if fill { theme.fill } else { theme.text };
+        let required = |role: &str| {
+            self.contrast_targets
+                .get(role)
+                .copied()
+                .unwrap_or(if role == "border" {
+                    self.contrast_target.min(3.0)
+                } else {
+                    self.contrast_target
+                })
+        };
         let sample = |fill: bool| {
-            let (low, high) = match (dark, fill) {
+            let (low, high) = profile(fill).lightness.unwrap_or(match (dark, fill) {
                 (true, true) => (0.4, 0.5),
                 (false, false) => (0.43, 0.53),
                 _ => (0.72, 0.82),
-            };
+            });
             let bias = &BIASES[2 * usize::from(dark) + usize::from(!fill)];
             let sector = (hue / 30.0) as usize;
             let offset = bias[sector]
@@ -94,16 +153,20 @@ impl Renderer {
                     back: Option<[u8; 3]>,
                     second: Option<[u8; 3]>| {
             let l = value.clamp(0.0, 1.0);
-            let c = Gamut::Srgb.cusp(l, hue) * (0.6 + (0.8 - 0.6) * u_c);
+            let role = profile(fill);
+            let (low, high) = role.chroma_scale.unwrap_or((0.6, 0.8));
+            let c = Gamut::Srgb.cusp(l, hue) * (low + (high - low) * u_c);
             Gamut::Srgb
                 .repair(
                     l,
-                    c.min(if fill { 0.16 } else { 0.19 }),
+                    c.min(role.chroma_cap.unwrap_or(if fill { 0.16 } else { 0.19 })),
                     hue,
                     target,
                     |rgb| {
                         let primary = score(rgb, back.unwrap_or_else(|| foreground(rgb)));
-                        second.map_or(primary, |other| primary.min(score(rgb, other)))
+                        second.map_or(primary, |other| {
+                            primary.min(score(rgb, other) * (target / required("textOnSubtle")))
+                        })
                     },
                 )
                 .color
@@ -111,9 +174,8 @@ impl Renderer {
         };
         let lf = sample(true);
         let lt = sample(false);
-        let t = self.contrast_target;
         let subtle = tone(lb + direction * 0.04, true, 1.0, None, None);
-        let fill = tone(lf, true, t, None, None);
+        let fill = tone(lf, true, required("fill"), None, None);
         let on_fill = foreground(fill);
         [
             ("background", bg),
@@ -123,20 +185,47 @@ impl Renderer {
             ("onFill", on_fill),
             (
                 "fillHover",
-                tone(lf + direction * 0.025, true, t, Some(on_fill), None),
+                tone(
+                    lf + direction * 0.025,
+                    true,
+                    required("fillHover"),
+                    Some(on_fill),
+                    None,
+                ),
             ),
             (
                 "fillActive",
-                tone(lf + direction * 0.05, true, t, Some(on_fill), None),
+                tone(
+                    lf + direction * 0.05,
+                    true,
+                    required("fillActive"),
+                    Some(on_fill),
+                    None,
+                ),
             ),
             (
                 "border",
-                tone(lb + direction * 0.39, true, t.min(3.0), Some(bg), None),
+                tone(
+                    lb + direction * 0.39,
+                    true,
+                    required("border"),
+                    Some(bg),
+                    None,
+                ),
             ),
-            ("text", tone(lt, false, t, Some(bg), Some(subtle))),
+            (
+                "text",
+                tone(lt, false, required("text"), Some(bg), Some(subtle)),
+            ),
             (
                 "strong",
-                tone(lt + direction * 0.10, false, t, Some(bg), None),
+                tone(
+                    lt + direction * 0.10,
+                    false,
+                    required("strong"),
+                    Some(bg),
+                    None,
+                ),
             ),
         ]
         .into_iter()
@@ -161,9 +250,25 @@ mod tests {
         let mut count = 0;
         for row in corpus.vectors {
             let opts = &row["options"];
-            if opts.get("profiles").is_some() || opts.get("contrastTargets").is_some() {
-                continue;
-            }
+            let theme_profile = |theme: &str| {
+                let role = |name: &str| {
+                    let obj = &opts["profiles"][theme][name];
+                    let range = |key: &str| {
+                        obj[key]
+                            .as_array()
+                            .map(|pair| (pair[0].as_f64().unwrap(), pair[1].as_f64().unwrap()))
+                    };
+                    RoleProfile {
+                        lightness: range("lightness"),
+                        chroma_scale: range("chromaScale"),
+                        chroma_cap: obj["chromaCap"].as_f64(),
+                    }
+                };
+                ThemeProfile {
+                    fill: role("fill"),
+                    text: role("text"),
+                }
+            };
             let background = |theme: &str, default| {
                 opts["backgrounds"][theme].as_str().map_or(default, |hex| {
                     std::array::from_fn(|i| {
@@ -175,6 +280,14 @@ mod tests {
                 namespace: opts["namespace"].as_str().unwrap_or("").into(),
                 seed: opts["seed"].as_u64().unwrap_or(0).try_into().unwrap(),
                 contrast_target: opts["contrastTarget"].as_f64().unwrap_or(4.5),
+                light_profile: theme_profile("light"),
+                dark_profile: theme_profile("dark"),
+                contrast_targets: opts["contrastTargets"]
+                    .as_object()
+                    .into_iter()
+                    .flatten()
+                    .map(|(k, v)| (k.clone(), v.as_f64().unwrap()))
+                    .collect(),
                 light_background: background("light", [255; 3]),
                 dark_background: background("dark", [18; 3]),
                 ..Default::default()
@@ -197,6 +310,6 @@ mod tests {
             }
             count += 1;
         }
-        assert_eq!(count, 25);
+        assert_eq!(count, 32);
     }
 }

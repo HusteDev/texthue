@@ -1,6 +1,6 @@
 mod renderer;
 mod tables;
-pub use renderer::{RenderedPalette, Renderer};
+pub use renderer::{RenderedPalette, Renderer, RoleProfile, ThemeProfile};
 mod color;
 pub use color::{Color, Hsl, Oklch};
 mod repair;
