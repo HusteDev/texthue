@@ -192,6 +192,36 @@ def pypi_target_state(
     return TargetState(CONFLICTING)
 
 
+def dart_target_state(version: str, archive: Path, *, fetch=None) -> TargetState:
+    """Compare the staged bytes with the coordinated version on pub.dev."""
+    version = validate_version(version)
+    if (
+        archive.name != f"texthue-{version}-dart.tar.gz"
+        or archive.is_symlink()
+        or not archive.is_file()
+    ):
+        raise ReleaseError("Missing or invalid staged Dart archive.")
+    digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+    try:
+        body = (fetch or _default_fetch)(f"https://pub.dev/api/packages/texthue/versions/{version}")
+        row = json.loads(body)
+        checksum = row["archive_sha256"]
+        retracted = row.get("retracted", False)
+        if (
+            row["version"] != version
+            or row["pubspec"]["name"] != "texthue"
+            or row["pubspec"]["version"] != version
+            or type(retracted) is not bool
+            or not re.fullmatch("[0-9a-f]{64}", checksum)
+        ):
+            raise ValueError("Invalid pub.dev version record")
+    except _NotFound:
+        return TargetState(ABSENT)
+    except Exception as error:
+        return TargetState(LOOKUP_FAILED, str(error))
+    return TargetState(MATCHING if checksum == digest and not retracted else CONFLICTING)
+
+
 def crate_target_state(version: str, archive: Path, *, fetch=None) -> TargetState:
     """Check the coordinated TextHue crate against its crates.io sparse-index entry."""
     version = validate_version(version)
@@ -452,6 +482,13 @@ def main(argv: list[str] | None = None) -> int:
         "--tarball", required=True, help="Path to the locally built tarball"
     )
     npm_state_parser.set_defaults(func=_cmd_npm_state)
+
+    dart = subparsers.add_parser("dart-state", help="Compare the staged Dart archive with pub.dev")
+    dart.add_argument("--version", required=True)
+    dart.add_argument("--archive", type=Path, required=True)
+    dart.set_defaults(
+        func=lambda a: _print_state_and_exit_code(dart_target_state(a.version, a.archive))
+    )
 
     crate = subparsers.add_parser("crate-state", help="Compare the staged crate with crates.io")
     crate.add_argument("--version", required=True)

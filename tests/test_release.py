@@ -164,9 +164,7 @@ class PypiTargetStateTests(unittest.TestCase):
 
     def test_matching_digests_is_matching(self):
         def fetch(_url):
-            return (
-                b'{"urls": [{"filename": "texthue-1.0.0.whl", ' b'"digests": {"sha256": "aaa"}}]}'
-            )
+            return b'{"urls": [{"filename": "texthue-1.0.0.whl", "digests": {"sha256": "aaa"}}]}'
 
         state = release.pypi_target_state(
             "texthue", "1.0.0", {"texthue-1.0.0.whl": "aaa"}, fetch=fetch
@@ -175,9 +173,7 @@ class PypiTargetStateTests(unittest.TestCase):
 
     def test_different_digest_is_conflicting(self):
         def fetch(_url):
-            return (
-                b'{"urls": [{"filename": "texthue-1.0.0.whl", ' b'"digests": {"sha256": "bbb"}}]}'
-            )
+            return b'{"urls": [{"filename": "texthue-1.0.0.whl", "digests": {"sha256": "bbb"}}]}'
 
         state = release.pypi_target_state(
             "texthue", "1.0.0", {"texthue-1.0.0.whl": "aaa"}, fetch=fetch
@@ -192,6 +188,46 @@ class PypiTargetStateTests(unittest.TestCase):
             "texthue", "1.0.0", {"texthue-1.0.0.whl": "aaa"}, fetch=fetch
         )
         self.assertEqual(state.state, release.CONFLICTING)
+
+
+class DartTargetStateTests(unittest.TestCase):
+    def test_version_record_and_transport_states(self):
+        import hashlib
+        import json
+        from unittest.mock import Mock
+
+        version = "1.0.0"
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory) / "texthue-1.0.0-dart.tar.gz"
+            archive.write_bytes(b"tested archive")
+            record = dict(
+                version=version,
+                pubspec=dict(name="texthue", version=version),
+                archive_sha256=hashlib.sha256(archive.read_bytes()).hexdigest(),
+            )
+            for changes, expected in [
+                ({}, release.MATCHING),
+                ({"archive_sha256": "0" * 64}, release.CONFLICTING),
+                ({"retracted": True}, release.CONFLICTING),
+                ({"pubspec": {}}, release.LOOKUP_FAILED),
+                ({"archive_sha256": ""}, release.LOOKUP_FAILED),
+                ({"version": "2.0.0"}, release.LOOKUP_FAILED),
+            ]:
+                fetch = Mock(return_value=json.dumps(record | changes).encode())
+                self.assertEqual(
+                    release.dart_target_state(version, archive, fetch=fetch).state, expected
+                )
+                fetch.assert_called_once_with("https://pub.dev/api/packages/texthue/versions/1.0.0")
+            for error, expected in [
+                (release._NotFound(), release.ABSENT),
+                (TimeoutError(), release.LOOKUP_FAILED),
+            ]:
+                self.assertEqual(
+                    release.dart_target_state(
+                        version, archive, fetch=Mock(side_effect=error)
+                    ).state,
+                    expected,
+                )
 
 
 class CrateTargetStateTests(unittest.TestCase):
