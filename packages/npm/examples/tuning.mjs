@@ -2,7 +2,7 @@
 import { resolveTextColors } from 'texthue';
 
 // Every supported option, with independent ranges for each theme and role.
-const colors = await resolveTextColors('project:atlas', {
+const colors = resolveTextColors('project:atlas', {
   namespace: 'workspace:demo',
   backgrounds: { light: '#f5f0e8', dark: '#20242b' },
   contrastTarget: 7,
@@ -19,13 +19,13 @@ const colors = await resolveTextColors('project:atlas', {
 });
 console.log('Customized colors:', JSON.stringify(colors, null, 2));
 
-const grayscale = await resolveTextColors('plain', {
+const grayscale = resolveTextColors('plain', {
   profiles: { light: { fill: { lightness: [0.75, 0.75], chromaScale: [0, 0] } } },
 });
 console.log('Fixed preferred lightness, zero chroma:', grayscale.light.fill);
 
 // Readability can override the preferred range. A high target may be impossible.
-const impossible = await resolveTextColors('project:atlas', {
+const impossible = resolveTextColors('project:atlas', {
   backgrounds: { light: '#777777' }, contrastTarget: 7,
 });
 if (!impossible.light.contrast.text.meetsTarget) {

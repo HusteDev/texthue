@@ -19,7 +19,7 @@
 <p id="status" role="status"></p>
 <section id="surface" aria-label="Color preview">
   <span id="fill">Fill with readable foreground</span>
-  <p id="text">Text text on the declared background</p>
+  <p id="preview-text">Text on the declared background</p>
 </section>
 <pre id="output"></pre>
 <script type="module">
@@ -30,21 +30,17 @@
   const theme = document.querySelector('#theme');
   const output = document.querySelector('#output');
   const status = document.querySelector('#status');
-  let revision = 0;
-  async function update() {
-    const current = ++revision;
+  function update() {
     try {
-      const colors = await resolveTextColors(text.value, { namespace: namespace.value });
-      if (current !== revision) return;
+      const colors = resolveTextColors(text.value, { namespace: namespace.value });
       const palette = colors[theme.value];
       document.querySelector('#surface').style.backgroundColor = palette.background.hex;
       document.querySelector('#fill').style.backgroundColor = palette.fill.hex;
       document.querySelector('#fill').style.color = palette.onFill.hex;
-      document.querySelector('#text').style.color = palette.text.hex;
+      document.querySelector('#preview-text').style.color = palette.text.hex;
       output.textContent = JSON.stringify(palette, null, 2);
       status.textContent = `Generated with ${colors.version}`;
     } catch (error) {
-      if (current !== revision) return;
       status.textContent = error.message;
       output.textContent = '';
     }

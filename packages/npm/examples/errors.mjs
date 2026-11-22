@@ -9,7 +9,7 @@ for (const [text, options] of [
   ['research', { profiles: { light: { fill: { chromaScale: [0.2, 0.1] } } } }],
 ]) {
   try {
-    await resolveTextColors(text, options);
+    resolveTextColors(text, options);
     throw new Error('This intentionally invalid example should have failed');
   } catch (error) {
     if (!(error instanceof TextColorError)) throw error;

@@ -14,7 +14,7 @@ function css(color: Color): string {
 }
 
 try {
-  const colors: ColorSet = await resolveTextColors('research', options);
+  const colors: ColorSet = resolveTextColors('research', options);
   console.log(css(colors.light.fill), colors.light.onFill.hex);
 } catch (error: unknown) {
   if (error instanceof TextColorError) console.error(error.code, error.message);

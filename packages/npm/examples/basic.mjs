@@ -1,7 +1,7 @@
 // Resolve one string and print every role in every output format for both themes.
 import { resolveTextColors } from 'texthue';
 
-const colors = await resolveTextColors('research');
+const colors = resolveTextColors('research');
 console.log('Algorithm:', colors.version);
 for (const themeName of ['light', 'dark']) {
   const theme = colors[themeName];
