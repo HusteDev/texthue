@@ -33,6 +33,13 @@ extension Gamut {
         [0, 32229 / 714400, 5220557 / 5000800],
     ]
 
+    func canonicalChannels(sRGB bytes: [UInt8]) -> [Double] {
+        if self == .sRGB { return bytes.map(Double.init) }
+        let linear = bytes.map { linearChannel(Double($0) / 255) }
+        let xyz = multiply(Color.rgbToXYZ, linear)
+        return multiply(Self.xyzToP3, xyz).map { encodedChannel($0) * 255 }
+    }
+
     static func p3Fallback(_ bytes: RGB) -> (rgb: RGB, clipped: Bool) {
         let linearP3 = [bytes.r, bytes.g, bytes.b].map { linearChannel(Double($0) / 255) }
         let linearRGB = multiply(xyzToRGB, multiply(p3ToXYZ, linearP3))

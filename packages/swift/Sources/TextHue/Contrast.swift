@@ -22,12 +22,16 @@ public enum ContrastModel: String, Decodable {
     case wcag2, apca
 
     func measure(text: [UInt8], background: [UInt8], gamut: Gamut) -> Double {
+        measure(encodedText: text.map(Double.init), background: background.map(Double.init), gamut: gamut)
+    }
+
+    func measure(encodedText text: [Double], background: [Double], gamut: Gamut) -> Double {
         let weights = self == .apca ? gamut.apcaWeights : gamut.ratioWeights
-        func luminance(_ rgb: [UInt8]) -> Double {
+        func luminance(_ rgb: [Double]) -> Double {
             precondition(rgb.count == 3)
             var sum = 0.0
             for i in weights.indices {
-                let x = Double(rgb[i]) / 255
+                let x = rgb[i] / 255
                 let linear: Double
                 if self == .apca { linear = pow(x, 2.4) }
                 else { linear = linearChannel(x) }

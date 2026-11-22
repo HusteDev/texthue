@@ -16,10 +16,13 @@ func linearChannel(_ encoded: Double) -> Double {
     encoded <= 0.04045 ? encoded / 12.92 : pow((encoded + 0.055) / 1.055, 2.4)
 }
 
-func channelByte(_ linear: Double) -> UInt8 {
+func encodedChannel(_ linear: Double) -> Double {
     let x = min(1, max(0, linear))
-    let encoded = x <= 0.0031308 ? x * 12.92 : 1.055 * pow(x, 1 / 2.4) - 0.055
-    return UInt8(floor(encoded * 255 + 0.5))
+    return x <= 0.0031308 ? x * 12.92 : 1.055 * pow(x, 1 / 2.4) - 0.055
+}
+
+func channelByte(_ linear: Double) -> UInt8 {
+    UInt8(floor(encodedChannel(linear) * 255 + 0.5))
 }
 
 func multiply(_ matrix: [[Double]], _ v: [Double]) -> [Double] {
@@ -36,7 +39,7 @@ public struct Color: Codable, Equatable {
     public let p3: DisplayP3?
     public let css: String?
     public let srgbClipped: Bool?
-    private static let rgbToXYZ: [[Double]] = [
+    static let rgbToXYZ: [[Double]] = [
         [506752 / 1228815, 87881 / 245763, 12673 / 70218],
         [87098 / 409605, 175762 / 245763, 12673 / 175545],
         [7918 / 409605, 87881 / 737289, 1001167 / 1053270],

@@ -12,6 +12,17 @@ final class ContrastTests: XCTestCase {
         }
     }
 
+    func testSuppliedColorKeepsPrecisionForP3Contrast() {
+        let supplied = Gamut.displayP3.canonicalChannels(sRGB: [23, 111, 208])
+        let emitted: [Double] = [243, 156, 30]
+        XCTAssertEqual(ContrastModel.wcag2.measure(encodedText: supplied, background: emitted,
+            gamut: .displayP3), 2.3039150922184106, accuracy: 1e-12)
+        XCTAssertEqual(ContrastModel.apca.measure(encodedText: supplied, background: emitted,
+            gamut: .displayP3), 29.871865630394122, accuracy: 1e-12)
+        XCTAssertEqual(ContrastModel.apca.measure(encodedText: emitted, background: supplied,
+            gamut: .displayP3), -31.71412486055511, accuracy: 1e-12)
+    }
+
     func testDisplayP3Reference() throws {
         struct Row: Decodable {
             let text, background: [UInt8]
