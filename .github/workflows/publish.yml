@@ -152,6 +152,18 @@ jobs:
           dotnet pack packages/csharp/src/TextHue --configuration Release --no-build --output artifacts
           python tools/check-nuget.py artifacts
           (cd artifacts && sha256sum "TextHue.${VERSION}.nupkg" >> SHA256SUMS)
+      - uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1
+        if: steps.bundle.outputs.state == 'absent'
+        with:
+          sdk: '3.8.1'
+      - name: Verify Dart conformance and publication contents
+        if: steps.bundle.outputs.state == 'absent'
+        working-directory: packages/dart
+        run: |
+          set -euo pipefail
+          dart pub get --enforce-lockfile
+          python ../../tools/verify.py --port dart
+          python ../../tools/check-dart-publication.py
       - name: Stage the tested Rust crate
         if: steps.bundle.outputs.state == 'absent'
         env:

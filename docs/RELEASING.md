@@ -95,4 +95,9 @@ For a partial publication, dispatch the same commit and version with **resume** 
 
 ## Dart publication validation
 
+The release workflow runs Dart conformance, the pub dry run and the standalone
+consumer check before staging a new draft. Pub's dry run reports the package
+contents and compressed size but does not export the archive. A draft therefore
+has no Dart archive to reuse for publication.
+
 From the repository root, run `python tools/check-dart-publication.py` to inspect the pub archive and validate its publication metadata. The dry run accepts the two advisories about the deliberately pinned runtime dependencies. Other validation warnings or failures require review.
