@@ -23,6 +23,8 @@ assert_eq!(single, *batch[0]);
 assert!(std::sync::Arc::ptr_eq(&batch[0], &batch[2]));
 ```
 
+Use `compiled.hex_strict(text, dark, role)` to return an error when a selected contrast target fails. Text is checked against both the background and subtle surface.
+
 For a fresh label set, call `compiled.assign(labels, &BTreeMap::new())` with
 `std::collections::BTreeMap` in scope. Pass the returned `assignments` map
 on the next call to retain prior placements. The result includes palettes

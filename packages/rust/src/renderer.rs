@@ -227,6 +227,49 @@ impl CompiledRenderer<'_> {
         Ok(format!("#{r:02x}{g:02x}{b:02x}"))
     }
 
+    /// Return the selected hex only when its required contrast relationships pass.
+    pub fn hex_strict(&self, text: &str, dark: bool, role: &str) -> Result<String, &'static str> {
+        if !ROLES.contains(&role) {
+            return Err("Unknown role");
+        }
+        let renderer = self.renderer;
+        let mapped = renderer.mapping(&renderer.normalization.apply(text), self)?;
+        // Requesting onFill also computes fill, including its approved foreground.
+        let selected = if role == "fill" { "onFill" } else { role };
+        let roles = renderer.role_bytes(dark, &mapped, Some(selected)).roles;
+        let rgb = roles[role];
+        let bg = if dark {
+            renderer.dark_background
+        } else {
+            renderer.light_background
+        };
+        let require = |pair, front, back| {
+            let target = renderer.required_target(pair, renderer.default_target());
+            if renderer
+                .contrast_model
+                .measure(front, back, Gamut::Srgb)
+                .abs()
+                < target
+            {
+                Err("Unmet contrast target")
+            } else {
+                Ok(())
+            }
+        };
+        match role {
+            "fill" | "onFill" => require("fill", roles["onFill"], roles["fill"])?,
+            "fillHover" | "fillActive" => require(role, roles["onFill"], rgb)?,
+            "text" => {
+                require(role, rgb, bg)?;
+                require("textOnSubtle", rgb, roles["subtle"])?;
+            }
+            "strong" | "border" => require(role, rgb, bg)?,
+            _ => {}
+        }
+        let [r, g, b] = rgb;
+        Ok(format!("#{r:02x}{g:02x}{b:02x}"))
+    }
+
     /// Resolve in input order, sharing normalized duplicates only within this call.
     pub fn batch<S: AsRef<str>>(
         &self,
@@ -895,6 +938,42 @@ mod tests {
             ..Renderer::default()
         };
         assert!(empty.batch(std::iter::empty::<&str>()).is_err());
+    }
+
+    #[test]
+    fn strict_hex_checks_only_requested_contrast() {
+        let gray = [119; 3];
+        for contrast_model in [ContrastModel::Wcag2, ContrastModel::Apca] {
+            let renderer = Renderer {
+                contrast_model,
+                foregrounds: vec![gray],
+                overrides: [(
+                    "gray".into(),
+                    BrandColors {
+                        light: gray,
+                        dark: gray,
+                    },
+                )]
+                .into(),
+                ..Default::default()
+            };
+            let compiled = renderer.compile().unwrap();
+            for role in ["fill", "onFill"] {
+                assert_eq!(compiled.hex("gray", false, role).unwrap(), "#777777");
+                assert_eq!(
+                    compiled.hex_strict("gray", false, role),
+                    Err("Unmet contrast target")
+                );
+            }
+            assert_eq!(
+                compiled.hex_strict("gray", false, "background").unwrap(),
+                "#ffffff"
+            );
+            assert_eq!(
+                compiled.hex_strict("gray", false, "missing"),
+                Err("Unknown role")
+            );
+        }
     }
 
     #[test]
