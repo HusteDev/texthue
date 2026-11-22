@@ -25,7 +25,14 @@ final class RendererTests: XCTestCase {
         struct Corpus: Decodable { let vectors: [Vector] }
         let corpus = try fixture("vectors.json", as: Corpus.self)
         for row in corpus.vectors {
-            let result = try Renderer(options: row.options).resolve(row.text)
+            let renderer = try Renderer(options: row.options)
+            let result = try renderer.resolve(row.text)
+            for (dark, theme) in [(false, result.light), (true, result.dark)] {
+                for (role, color) in theme {
+                    XCTAssertEqual(try renderer.color(row.text, dark: dark, role: role), color)
+                    XCTAssertEqual(try renderer.hex(row.text, dark: dark, role: role), color.hex)
+                }
+            }
             struct Encoded: Decodable { let light, dark: Vector.Theme }
             let encoded = try JSONDecoder().decode(Encoded.self, from: JSONEncoder().encode(result))
             for (name, theme) in [("light", encoded.light), ("dark", encoded.dark)] {

@@ -298,13 +298,34 @@ public struct Renderer {
     }
 
     private func resolveNormalized(_ name: String) throws -> RenderedPalette {
-        func fixed(_ light: FixedTone, _ dark: FixedTone, source: String) throws -> RenderedPalette {
-            try RenderedPalette(version: "text-to-color-v1", source: source, hueFraction: light.fraction,
-                                hue: light.hue, lightTheme: theme("light", light.hue, 0.5, 0.5, light),
-                                darkTheme: theme("dark", dark.hue, 0.5, 0.5, dark))
+        let mapped = try mapping(name)
+        return try RenderedPalette(version: "text-to-color-v1", source: mapped.source, hueFraction: mapped.fraction,
+                                   hue: mapped.hue, lightTheme: theme("light", mapped), darkTheme: theme("dark", mapped))
+    }
+
+    private typealias Mapping = (source: String, fraction: Double, hue: Double, l: Double, c: Double,
+                                 light: FixedTone?, dark: FixedTone?)
+
+    public func color(_ text: String, dark: Bool = false, role: String = "fill") throws -> Color {
+        let bytes = try selected(text, dark, role)
+        return Color(rgb: RGB(r: bytes[0], g: bytes[1], b: bytes[2]))
+    }
+
+    public func hex(_ text: String, dark: Bool = false, role: String = "fill") throws -> String {
+        try Color.hexString(selected(text, dark, role))
+    }
+
+    private func selected(_ text: String, _ dark: Bool, _ role: String) throws -> [UInt8] {
+        let mapped = try mapping(normalization.apply(text))
+        return try rawTheme(dark ? "dark" : "light", mapped, [role]).roles[role]!
+    }
+
+    private func mapping(_ name: String) throws -> Mapping {
+        func fixed(_ light: FixedTone, _ dark: FixedTone, source: String) -> Mapping {
+            (source, light.fraction, light.hue, 0.5, 0.5, light, dark)
         }
         if let (light, dark) = fixedColors[Data(name.utf8)] {
-            return try fixed(light, dark, source: "override")
+            return fixed(light, dark, source: "override")
         }
         let digest = try identityDigest(name, namespace: scope, seed: options.seed ?? 0)
         var bestRank: [UInt8] = []
@@ -316,23 +337,21 @@ public struct Renderer {
                 winner = entry
             }
         }
-        if let winner { return try fixed(winner.light, winner.dark, source: "palette") }
+        if let winner { return fixed(winner.light, winner.dark, source: "palette") }
         let fractions = identityFractions(digest)
-        return try render(hueFraction: fractions[0], lightness: fractions[1], chroma: fractions[2])
-    }
-
-    private func render(hueFraction: Double, lightness: Double, chroma: Double) throws -> RenderedPalette {
-        let position = hueFraction * 12, slot = Int(position)
+        let position = fractions[0] * 12, slot = Int(position)
         let naturalHue = (anchors[slot] + (anchors[slot + 1] - anchors[slot]) * (position - Double(slot)))
             .truncatingRemainder(dividingBy: 360)
         let hue = hueDomain.map(naturalHue)
-        return try RenderedPalette(version: "text-to-color-v1", source: "hash", hueFraction: hueFraction,
-                                   hue: hue, lightTheme: theme("light", hue, lightness, chroma),
-                                   darkTheme: theme("dark", hue, lightness, chroma))
+        return ("hash", fractions[0], hue, fractions[1], fractions[2], nil, nil)
     }
 
-    private func theme(_ name: String, _ hue: Double, _ uL: Double, _ uC: Double, _ fixed: FixedTone? = nil) throws -> ReportedTheme {
+    private typealias Flags = (adjusted: Bool, capped: Bool, reduced: Bool, fallback: String?)
+    private func rawTheme(_ name: String, _ mapped: Mapping, _ requestedRoles: [String]) throws
+        -> (roles: [String: [UInt8]], metadata: [String: Flags]) {
         let dark = name == "dark", direction: Double = dark ? 1 : -1
+        let fixed = dark ? mapped.dark : mapped.light
+        let hue = fixed?.hue ?? mapped.hue, uL = mapped.l, uC = mapped.c
         let base = dark ? darkBackground : lightBackground
         let bg = base.bytes, lb = base.lightness
         let model = options.contrastModel ?? .wcag2
@@ -389,17 +408,39 @@ public struct Renderer {
             metadata[role] = (result.color.lightness != l, requested > profile.cap, result.color.chroma < c, result.fallback)
             return result.color.bytes
         }
-        let subtle = tone("subtle", lb + direction * 0.04, fillP, unconstrained)
-        let fill = fixed?.bytes ?? tone("fill", fillP.l, fillP, required("fill")), onFill = foreground(fill, target: required("fill"))
-        let roles = [
-            "background": bg, "subtle": subtle, "muted": tone("muted", lb + direction * 0.10, fillP, unconstrained),
-            "fill": fill, "onFill": onFill,
-            "fillHover": tone("fillHover", (fixed?.lightness ?? fillP.l) + direction * 0.025, fillP, required("fillHover"), onFill, surface: true),
-            "fillActive": tone("fillActive", (fixed?.lightness ?? fillP.l) + direction * 0.05, fillP, required("fillActive"), onFill, surface: true),
-            "border": tone("border", lb + direction * 0.39, fillP, required("border"), bg),
-            "text": tone("text", textP.l, textP, required("text"), bg, subtle),
-            "strong": tone("strong", textP.l + direction * 0.10, textP, required("strong"), bg)
-        ]
+        lazy var subtle = tone("subtle", lb + direction * 0.04, fillP, unconstrained)
+        lazy var fill = fixed?.bytes ?? tone("fill", fillP.l, fillP, required("fill"))
+        lazy var onFill = foreground(fill, target: required("fill"))
+        var roles: [String: [UInt8]] = [:]
+        for role in requestedRoles {
+            roles[role] = switch role {
+            case "background": bg
+            case "subtle": subtle
+            case "muted": tone(role, lb + direction * 0.10, fillP, unconstrained)
+            case "fill": fill
+            case "onFill": onFill
+            case "fillHover", "fillActive":
+                tone(role, (fixed?.lightness ?? fillP.l) + direction * (role == "fillHover" ? 0.025 : 0.05),
+                     fillP, required(role), onFill, surface: true)
+            case "border": tone(role, lb + direction * 0.39, fillP, required(role), bg)
+            case "text": tone(role, textP.l, textP, required(role), bg, subtle)
+            case "strong": tone(role, textP.l + direction * 0.10, textP, required(role), bg)
+            default: throw RenderError.invalidOptions
+            }
+        }
+        return (roles, metadata)
+    }
+
+    private func theme(_ name: String, _ mapped: Mapping) throws -> ReportedTheme {
+        let (roles, metadata) = try rawTheme(name, mapped, ["background", "subtle", "muted", "fill", "onFill",
+            "fillHover", "fillActive", "border", "text", "strong"])
+        let onFill = roles["onFill"]!, subtle = roles["subtle"]!, bg = roles["background"]!
+        let fixed = name == "dark" ? mapped.dark : mapped.light
+        let model = options.contrastModel ?? .wcag2
+        let target = options.contrastTarget ?? (model == .apca ? 60 : options.preset == .controls ? 7 : 4.5)
+        func required(_ role: String) -> Double {
+            options.contrastTargets?[role] ?? (role == "border" && model == .wcag2 ? min(target, 3) : target)
+        }
         var relationships: [String: ContrastRelationship] = [:]
         for role in ["fill", "fillHover", "fillActive", "border", "text", "textOnSubtle", "strong"] {
             let colorRole = role == "textOnSubtle" ? "text" : role

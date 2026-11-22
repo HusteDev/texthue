@@ -47,11 +47,15 @@ public struct Color: Codable, Equatable {
         [0.0259040424655478, 0.7827717124575296, -0.8086757549230774],
     ]
 
+    static func hexString(_ bytes: [UInt8]) -> String {
+        "#" + bytes.map { String(format: "%02x", $0) }.joined()
+    }
+
     public init(rgb: RGB) {
         func round6(_ value: Double) -> Double { floor(value * 1e6 + 0.5) / 1e6 }
         self.rgb = rgb
         let bytes = [rgb.r, rgb.g, rgb.b]
-        hex = "#" + bytes.map { String(format: "%02x", $0) }.joined()
+        hex = Self.hexString(bytes)
         let values = bytes.map { Double($0) / 255 }
         let r = values[0], g = values[1], b = values[2]
         let hi = max(r, g, b), lo = min(r, g, b)
