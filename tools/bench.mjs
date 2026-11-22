@@ -11,9 +11,14 @@ for (const [scenario,target,light,options] of [
   const resolver = createResolver({contrastTarget:target, backgrounds:{light}, ...options});
   const samples = [];
   for (let i = -20; i < 100; i++) {
+    const label = `item:${i}`;
     const start = performance.now();
-    resolver.resolve(`item:${i}`);
-    if (i >= 0) samples.push((performance.now()-start)*1000);
+    const result = resolver.resolve(label);
+    const elapsed = performance.now() - start;
+    if (scenario === 'p3' && (!result.light.fill.p3 || !result.dark.fill.p3)) {
+      throw new Error('Missing native Display-P3 fill');
+    }
+    if (i >= 0) samples.push(elapsed * 1000);
   }
   samples.sort((a,b) => a-b);
   console.log(JSON.stringify({scenario,medianUs:(samples[49]+samples[50])/2,p95Us:samples[94]}));
@@ -24,8 +29,10 @@ const resolver = createResolver();
 const samples = [];
 for (let i = -5; i < 20; i++) {
   const start = performance.now();
-  resolver.assign(labels);
-  if (i >= 0) samples.push((performance.now()-start)*1000);
+  const result = resolver.assign(labels);
+  const elapsed = performance.now() - start;
+  if (Object.keys(result.colors).length !== labels.length) throw new Error('Incomplete assignment');
+  if (i >= 0) samples.push(elapsed * 1000);
 }
 samples.sort((a,b) => a-b);
 console.log(JSON.stringify({scenario:'assign40',medianUs:(samples[9]+samples[10])/2,p95Us:samples[18]}));
