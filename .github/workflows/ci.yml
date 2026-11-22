@@ -177,6 +177,13 @@ jobs:
       - name: Compile CSS with the packed Tailwind adapter
         if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
         run: python tools/check-tailwind-consumer.py
+      - name: Exercise staged inspector in Firefox and WebKit
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        run: |
+          python -m pip install playwright==1.59.0
+          python -m playwright install --with-deps firefox webkit
+          python tools/check-inspector.py firefox
+          python tools/check-inspector.py webkit
       - name: Exercise the packed React adapter on React 18 and 19
         if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
         run: python tools/check-react-consumers.py

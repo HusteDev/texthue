@@ -41,7 +41,7 @@ def check_markers(page):
     toggle.uncheck()
 
 
-def exercise(page, url):
+def exercise(page, url, clipboard):
     page.goto(url)
     status = page.get_by_role("status")
     expect(status).to_have_text("3 distinct labels")
@@ -81,6 +81,14 @@ def exercise(page, url):
     page.locator("#registry").fill(outputs["registry"])
     page.get_by_role("button", name="Inspect palette").press("Enter")
     expect(status).to_have_text("1 distinct labels")
+    if not clipboard:
+        # Exercise the documented manual-copy path without reading the OS clipboard.
+        page.evaluate("Object.defineProperty(navigator, 'clipboard', {value: undefined})")
+        page.get_by_role("button", name="Copy registry CSS").click()
+        field = page.get_by_label("Select and copy registry CSS")
+        expect(field).to_be_focused()
+        assert "--texthue-fresh-" in field.input_value()
+        return
     page.get_by_role("button", name="Copy registry CSS").click()
     expect(status).to_have_text("Registry CSS copied")
     assert "--texthue-fresh-" in page.evaluate("navigator.clipboard.readText()")
@@ -98,13 +106,26 @@ def main():
             threading.Thread(target=server.serve_forever, daemon=True).start()
             try:
                 with sync_playwright() as playwright:
-                    browser = playwright.chromium.launch(executable_path=args.browser)
-                    context = browser.new_context(permissions=["clipboard-read", "clipboard-write"])
-                    exercise(context.new_page(), f"http://127.0.0.1:{server.server_port}/texthue/")
+                    clipboard = args.browser not in ("firefox", "webkit")
+                    if clipboard:
+                        browser = playwright.chromium.launch(executable_path=args.browser)
+                        context = browser.new_context(
+                            permissions=["clipboard-read", "clipboard-write"]
+                        )
+                    else:
+                        browser = getattr(playwright, args.browser).launch()
+                        context = browser.new_context()
+                    exercise(
+                        context.new_page(),
+                        f"http://127.0.0.1:{server.server_port}/texthue/",
+                        clipboard,
+                    )
                     browser.close()
             finally:
                 server.shutdown()
-    print("PASS: staged inspector worker replacement, keyboard replay, downloads and CSS clipboard")
+    print(
+        f"PASS: {args.browser} staged inspector worker replacement, keyboard replay, downloads and CSS copy"
+    )
 
 
 if __name__ == "__main__":
