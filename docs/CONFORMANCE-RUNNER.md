@@ -28,6 +28,12 @@ document.
 
 ## Registered runners
 
+Rust supplies a Cargo example for direct resolution requests. Run
+`cargo run --quiet --locked --manifest-path packages/rust/Cargo.toml --example conformance`
+from the repository root with a JSON array on stdin. The runner uses the production
+renderer and development-only JSON dependencies. The parity suite includes Rust
+when Cargo is available.
+
 `tools/conformance-js.mjs` runs the JavaScript reference. `packages/go/cmd/conformance/main.go` implements the Go runner. `tools/conformance-python.py` runs the Python implementation in a subprocess using the active Python interpreter. The Go runner’s README documents its invocation. Use it as the template for a new
 language's runner: same stdin/stdout shapes, same exit-code rule.
 
