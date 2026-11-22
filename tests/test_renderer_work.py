@@ -77,3 +77,21 @@ class RendererWorkTests(unittest.TestCase):
                         getattr(expected, role).hex,
                     )
                     self.assertEqual(cusps.call_count, tones)
+
+    def test_projection_converts_only_requested_formats(self):
+        core = BENCH["_core"]
+        for gamut in ("srgb", "display-p3"):
+            resolver = BENCH["Resolver"](gamut=gamut)
+            expected = resolver.resolve("sample").light.fill.to_dict()
+            for fmt, value in expected.items():
+                with (
+                    self.subTest(gamut=gamut, format=fmt),
+                    patch.object(core, "_hsl", wraps=core._hsl) as hsl,
+                    patch.object(core, "_oklch", wraps=core._oklch) as oklch,
+                ):
+                    projected = resolver.project(
+                        "sample", themes=["light"], roles=["fill"], formats=[fmt]
+                    )
+                    self.assertEqual(projected, {"light": {"fill": {fmt: value}}})
+                    self.assertEqual(hsl.call_count, int(fmt == "hsl"))
+                    self.assertEqual(oklch.call_count, int(fmt == "oklch"))

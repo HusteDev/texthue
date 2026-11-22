@@ -212,7 +212,7 @@ class Resolver:
             trace="trace" in formats,
             themes=themes,
             roles=roles,
-            hex_only=set(formats) == {"hex"},
+            formats=(*formats, "hex") if "trace" in formats else formats,
         )
         return {
             theme: {role: {fmt: result[theme][role][fmt] for fmt in formats} for role in roles}
@@ -247,7 +247,11 @@ class Resolver:
         }:
             raise TextColorError("INVALID_OPTIONS", "Unknown theme or role")
         return _core.render(
-            text, *self._compiled, themes=(theme,), roles=(_wire_name(role),), hex_only=hex_only
+            text,
+            *self._compiled,
+            themes=(theme,),
+            roles=(_wire_name(role),),
+            formats=("hex",) if hex_only else None,
         )[theme]
 
     def color(self, text: str, *, theme: str, role: str) -> Color:

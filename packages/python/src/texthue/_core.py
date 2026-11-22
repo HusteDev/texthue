@@ -192,13 +192,7 @@ def _oklch(rgb, matrix):
     return {"l": _round6(lab[0]), "c": _round6(chroma), "h": _round6(ok_hue) % 360}
 
 
-def _formats(rgb):
-    """Derive every output representation from canonical RGB bytes.
-
-    HSL and OKLCH are computed from the bytes and rounded to six decimal places.
-    Achromatic colors report zero hue and zero chroma.
-    """
-    r, g, b = rgb
+def _hsl(rgb):
     values = [value / 255 for value in rgb]
     maximum, minimum = max(values), min(values)
     delta = maximum - minimum
@@ -215,13 +209,20 @@ def _formats(rgb):
         else:
             hue = (red - green) / delta + 4
         hue *= 60
-    return {
-        "hex": "#" + "".join(f"{value:02x}" for value in rgb),
-        "rgb": {"r": r, "g": g, "b": b},
-        # A rounded 360 wraps to 0 so hue stays within [0, 360).
-        "hsl": {"h": _round6(hue) % 360, "s": _round6(saturation * 100), "l": _round6(light * 100)},
-        "oklch": _oklch(rgb, _RGB_TO_XYZ),
-    }
+    return {"h": _round6(hue) % 360, "s": _round6(saturation * 100), "l": _round6(light * 100)}
+
+
+def _formats(rgb, formats=("hex", "rgb", "hsl", "oklch")):
+    result = {}
+    if "hex" in formats:
+        result["hex"] = "#" + "".join(f"{value:02x}" for value in rgb)
+    if "rgb" in formats:
+        result["rgb"] = dict(zip("rgb", rgb, strict=True))
+    if "hsl" in formats:
+        result["hsl"] = _hsl(rgb)
+    if "oklch" in formats:
+        result["oklch"] = _oklch(rgb, _RGB_TO_XYZ)
+    return result
 
 
 def _choose(
@@ -688,7 +689,7 @@ def compile_settings(options):
 
 
 def fixed_fraction(rgb):
-    hue = (math.floor(_formats(rgb)["oklch"]["h"] * 1024 + 0.5) / 1024) % 360
+    hue = (math.floor(_oklch(rgb, _RGB_TO_XYZ)["h"] * 1024 + 0.5) / 1024) % 360
     angle = hue + 360 if hue < ANCHORS[0] else hue
     i = next(index for index, value in enumerate(ANCHORS) if value > angle) - 1
     return (i + (angle - ANCHORS[i]) / (ANCHORS[i + 1] - ANCHORS[i])) / 12
@@ -705,7 +706,7 @@ def render(
     trace=False,
     themes=("light", "dark"),
     roles=None,
-    hex_only=False,
+    formats=None,
 ):
     _text(text, "text", "INVALID_TEXT")
     requested_roles = None if roles is None else set(roles)
@@ -735,7 +736,7 @@ def render(
     source, brand = settings["brand"](name, digest)
 
     def snapped(rgb):
-        return (math.floor(_formats(rgb)["oklch"]["h"] * 1024 + 0.5) / 1024) % 360
+        return (math.floor(_oklch(rgb, _RGB_TO_XYZ)["h"] * 1024 + 0.5) / 1024) % 360
 
     natural_hue = hue
     if brand:
@@ -820,7 +821,7 @@ def render(
 
         fp, tp = sample("fill"), sample("text")
         if brand:
-            fixed = _formats(brand[theme])["oklch"]
+            fixed = _oklch(brand[theme], _RGB_TO_XYZ)
             fixed_l = math.floor(fixed["l"] * 4096 + 0.5) / 4096
             fp = (fixed_l, fp[1], fp[2] if fixed["c"] else 0, fixed_l)
             if not fixed["c"]:
@@ -912,10 +913,9 @@ def render(
                 )
 
         def display(rgb):
-            if hex_only:
-                channels = _p3_fallback(rgb)[0] if settings["wide"] else rgb
-                return {"hex": "#" + "".join(f"{v:02x}" for v in channels)}
-            return settings["formats"](rgb)
+            if formats is None:
+                return settings["formats"](rgb)
+            return settings["formats"](rgb, formats)
 
         output = {
             k: display(v["rgb"])
@@ -978,14 +978,24 @@ def _p3_apca_contrast(text, background):
     )
 
 
-def _p3_formats(rgb):
-    fallback, clipped = _p3_fallback(rgb)
-    channels = [_round6(v / 255) for v in rgb]
-    css = "color(display-p3 " + " ".join(f"{v:.6f}".rstrip("0").rstrip(".") for v in channels) + ")"
-    return {
-        **_formats(fallback),
-        "oklch": _oklch(rgb, _P3_TO_XYZ),
-        "p3": dict(zip("rgb", channels, strict=True)),
-        "css": css,
-        "srgbClipped": clipped,
-    }
+def _p3_formats(rgb, formats=("hex", "rgb", "hsl", "oklch", "p3", "css", "srgbClipped")):
+    result = {}
+    fallback_formats = {"hex", "rgb", "hsl"}.intersection(formats)
+    if fallback_formats or "srgbClipped" in formats:
+        fallback, clipped = _p3_fallback(rgb)
+        result.update(_formats(fallback, fallback_formats))
+        if "srgbClipped" in formats:
+            result["srgbClipped"] = clipped
+    if "oklch" in formats:
+        result["oklch"] = _oklch(rgb, _P3_TO_XYZ)
+    if "p3" in formats or "css" in formats:
+        channels = [_round6(v / 255) for v in rgb]
+        if "p3" in formats:
+            result["p3"] = dict(zip("rgb", channels, strict=True))
+        if "css" in formats:
+            result["css"] = (
+                "color(display-p3 "
+                + " ".join(f"{v:.6f}".rstrip("0").rstrip(".") for v in channels)
+                + ")"
+            )
+    return result
