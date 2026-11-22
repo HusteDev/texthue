@@ -1,0 +1,10 @@
+{
+  "name": "@texthue/tailwind",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Build-time TextHue label colors for Tailwind theme configurations",
+  "exports": "./index.js",
+  "files": ["index.js", "LICENSE"],
+  "dependencies": {"texthue": "0.1.0"},
+  "license": "MIT"
+}

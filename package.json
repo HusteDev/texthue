@@ -5,7 +5,7 @@
   "description": "TextHue cross-language deterministic color libraries",
   "type": "module",
   "engines": { "node": ">=22" },
-  "workspaces": ["packages/npm"],
+  "workspaces": ["packages/npm", "packages/tailwind"],
   "scripts": {
     "build": "npm run build --workspace texthue",
     "test": "npm run build && node --test tests/*.test.mjs",
