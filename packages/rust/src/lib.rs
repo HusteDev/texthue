@@ -1,3 +1,5 @@
+mod repair;
+pub use repair::RepairedTone;
 mod gamut;
 pub use gamut::{p3_fallback, FittedColor};
 mod contrast;
