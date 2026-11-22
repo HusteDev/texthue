@@ -23,9 +23,12 @@ String rgbHex(List<int> bytes) =>
 
 double _round6(double value) => (value * 1e6 + 0.5).floor() / 1e6;
 
-List<double> srgbToLab(double r, double g, double b) {
-  final xyz = multiply(
-      _rgbToXYZ, [linearChannel(r), linearChannel(g), linearChannel(b)]);
+List<double> srgbToLab(double r, double g, double b) =>
+    _lab(r, g, b, Gamut.sRGB);
+
+List<double> _lab(double r, double g, double b, Gamut gamut) {
+  final xyz = multiply(gamut == Gamut.sRGB ? _rgbToXYZ : p3ToXYZ,
+      [linearChannel(r), linearChannel(g), linearChannel(b)]);
   final lms = multiply(_xyzToLMS, xyz);
   return multiply(_lmsToLab,
       [for (final x in lms) x.sign * math.pow(x.abs(), 1 / 3).toDouble()]);
@@ -37,7 +40,12 @@ final class Color {
   final ({double h, double s, double l}) hsl;
   final ({double l, double c, double h}) oklch;
 
-  const Color._(this.hex, this.rgb, this.hsl, this.oklch);
+  final ({double r, double g, double b})? p3;
+  final String? css;
+  final bool? srgbClipped;
+
+  const Color._(this.hex, this.rgb, this.hsl, this.oklch,
+      [this.p3, this.css, this.srgbClipped]);
 
   /// Composite this sRGB color over an opaque backdrop in linear light.
   Color compositeOver(double alpha, Color backdrop) {
@@ -72,21 +80,50 @@ final class Color {
         hue = (r - g) / delta + 4;
       }
     }
-    final lab = srgbToLab(r, g, b);
-    final neutral = red == green && green == blue;
+    return Color._(
+        hex,
+        (r: red, g: green, b: blue),
+        (
+          h: _round6(60 * hue) % 360,
+          s: _round6(100 * saturation),
+          l: _round6(100 * light)
+        ),
+        _oklch(r, g, b, Gamut.sRGB));
+  }
+
+  static ({double l, double c, double h}) _oklch(
+      double r, double g, double b, Gamut gamut) {
+    final lab = _lab(r, g, b, gamut);
+    final neutral = r == g && g == b;
     final degrees = (math.atan2(lab[2], lab[1]) * 180 / math.pi + 360) % 360;
-    return Color._(hex, (
-      r: red,
-      g: green,
-      b: blue
-    ), (
-      h: _round6(60 * hue) % 360,
-      s: _round6(100 * saturation),
-      l: _round6(100 * light)
-    ), (
+    return (
       l: _round6(lab[0]),
       c: neutral ? 0 : _round6(math.sqrt(lab[1] * lab[1] + lab[2] * lab[2])),
       h: neutral ? 0 : _round6(degrees) % 360
-    ));
+    );
+  }
+
+  factory Color.fromDisplayP3(double red, double green, double blue) {
+    final channels = [red, green, blue];
+    for (final channel in channels) {
+      if (!(channel >= 0 && channel <= 1))
+        throw RangeError.range(channel, 0, 1, 'channel');
+    }
+    final fallback =
+        p3Fallback([for (final channel in channels) channel * 255]);
+    final bytes = fallback.bytes;
+    final base = Color.fromRgb(bytes[0], bytes[1], bytes[2]);
+    final values = channels.map(_round6).toList();
+    final css = values
+        .map((v) => v == v.truncate() ? v.toInt().toString() : v.toString())
+        .join(' ');
+    return Color._(
+        base.hex,
+        base.rgb,
+        base.hsl,
+        _oklch(red, green, blue, Gamut.displayP3),
+        (r: values[0], g: values[1], b: values[2]),
+        'color(display-p3 $css)',
+        fallback.clipped);
   }
 }

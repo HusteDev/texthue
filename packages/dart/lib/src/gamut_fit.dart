@@ -21,7 +21,7 @@ const _xyzToP3 = <List<double>>[
   [-14852 / 17905, 63121 / 35810, 423 / 17905],
   [11844 / 330415, -50337 / 660830, 316169 / 330415],
 ];
-const _p3ToXYZ = <List<double>>[
+const p3ToXYZ = <List<double>>[
   [608311 / 1250200, 189793 / 714400, 198249 / 1000160],
   [35783 / 156275, 247089 / 357200, 198249 / 2500400],
   [0, 32229 / 714400, 5220557 / 5000800],
@@ -40,9 +40,9 @@ int channelByte(double linear) {
 bool _inside(List<double> channels) =>
     channels.every((x) => x >= -1e-12 && x <= 1 + 1e-12);
 
-({List<int> bytes, bool clipped}) p3Fallback(List<int> bytes) {
+({List<int> bytes, bool clipped}) p3Fallback(List<num> bytes) {
   final linear = [for (final byte in bytes) linearChannel(byte / 255)];
-  final rgb = multiply(_xyzToRGB, multiply(_p3ToXYZ, linear));
+  final rgb = multiply(_xyzToRGB, multiply(p3ToXYZ, linear));
   return (bytes: rgb.map(channelByte).toList(), clipped: !_inside(rgb));
 }
 

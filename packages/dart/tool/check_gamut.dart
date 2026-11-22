@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:texthue/texthue.dart' show Color;
 import 'package:texthue/src/contrast.dart';
 import 'package:texthue/src/gamut_fit.dart';
 
@@ -14,6 +15,18 @@ void main() {
     final fit = Gamut.displayP3
         .fit(row['l'].toDouble(), row['c'].toDouble(), row['h'].toDouble());
     final fallback = p3Fallback(fit.bytes);
+    final color = Color.fromDisplayP3(
+        fit.bytes[0] / 255, fit.bytes[1] / 255, fit.bytes[2] / 255);
+    final channels = color.p3!;
+    final expected =
+        fit.bytes.map((v) => (v / 255 * 1e6).round() / 1e6).toList();
+    if (jsonEncode([channels.r, channels.g, channels.b]) !=
+            jsonEncode(expected) ||
+        jsonEncode([color.rgb.r, color.rgb.g, color.rgb.b]) !=
+            jsonEncode(row['fallback']) ||
+        color.srgbClipped != row['clipped']) {
+      throw StateError('Display-P3 rendition mismatch for $row');
+    }
     if (jsonEncode(fit.bytes) != jsonEncode(row['rgb']) ||
         jsonEncode(fallback.bytes) != jsonEncode(row['fallback']) ||
         fallback.clipped != row['clipped']) {
