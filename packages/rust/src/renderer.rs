@@ -46,7 +46,29 @@ pub enum ForegroundPolicy {
     FirstPassing,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Preset {
+    #[default]
+    Labels,
+    Controls,
+    Chart,
+    Subdued,
+    Mono,
+}
+
+impl Preset {
+    fn chroma_scale(self) -> (f64, f64) {
+        match self {
+            Self::Labels | Self::Controls => (0.6, 0.8),
+            Self::Chart => (0.8, 1.0),
+            Self::Subdued => (0.2, 0.4),
+            Self::Mono => (0.0, 0.0),
+        }
+    }
+}
+
 pub struct Renderer {
+    pub preset: Preset,
     pub foregrounds: Vec<[u8; 3]>,
     pub foreground_policy: ForegroundPolicy,
     pub hue_range: (f64, f64),
@@ -66,6 +88,7 @@ pub struct Renderer {
 impl Default for Renderer {
     fn default() -> Self {
         Self {
+            preset: Preset::Labels,
             namespace: String::new(),
             foregrounds: vec![[0; 3], [255; 3]],
             foreground_policy: ForegroundPolicy::Best,
@@ -184,9 +207,13 @@ impl Renderer {
         };
         let profile = |fill: bool| if fill { theme.fill } else { theme.text };
         let wcag = self.contrast_model == ContrastModel::Wcag2;
-        let default_target = self
-            .contrast_target
-            .unwrap_or(if wcag { 4.5 } else { 60.0 });
+        let default_target =
+            self.contrast_target
+                .unwrap_or(match (self.contrast_model, self.preset) {
+                    (ContrastModel::Apca, _) => 60.0,
+                    (_, Preset::Controls) => 7.0,
+                    _ => 4.5,
+                });
         let unconstrained = if wcag { 1.0 } else { 0.0 };
         let required = |role: &str| {
             self.contrast_targets
@@ -236,7 +263,7 @@ impl Renderer {
             |value: f64, fill: bool, target: f64, against: Against, second: Option<[u8; 3]>| {
                 let l = value.clamp(0.0, 1.0);
                 let role = profile(fill);
-                let (low, high) = role.chroma_scale.unwrap_or((0.6, 0.8));
+                let (low, high) = role.chroma_scale.unwrap_or(self.preset.chroma_scale());
                 let c = Gamut::Srgb.cusp(l, hue) * (low + (high - low) * u_c);
                 let secondary = if second.is_some() {
                     required("textOnSubtle")
@@ -336,6 +363,41 @@ mod tests {
     use super::*;
     use serde::Deserialize;
     use serde_json::Value;
+    #[test]
+    fn shared_presets() {
+        let rows: Vec<Value> =
+            serde_json::from_str(include_str!("../testdata/presets-v1.json")).unwrap();
+        assert_eq!(rows.len(), 20);
+        for row in rows {
+            let options = &row["options"];
+            let renderer = Renderer {
+                preset: match options["preset"].as_str().unwrap() {
+                    "labels" => Preset::Labels,
+                    "controls" => Preset::Controls,
+                    "chart" => Preset::Chart,
+                    "subdued" => Preset::Subdued,
+                    "mono" => Preset::Mono,
+                    name => panic!("unknown preset {name}"),
+                },
+                contrast_model: match options["contrastModel"].as_str().unwrap() {
+                    "wcag2" => ContrastModel::Wcag2,
+                    "apca" => ContrastModel::Apca,
+                    name => panic!("unknown contrast model {name}"),
+                },
+                contrast_target: options["contrastTarget"].as_f64(),
+                ..Default::default()
+            };
+            let result = renderer.resolve(row["text"].as_str().unwrap()).unwrap();
+            for (name, colors) in [("light", result.light), ("dark", result.dark)] {
+                let expected = row[name].as_object().unwrap();
+                assert_eq!(colors.len(), expected.len());
+                for (role, hex) in expected {
+                    assert_eq!(colors[role.as_str()].hex, *hex, "{options} {name} {role}");
+                }
+            }
+        }
+    }
+
     #[test]
     fn apca_text_relationships() {
         for (primary, secondary, light, dark) in [

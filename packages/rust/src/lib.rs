@@ -3,7 +3,9 @@ mod hue;
 pub use composite::composite_over;
 mod renderer;
 mod tables;
-pub use renderer::{ForegroundPolicy, RenderedPalette, Renderer, RoleProfile, ThemeProfile};
+pub use renderer::{
+    ForegroundPolicy, Preset, RenderedPalette, Renderer, RoleProfile, ThemeProfile,
+};
 mod color;
 pub use color::{Color, Hsl, Oklch};
 mod repair;
