@@ -59,7 +59,8 @@ pub struct Renderer {
     pub normalization: Normalization,
     pub light_background: [u8; 3],
     pub dark_background: [u8; 3],
-    pub contrast_target: f64,
+    pub contrast_model: ContrastModel,
+    pub contrast_target: Option<f64>,
 }
 
 impl Default for Renderer {
@@ -77,7 +78,8 @@ impl Default for Renderer {
             normalization: Normalization::default(),
             light_background: [255; 3],
             dark_background: [18; 3],
-            contrast_target: 4.5,
+            contrast_model: ContrastModel::Wcag2,
+            contrast_target: None,
         }
     }
 }
@@ -121,14 +123,18 @@ impl Renderer {
         if self.foregrounds.is_empty() {
             return Err("At least one foreground is required");
         }
-        if !(1.0..=21.0).contains(&self.contrast_target) {
+        let range = match self.contrast_model {
+            ContrastModel::Wcag2 => 1.0..=21.0,
+            ContrastModel::Apca => 0.0..=106.0,
+        };
+        if self.contrast_target.is_some_and(|v| !range.contains(&v)) {
             return Err("Invalid contrast target");
         }
         for (role, value) in &self.contrast_targets {
             if !matches!(
                 role.as_str(),
                 "fill" | "fillHover" | "fillActive" | "border" | "text" | "textOnSubtle" | "strong"
-            ) || !(1.0..=21.0).contains(value)
+            ) || !range.contains(value)
             {
                 return Err("Invalid relationship target");
             }
@@ -177,14 +183,19 @@ impl Renderer {
             self.light_profile
         };
         let profile = |fill: bool| if fill { theme.fill } else { theme.text };
+        let wcag = self.contrast_model == ContrastModel::Wcag2;
+        let default_target = self
+            .contrast_target
+            .unwrap_or(if wcag { 4.5 } else { 60.0 });
+        let unconstrained = if wcag { 1.0 } else { 0.0 };
         let required = |role: &str| {
             self.contrast_targets
                 .get(role)
                 .copied()
-                .unwrap_or(if role == "border" {
-                    self.contrast_target.min(3.0)
+                .unwrap_or(if role == "border" && wcag {
+                    default_target.min(3.0)
                 } else {
-                    self.contrast_target
+                    default_target
                 })
         };
         let sample = |fill: bool| {
@@ -199,7 +210,7 @@ impl Renderer {
                 + (bias[(sector + 1) % 12] - bias[sector]) * (hue / 30.0 - sector as f64);
             (low + (high - low) * u_l + offset).clamp(0.0, 1.0)
         };
-        let score = |a, b| ContrastModel::Wcag2.measure(a, b, Gamut::Srgb);
+        let score = |a, b| self.contrast_model.measure(a, b, Gamut::Srgb).abs();
         let foreground = |rgb, target| {
             let mut best = self.foregrounds[0];
             let mut best_score = -1.0;
@@ -215,40 +226,58 @@ impl Renderer {
             }
             best
         };
-        let tone = |value: f64,
-                    fill: bool,
-                    target: f64,
-                    back: Option<[u8; 3]>,
-                    second: Option<[u8; 3]>| {
-            let l = value.clamp(0.0, 1.0);
-            let role = profile(fill);
-            let (low, high) = role.chroma_scale.unwrap_or((0.6, 0.8));
-            let c = Gamut::Srgb.cusp(l, hue) * (low + (high - low) * u_c);
-            Gamut::Srgb
-                .repair(
-                    l,
-                    c.min(role.chroma_cap.unwrap_or(if fill { 0.16 } else { 0.19 })),
-                    hue,
-                    target,
-                    |rgb| {
-                        let primary = score(rgb, back.unwrap_or_else(|| foreground(rgb, target)));
-                        second.map_or(primary, |other| {
-                            primary.min(score(rgb, other) * (target / required("textOnSubtle")))
-                        })
-                    },
-                )
-                .color
-                .bytes
-        };
+        enum Against {
+            Candidates,
+            Text([u8; 3]),
+            Background([u8; 3]),
+        }
+        use Against::*;
+        let tone =
+            |value: f64, fill: bool, target: f64, against: Against, second: Option<[u8; 3]>| {
+                let l = value.clamp(0.0, 1.0);
+                let role = profile(fill);
+                let (low, high) = role.chroma_scale.unwrap_or((0.6, 0.8));
+                let c = Gamut::Srgb.cusp(l, hue) * (low + (high - low) * u_c);
+                let secondary = if second.is_some() {
+                    required("textOnSubtle")
+                } else {
+                    0.0
+                };
+                Gamut::Srgb
+                    .repair(
+                        l,
+                        c.min(role.chroma_cap.unwrap_or(if fill { 0.16 } else { 0.19 })),
+                        hue,
+                        if target == 0.0 { secondary } else { target },
+                        |rgb| {
+                            let primary = match against {
+                                Candidates => score(foreground(rgb, target), rgb),
+                                Text(text) => score(text, rgb),
+                                Background(bg) => score(rgb, bg),
+                            };
+                            second.filter(|_| secondary > 0.0).map_or(primary, |other| {
+                                if target == 0.0 {
+                                    return score(rgb, other);
+                                }
+                                primary.min(score(rgb, other) * (target / secondary))
+                            })
+                        },
+                    )
+                    .color
+                    .bytes
+            };
         let lf = sample(true);
         let lt = sample(false);
-        let subtle = tone(lb + direction * 0.04, true, 1.0, None, None);
-        let fill = tone(lf, true, required("fill"), None, None);
+        let subtle = tone(lb + direction * 0.04, true, unconstrained, Candidates, None);
+        let fill = tone(lf, true, required("fill"), Candidates, None);
         let on_fill = foreground(fill, required("fill"));
         [
             ("background", bg),
             ("subtle", subtle),
-            ("muted", tone(lb + direction * 0.10, true, 1.0, None, None)),
+            (
+                "muted",
+                tone(lb + direction * 0.10, true, unconstrained, Candidates, None),
+            ),
             ("fill", fill),
             ("onFill", on_fill),
             (
@@ -257,7 +286,7 @@ impl Renderer {
                     lf + direction * 0.025,
                     true,
                     required("fillHover"),
-                    Some(on_fill),
+                    Text(on_fill),
                     None,
                 ),
             ),
@@ -267,7 +296,7 @@ impl Renderer {
                     lf + direction * 0.05,
                     true,
                     required("fillActive"),
-                    Some(on_fill),
+                    Text(on_fill),
                     None,
                 ),
             ),
@@ -277,13 +306,13 @@ impl Renderer {
                     lb + direction * 0.39,
                     true,
                     required("border"),
-                    Some(bg),
+                    Background(bg),
                     None,
                 ),
             ),
             (
                 "text",
-                tone(lt, false, required("text"), Some(bg), Some(subtle)),
+                tone(lt, false, required("text"), Background(bg), Some(subtle)),
             ),
             (
                 "strong",
@@ -291,7 +320,7 @@ impl Renderer {
                     lt + direction * 0.10,
                     false,
                     required("strong"),
-                    Some(bg),
+                    Background(bg),
                     None,
                 ),
             ),
@@ -308,13 +337,41 @@ mod tests {
     use serde::Deserialize;
     use serde_json::Value;
     #[test]
+    fn apca_text_relationships() {
+        for (primary, secondary, light, dark) in [
+            (0.0, 90.0, "#003b44", "#a8f2ff"),
+            (90.0, 0.0, "#0b515c", "#a1f1ff"),
+            (0.0, 0.0, "#286771", "#53c4d7"),
+        ] {
+            let renderer = Renderer {
+                contrast_model: ContrastModel::Apca,
+                contrast_targets: [("text".into(), primary), ("textOnSubtle".into(), secondary)]
+                    .into(),
+                ..Renderer::default()
+            };
+            let palette = renderer.resolve("repair").unwrap();
+            assert_eq!(palette.light["text"].hex, light);
+            assert_eq!(palette.dark["text"].hex, dark);
+        }
+        let renderer = Renderer {
+            contrast_model: ContrastModel::Apca,
+            contrast_target: Some(106.0),
+            ..Renderer::default()
+        };
+        let palette = renderer.resolve("foreground").unwrap();
+        assert_eq!(palette.dark["fill"].hex, "#002206");
+        assert_eq!(palette.dark["fillHover"].hex, "#002206");
+        assert_eq!(palette.dark["onFill"].hex, "#ffffff");
+    }
+
+    #[test]
     fn ordered_foregrounds() {
         for policy in [ForegroundPolicy::FirstPassing, ForegroundPolicy::Best] {
             for target in [1.0, 21.0] {
                 let renderer = Renderer {
                     foregrounds: vec![[0x55, 0x66, 0x77], [0; 3], [255; 3]],
                     foreground_policy: policy,
-                    contrast_target: target,
+                    contrast_target: Some(target),
                     ..Renderer::default()
                 };
                 let p = renderer.resolve("foreground").unwrap();
@@ -411,7 +468,7 @@ mod tests {
             .batch(std::iter::empty::<&str>())
             .unwrap()
             .is_empty());
-        renderer.contrast_target = f64::NAN;
+        renderer.contrast_target = Some(f64::NAN);
         assert!(renderer.batch(labels).is_err());
     }
 
@@ -455,7 +512,7 @@ mod tests {
             let renderer = Renderer {
                 namespace: opts["namespace"].as_str().unwrap_or("").into(),
                 seed: opts["seed"].as_u64().unwrap_or(0).try_into().unwrap(),
-                contrast_target: opts["contrastTarget"].as_f64().unwrap_or(4.5),
+                contrast_target: opts["contrastTarget"].as_f64(),
                 light_profile: theme_profile("light"),
                 dark_profile: theme_profile("dark"),
                 contrast_targets: opts["contrastTargets"]

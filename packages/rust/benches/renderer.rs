@@ -11,7 +11,7 @@ fn render(c: &mut Criterion) {
         ("unattainable_on_gray", 21.0, [119; 3]),
     ] {
         let renderer = Renderer {
-            contrast_target: target,
+            contrast_target: Some(target),
             light_background: background,
             ..Renderer::default()
         };
