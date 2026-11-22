@@ -23,6 +23,6 @@ const label = 'research';
 const resolver = createResolver();
 const variables = cssVariables(resolver.resolve(label), {theme:'light', slug:label});
 for (const [name, value] of Object.entries(variables)) element.style.setProperty(name, value);
-const fill = Object.keys(variables).find(name => name.endsWith('-fill'));
+const fill = Object.keys(variables).find(name => name.endsWith('-fill') && !name.endsWith('-on-fill'));
 element.style.backgroundColor = `var(${fill})`;
 ```
