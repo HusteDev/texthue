@@ -26,3 +26,10 @@ For brand colors, construct `RenderOptions` and pass it to `Renderer(options:)`.
 Run `swift test --package-path packages/swift --force-resolved-versions` from the repository root with Swift 6 or later. The SwiftPM test target bundles the shared reference vectors. From a standalone copy of the Swift package, run `swift test --force-resolved-versions`.
 
 The package uses CryptoKit on Apple platforms and pins swift-crypto 3.0.0 for Linux and Windows. The package manifest declares deployment minimums of macOS 10.15, iOS 13, tvOS 13 and watchOS 6.
+
+On the Windows development host, Swift 6.1.3 passed all 26 XCTest cases in the Linux x86_64 container. The renderer test checks ten roles in each theme for all 32 frozen identity vectors. The following PowerShell command reproduces the locked build from the repository root. Keep the cache mounted at the same container path across runs because Swift precompiled headers record absolute paths.
+
+```powershell
+$source = (Resolve-Path packages/swift).Path
+docker run --rm --mount "type=bind,source=$source,target=/src,readonly" --mount type=volume,source=texthue-swift61-build,target=/tmp/build -w /src swift:6.1.3-jammy swift test --scratch-path /tmp/build --force-resolved-versions -j 4
+```
