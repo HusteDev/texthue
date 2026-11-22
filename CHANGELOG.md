@@ -30,7 +30,7 @@ mapping itself changes.
   `tools/verify.py`, and `tools/build-packages.py` now read it instead of
   hardcoding each language.
 - `CONTRIBUTING.md` and `SECURITY.md`.
-- JavaScript, Python, Go, Rust, Swift, and C# register JSON conformance runners.
+- JavaScript, Python, Go, Rust, Swift, C#, and Dart register JSON conformance runners.
   They read resolution requests from stdin and return palettes in input order.
   JavaScript, Python, and Go also accept exported configurations for replay.
   [Runner contract](docs/CONFORMANCE-RUNNER.md)

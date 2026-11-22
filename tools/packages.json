@@ -102,7 +102,8 @@
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
       "verifyCommands": [["dart", "analyze", "--fatal-infos"], ["dart", "run", "{suite}"]],
       "verifySuites": "tool/check_*.dart",
-      "conformanceRunner": null
+      "optionalToolchain": true,
+      "conformanceRunner": ["dart", "run", "packages/dart/tool/conformance.dart"]
     },
     {
       "id": "csharp",

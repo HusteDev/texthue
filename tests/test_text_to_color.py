@@ -607,6 +607,8 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
                 command = list(package["conformanceRunner"])
                 if command[0] == "python":
                     command[0] = sys.executable
+                else:
+                    command[0] = shutil.which(command[0]) or command[0]
                 run = subprocess.run(
                     command,
                     cwd=ROOT,
