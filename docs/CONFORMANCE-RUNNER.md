@@ -33,6 +33,17 @@ language's runner: same stdin/stdout shapes, same exit-code rule.
 
 ## Registering a runner
 
+Swift supplies the `TextHueConformance` executable. From the repository root, run
+`swift run --package-path packages/swift --force-resolved-versions TextHueConformance`
+with a JSON array on stdin. It accepts direct resolution requests. JavaScript,
+Python and Go also support configuration replay.
+
+To compare installed ports after building the npm package, run
+`python -m unittest discover -s tests -p test_text_to_color.py -k cross_language_generated_cases`.
+JavaScript, Python and Go are required. The test includes Swift when `swift` is
+on PATH and records a skipped Swift subtest otherwise. A Swift build failure
+or output mismatch fails the test when the toolchain is present.
+
 Add the command to invoke it (and any build step it needs) to that
 package's entry in `tools/packages.json` under `conformanceRunner`. The
 cross-language test in `tests/` builds the manifest's runner list and
