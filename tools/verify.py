@@ -99,6 +99,7 @@ def main():
     run("TypeScript compilation", [npm, "run", "build"], env=env)
     run("assignment vectors", ["node", "tools/build-assign-vectors.mjs", "--check"], env=env)
     run("normalization vectors", ["node", "tools/build-normalization-vectors.mjs", "--check"], env=env)
+    run("preset vectors", ["node", "tools/build-preset-vectors.mjs", "--check"], env=env)
     run("tone repair vectors", ["node", "tools/repair-vectors.mjs", "--check"], env=env)
     run("renderer vectors", ["node", "tools/build-renderer-vectors.mjs", "--check"], env=env)
     run("pinned color tables", ["node", "tools/tune-tables.mjs", "--check"], env=env)

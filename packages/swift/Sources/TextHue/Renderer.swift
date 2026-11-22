@@ -26,7 +26,21 @@ public enum ForegroundPolicy: String, Decodable {
     case firstPassing = "first-passing"
 }
 
+public enum Preset: String, Decodable {
+    case labels, controls, chart, subdued, mono
+
+    fileprivate var chromaScale: [Double] {
+        switch self {
+        case .labels, .controls: [0.6, 0.8]
+        case .chart: [0.8, 1]
+        case .subdued: [0.2, 0.4]
+        case .mono: [0, 0]
+        }
+    }
+}
+
 public struct RenderOptions: Decodable {
+    public var preset: Preset?
     public var normalize: Normalization?
     public var namespace: String?
     public var seed: UInt32?
@@ -152,7 +166,8 @@ public struct Renderer {
         let base = dark ? darkBackground : lightBackground
         let bg = base.bytes, lb = base.lightness
         let model = options.contrastModel ?? .wcag2
-        let target = options.contrastTarget ?? (model == .apca ? 60 : 4.5)
+        let preset = options.preset ?? .labels
+        let target = options.contrastTarget ?? (model == .apca ? 60 : preset == .controls ? 7 : 4.5)
         let unconstrained: Double = model == .apca ? 0 : 1
         func required(_ role: String) -> Double {
             options.contrastTargets?[role] ?? (role == "border" && model == .wcag2 ? min(target, 3) : target)
@@ -162,7 +177,7 @@ public struct Renderer {
             let fill = role == "fill"
             let range = profile?.lightness ?? (dark ? (fill ? [0.4,0.5] : [0.72,0.82]) :
                                                 (fill ? [0.72,0.82] : [0.43,0.53]))
-            let scale = profile?.chromaScale ?? [0.6,0.8]
+            let scale = profile?.chromaScale ?? preset.chromaScale
             let cap = profile?.chromaCap ?? (fill ? 0.16 : 0.19)
             let bias = biases[(dark ? 2 : 0) + (fill ? 0 : 1)], sector = Int(hue / 30)
             let offset = bias[sector] + (bias[(sector + 1) % 12] - bias[sector]) * (hue / 30 - Double(sector))
