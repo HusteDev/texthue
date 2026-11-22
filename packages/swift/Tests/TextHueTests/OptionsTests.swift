@@ -31,6 +31,33 @@ final class OptionsTests: XCTestCase {
         }
     }
 
+    func testStrictTextChecksBothRelationshipsIndependently() throws {
+        let models: [(ContrastModel, Double, Double)] = [(.wcag2, 1, 21), (.apca, 0, 106)]
+        for (model, low, high) in models {
+            for (primary, secondary) in [(low, high), (high, low), (low, low)] {
+                var options = RenderOptions()
+                options.contrastModel = model
+                options.backgrounds = ["light": "#777777", "dark": "#777777"]
+                options.contrastTargets = ["text": primary, "textOnSubtle": secondary]
+                let renderer = try Renderer(options: options)
+                let palette = try renderer.resolve("strict")
+                for dark in [false, true] {
+                    let pairs = (dark ? palette.darkContrast : palette.lightContrast).relationships
+                    XCTAssertEqual(pairs["text"]?.meetsTarget, primary == low)
+                    XCTAssertEqual(pairs["textOnSubtle"]?.meetsTarget, secondary == low)
+                    if primary == low && secondary == low {
+                        XCTAssertEqual(try renderer.hex("strict", dark: dark, role: "text", strict: true),
+                                       (dark ? palette.dark : palette.light)["text"]?.hex)
+                    } else {
+                        XCTAssertThrowsError(try renderer.hex("strict", dark: dark, role: "text", strict: true)) {
+                            XCTAssertEqual($0 as? RenderError, .unmetConstraint)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     func testRejectsInvalidConfigurationBeforeRendering() {
         let invalid: [(inout RenderOptions) -> Void] = [
             { $0.contrastTarget = .nan }, { $0.contrastTargets = ["text": 22] },
