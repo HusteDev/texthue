@@ -55,3 +55,24 @@ Check(new(0, 0, 0), new(255, 255, 255), ContrastModel.Wcag2, Gamut.SRgb, 21);
 Check(new(255, 0, 0), new(0, 0, 0), ContrastModel.Wcag2, Gamut.SRgb, 5.252);
 if (measurements != 1137) throw new InvalidDataException("Unexpected contrast corpus size.");
 Console.WriteLine($"Passed {measurements} contrast measurements.");
+
+int colorCount = 0;
+double tolerance = document.RootElement.GetProperty("numericTolerance").GetDouble();
+foreach (var vector in vectors.EnumerateArray())
+foreach (var theme in new[] { "light", "dark" })
+foreach (var role in vector.GetProperty("expected").GetProperty(theme).EnumerateObject())
+{
+    if (role.Name == "contrast") continue;
+    var expected = role.Value;
+    var rgb = expected.GetProperty("rgb");
+    var color = new Color(new(rgb.GetProperty("r").GetByte(), rgb.GetProperty("g").GetByte(), rgb.GetProperty("b").GetByte()));
+    bool Matches(double actual, string format, string field) =>
+        Math.Abs(actual - expected.GetProperty(format).GetProperty(field).GetDouble()) <= tolerance + 1e-12;
+    if (color.Hex != expected.GetProperty("hex").GetString() ||
+        !Matches(color.Hsl.H, "hsl", "h") || !Matches(color.Hsl.S, "hsl", "s") || !Matches(color.Hsl.L, "hsl", "l") ||
+        !Matches(color.Oklch.L, "oklch", "l") || !Matches(color.Oklch.C, "oklch", "c") || !Matches(color.Oklch.H, "oklch", "h"))
+        throw new InvalidDataException($"Format mismatch for {vector.GetProperty("id")} {theme} {role.Name}");
+    colorCount++;
+}
+if (colorCount != 640) throw new InvalidDataException("Unexpected role count.");
+Console.WriteLine($"Passed {colorCount} shared role color formats.");
