@@ -4,9 +4,14 @@ using System.Text;
 
 namespace TextHue;
 
+public sealed record ContrastRelationship(double Ratio, bool MeetsTarget, bool LightnessAdjusted,
+    bool ChromaCapped, bool ChromaReduced, string? Fallback, ContrastModel Model, double Value);
+
 public sealed record RenderedPalette(double HueFraction, double Hue,
     IReadOnlyDictionary<string, Color> Light, IReadOnlyDictionary<string, Color> Dark)
 {
+    public IReadOnlyDictionary<string, ContrastRelationship> LightContrast { get; internal init; } = FrozenDictionary<string, ContrastRelationship>.Empty;
+    public IReadOnlyDictionary<string, ContrastRelationship> DarkContrast { get; internal init; } = FrozenDictionary<string, ContrastRelationship>.Empty;
     public string Version => "text-to-color-v1";
     public string Source { get; internal init; } = "hash";
 }
@@ -156,12 +161,29 @@ public sealed partial class Renderer
 
     private RenderedPalette Render(Mapping mapping)
     {
-        IReadOnlyDictionary<string, Color> Theme(bool dark)
+        (FrozenDictionary<string, Color> Colors, FrozenDictionary<string, ContrastRelationship> Report) Theme(bool dark)
         {
-            var bytes = RoleRenderer(mapping, dark);
-            return Roles.ToFrozenDictionary(role => role, role => new Color(bytes(role)));
+            var flags = new Dictionary<string, ToneFlags>();
+            var bytes = RoleRenderer(mapping, dark, flags);
+            var colors = Roles.ToFrozenDictionary(role => role, role => new Color(bytes(role)));
+            var report = new Dictionary<string, ContrastRelationship>();
+            foreach (var (pair, frontRole, backRole) in Relationships)
+            {
+                var front = colors[frontRole].Rgb;
+                var back = colors[backRole].Rgb;
+                double value = Contrast.Measure(front, back, contrastModel);
+                bool passes = Math.Abs(value) >= Target(pair);
+                var tone = flags.GetValueOrDefault(pair == "textOnSubtle" ? "text" : pair);
+                string? fallback = pair == "fill" && mapping.Light != null && !passes ? "palette-constraint" : tone.Fallback;
+                double ratio = contrastModel == ContrastModel.Wcag2 ? value : Contrast.Measure(front, back, ContrastModel.Wcag2);
+                report.Add(pair, new(ratio, passes, tone.Adjusted, tone.Capped, tone.Reduced, fallback, contrastModel, value));
+            }
+            return (colors, report.ToFrozenDictionary());
         }
-        return new(mapping.Fraction, mapping.Hue, Theme(false), Theme(true)) { Source = mapping.Source };
+        var light = Theme(false);
+        var dark = Theme(true);
+        return new(mapping.Fraction, mapping.Hue, light.Colors, dark.Colors)
+            { Source = mapping.Source, LightContrast = light.Report, DarkContrast = dark.Report };
     }
 
     public Color ResolveColor(string text, bool dark = false, string role = "fill") =>
@@ -238,7 +260,14 @@ public sealed partial class Renderer
         return new(fraction, light.Hue, 0.5, 0.5, light, dark, source);
     }
 
-    private Func<string, Rgb> RoleRenderer(Mapping mapping, bool dark)
+    private static readonly (string Pair, string Front, string Back)[] Relationships = [
+        ("fill", "onFill", "fill"), ("fillHover", "onFill", "fillHover"), ("fillActive", "onFill", "fillActive"),
+        ("text", "text", "background"), ("textOnSubtle", "text", "subtle"), ("border", "border", "background"),
+        ("strong", "strong", "background")
+    ];
+    private readonly record struct ToneFlags(bool Adjusted, bool Capped, bool Reduced, string? Fallback);
+
+    private Func<string, Rgb> RoleRenderer(Mapping mapping, bool dark, Dictionary<string, ToneFlags>? flags = null)
     {
         var fixedTone = dark ? mapping.Dark : mapping.Light;
         double hue = fixedTone?.Hue ?? mapping.Hue, uL = mapping.UL, uC = mapping.UC;
@@ -276,40 +305,44 @@ public sealed partial class Renderer
             }
             return best;
         }
-        Rgb Tone(double value, bool fill, double target, Rgb? back = null, Rgb? second = null, bool surface = false)
+        Rgb Tone(string name, double value, bool fill, double target, Rgb? back = null, Rgb? second = null, bool surface = false)
         {
             double l = Math.Clamp(value, 0, 1);
             var role = fill ? profile.Fill : profile.Text;
             var (low, high) = role?.ChromaScale ?? chromaScale;
-            double c = fixedTone?.Neutral == true ? 0 : Math.Min(role?.ChromaCap ?? (fill ? 0.16 : 0.19), Gamut.SRgb.Cusp(l, hue) * ((low + (high - low) * uC) * (mapping.Ring < 3 ? 1 : 0.6)));
+            double cap = fixedTone?.Neutral == true ? 0 : role?.ChromaCap ?? (fill ? 0.16 : 0.19);
+            double requested = Gamut.SRgb.Cusp(l, hue) * ((low + (high - low) * uC) * (mapping.Ring < 3 ? 1 : 0.6));
+            double c = Math.Min(requested, cap);
             double secondary = second.HasValue ? Target("textOnSubtle") : 0;
-            return Gamut.SRgb.Repair(l, c, hue, target == 0 ? secondary : target, rgb =>
+            var repair = Gamut.SRgb.Repair(l, c, hue, target == 0 ? secondary : target, rgb =>
             {
                 double primary = back is Rgb bg ? (surface ? Score(bg, rgb) : Score(rgb, bg)) : Score(Foreground(rgb, target), rgb);
                 if (second is not Rgb other || secondary == 0) return primary;
                 double otherScore = Score(rgb, other);
                 return target == 0 ? otherScore : Math.Min(primary, otherScore * (target / secondary));
-            }).Color.Bytes;
+            });
+            if (flags != null) flags[name] = new(repair.Color.Lightness != l, requested > cap, repair.Color.Chroma < c, repair.Fallback);
+            return repair.Color.Bytes;
         }
 
         double lf = fixedTone?.Lightness ?? Sample(true), lt = Sample(false);
         double unconstrained = contrastModel == ContrastModel.Apca ? 0 : 1;
         Rgb? subtle = null, fill = null, onFill = null;
-        Rgb Subtle() => subtle ??= Tone(lb + direction * 0.04, true, unconstrained);
-        Rgb Fill() => fill ??= fixedTone?.Bytes ?? Tone(lf, true, Target("fill"));
+        Rgb Subtle() => subtle ??= Tone("subtle", lb + direction * 0.04, true, unconstrained);
+        Rgb Fill() => fill ??= fixedTone?.Bytes ?? Tone("fill", lf, true, Target("fill"));
         Rgb OnFill() => onFill ??= Foreground(Fill(), Target("fill"));
         return role => role switch
         {
             "background" => background.Rgb,
             "subtle" => Subtle(),
-            "muted" => Tone(lb + direction * 0.10, true, unconstrained),
+            "muted" => Tone(role, lb + direction * 0.10, true, unconstrained),
             "fill" => Fill(),
             "onFill" => OnFill(),
-            "fillHover" => Tone(lf + direction * 0.025, true, Target("fillHover"), OnFill(), surface: true),
-            "fillActive" => Tone(lf + direction * 0.05, true, Target("fillActive"), OnFill(), surface: true),
-            "border" => Tone(lb + direction * 0.39, true, Target("border"), background.Rgb),
-            "text" => Tone(lt, false, Target("text"), background.Rgb, Subtle()),
-            "strong" => Tone(lt + direction * 0.10, false, Target("strong"), background.Rgb),
+            "fillHover" => Tone(role, lf + direction * 0.025, true, Target("fillHover"), OnFill(), surface: true),
+            "fillActive" => Tone(role, lf + direction * 0.05, true, Target("fillActive"), OnFill(), surface: true),
+            "border" => Tone(role, lb + direction * 0.39, true, Target("border"), background.Rgb),
+            "text" => Tone(role, lt, false, Target("text"), background.Rgb, Subtle()),
+            "strong" => Tone(role, lt + direction * 0.10, false, Target("strong"), background.Rgb),
             _ => throw new ArgumentOutOfRangeException(nameof(role), role, "Unknown color role.")
         };
     }

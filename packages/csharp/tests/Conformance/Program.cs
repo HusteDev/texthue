@@ -174,6 +174,19 @@ foreach (var row in vectors.EnumerateArray())
         throw new InvalidDataException($"Renderer identity mismatch for {row.GetProperty("id")}");
     foreach (var (theme, colors) in new[] { ("light", palette.Light), ("dark", palette.Dark) })
     {
+        var report = theme == "light" ? palette.LightContrast : palette.DarkContrast;
+        if (report.Count != 7) throw new InvalidDataException("Missing contrast relationships.");
+        foreach (var (pair, result) in report)
+        {
+            var reference = expected.GetProperty(theme).GetProperty("contrast").GetProperty(pair);
+            if (Math.Abs(result.Ratio - reference.GetProperty("ratio").GetDouble()) > 1e-10 ||
+                result.MeetsTarget != reference.GetProperty("meetsTarget").GetBoolean() ||
+                result.LightnessAdjusted != reference.GetProperty("lightnessAdjusted").GetBoolean() ||
+                result.ChromaCapped != reference.GetProperty("chromaCapped").GetBoolean() ||
+                result.ChromaReduced != reference.GetProperty("chromaReduced").GetBoolean() ||
+                result.Fallback != reference.GetProperty("fallback").GetString())
+                throw new InvalidDataException($"Contrast report mismatch for {row.GetProperty("id")} {theme} {pair}: {result} vs {reference}");
+        }
         if (colors.Count != 10) throw new InvalidDataException("Missing roles.");
         foreach (var (role, color) in colors)
             if (renderer.Hex(row.GetProperty("text").GetString()!, theme == "dark", role) != color.Hex ||

@@ -19,6 +19,8 @@ For one role, use `renderer.Hex("apple", dark: true, role: "border")` or
 `renderer.ResolveColor("apple", role: "fill")`. Both render the selected theme
 and the role's dependencies. `Hex` formats the sRGB bytes directly.
 
+Read `palette.LightContrast["textOnSubtle"]` or the corresponding `DarkContrast` entry to inspect the rendered relationship. Each report includes the WCAG ratio, the selected model and its signed measurement, pass status, lightness and chroma adjustments, and any fallback reason.
+
 Use `renderer.HexStrict(text, role: "text")` to enforce the selected role's contrast targets. Text is checked against both the background and subtle surface. An unmet target throws `InvalidOperationException`.
 
 Use `renderer.Assign(labels)` to assign a collection and
