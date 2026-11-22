@@ -296,7 +296,11 @@ def verify_bundle(version: str, commit: str, directory: Path) -> None:
     names = {f"texthue-{version}{suffix}" for suffix in (".tgz", ".tar.gz", "-py3-none-any.whl")}
     # Older staged releases predate the native archives. Both digest records still have to
     # agree with the exact set of files present in either bundle.
-    for archive in (f"TextHue.{version}.nupkg", f"texthue-{version}.crate"):
+    for archive in (
+        f"TextHue.{version}.nupkg",
+        f"texthue-{version}.crate",
+        f"texthue-{version}-maven.zip",
+    ):
         if (directory / archive).exists():
             names.add(archive)
     entries = list(directory.iterdir())

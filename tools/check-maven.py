@@ -1,21 +1,18 @@
 """Run a separate Kotlin/JVM application against the local Maven staging repository."""
 
+import argparse
 import os
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 KOTLIN = ROOT / "packages/kotlin"
 
 
-def main():
-    repository = KOTLIN / "build/repository"
-    metadata = repository / "com/hustedev/texthue/maven-metadata.xml"
-    version = ET.parse(metadata).findtext("./versioning/release")
-    if not version:
-        raise ValueError("Staged Maven repository has no release version")
+def check_consumer(repository, version):
     with tempfile.TemporaryDirectory() as temp:
         app = Path(temp)
         (app / "settings.gradle").write_text(
@@ -66,6 +63,36 @@ fun main() {
         if output.strip() != "#5ab95a #ffffff":
             raise ValueError(f"Unexpected packaged consumer output: {output!r}")
         print(f"PASS: com.hustedev:texthue:{version} Maven consumer")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--stage", type=Path, help="Save the consumer-tested repository ZIP")
+    args = parser.parse_args()
+    repository = KOTLIN / "build/repository"
+    coordinate = Path("com/hustedev/texthue")
+    version = ET.parse(repository / coordinate / "maven-metadata.xml").findtext(
+        "./versioning/release"
+    )
+    if not version or not all(part.isdecimal() for part in version.split(".")):
+        raise ValueError("Expected a numeric Maven release version")
+    if args.stage is None:
+        check_consumer(repository, version)
+        return
+    with tempfile.TemporaryDirectory() as temp:
+        root = Path(temp)
+        bundle = root / f"texthue-{version}-maven.zip"
+        with zipfile.ZipFile(bundle, "w") as archive:
+            for suffix in (".jar", "-sources.jar", ".pom", ".module"):
+                member = coordinate / version / f"texthue-{version}{suffix}"
+                archive.write(repository / member, member.as_posix())
+        extracted = root / "repository"
+        with zipfile.ZipFile(bundle) as archive:
+            archive.extractall(extracted)
+        check_consumer(extracted, version)
+        args.stage.mkdir(parents=True, exist_ok=True)
+        with (args.stage / bundle.name).open("xb") as output:
+            output.write(bundle.read_bytes())
 
 
 if __name__ == "__main__":

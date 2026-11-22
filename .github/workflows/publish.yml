@@ -164,6 +164,17 @@ jobs:
           dart pub get --enforce-lockfile
           python ../../tools/verify.py --port dart
           python ../../tools/check-dart-publication.py
+      - name: Stage the Kotlin Maven repository
+        if: steps.bundle.outputs.state == 'absent'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          python tools/verify.py --port kotlin
+          packages/kotlin/gradlew -p packages/kotlin publishLibraryPublicationToStagingRepository
+          python tools/check-maven.py --stage artifacts
+          (cd artifacts && sha256sum "texthue-${VERSION}-maven.zip" >> SHA256SUMS)
       - name: Stage the tested Rust crate
         if: steps.bundle.outputs.state == 'absent'
         env:

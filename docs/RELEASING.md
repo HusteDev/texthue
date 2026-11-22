@@ -23,6 +23,11 @@ The build job exercises the NuGet consumer and runs the unpacked crate's tests
 and example before recording the archive digests.
 Resuming an older bundle preserves its original archive set.
 
+The Kotlin draft asset, `texthue-<version>-maven.zip`, contains the binary JAR,
+sources JAR, POM and Gradle module metadata under their Maven coordinates.
+The build tests a separate Kotlin consumer against the extracted ZIP before
+staging it. Maven Central signing and publication remain separate steps.
+
 ## Build and verify locally
 
 Install Node.js 22+, Python 3.11+, and Go 1.23+. From the repository root:
