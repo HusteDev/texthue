@@ -1,9 +1,11 @@
 use crate::tables::{ANCHORS, BIASES};
 use crate::{identity_digest, identity_fractions, Color, ContrastModel, Gamut, Normalization};
-use std::collections::BTreeMap;
+use std::collections::{hash_map::Entry, BTreeMap, HashMap};
+use std::sync::Arc;
 
 pub type Theme = BTreeMap<&'static str, Color>;
 
+#[derive(Debug, PartialEq)]
 pub struct RenderedPalette {
     pub hue_fraction: f64,
     pub hue: f64,
@@ -66,6 +68,38 @@ impl Default for Renderer {
 
 impl Renderer {
     pub fn resolve(&self, text: &str) -> Result<RenderedPalette, &'static str> {
+        self.validate()?;
+        self.resolve_normalized(
+            &self.normalization.apply(text),
+            &self.normalization.apply(&self.namespace),
+        )
+    }
+
+    /// Resolve in input order, sharing normalized duplicates only within this call.
+    pub fn batch<S: AsRef<str>>(
+        &self,
+        labels: impl IntoIterator<Item = S>,
+    ) -> Result<Vec<Arc<RenderedPalette>>, &'static str> {
+        self.validate()?;
+        let scope = self.normalization.apply(&self.namespace);
+        let mut cache = HashMap::new();
+        let mut result = Vec::new();
+        for label in labels {
+            let key = self.normalization.apply(label.as_ref());
+            let palette = match cache.entry(key) {
+                Entry::Occupied(entry) => Arc::clone(entry.get()),
+                Entry::Vacant(entry) => {
+                    let palette = Arc::new(self.resolve_normalized(entry.key(), &scope)?);
+                    entry.insert(Arc::clone(&palette));
+                    palette
+                }
+            };
+            result.push(palette);
+        }
+        Ok(result)
+    }
+
+    fn validate(&self) -> Result<(), &'static str> {
         if !(1.0..=21.0).contains(&self.contrast_target) {
             return Err("Invalid contrast target");
         }
@@ -83,12 +117,11 @@ impl Renderer {
                 return Err("Invalid role profile");
             }
         }
-        let digest = identity_digest(
-            &self.normalization.apply(text),
-            &self.normalization.apply(&self.namespace),
-            self.seed,
-        )
-        .map_err(|_| "Namespace too long")?;
+        Ok(())
+    }
+
+    fn resolve_normalized(&self, text: &str, scope: &str) -> Result<RenderedPalette, &'static str> {
+        let digest = identity_digest(text, scope, self.seed).map_err(|_| "Namespace too long")?;
         let [u_h, u_l, u_c] = identity_fractions(&digest);
         let position = u_h * 12.0;
         let i = position as usize;
@@ -239,6 +272,28 @@ mod tests {
     use super::*;
     use serde::Deserialize;
     use serde_json::Value;
+    #[test]
+    fn ordered_batch() {
+        let mut renderer = Renderer::default();
+        let labels = ["é", "", "e\u{301}", "é", "\0"];
+        let palettes = renderer.batch(labels).unwrap();
+        for (palette, label) in palettes.iter().zip(labels) {
+            assert_eq!(palette.as_ref(), &renderer.resolve(label).unwrap());
+        }
+        assert_eq!(palettes.len(), labels.len());
+        assert!(Arc::ptr_eq(&palettes[0], &palettes[3]));
+        assert_ne!(palettes[0].hue, palettes[2].hue);
+        renderer.normalization.unicode = crate::UnicodeForm::Nfc;
+        let normalized = renderer.batch(labels).unwrap();
+        assert!(Arc::ptr_eq(&normalized[0], &normalized[2]));
+        assert!(renderer
+            .batch(std::iter::empty::<&str>())
+            .unwrap()
+            .is_empty());
+        renderer.contrast_target = f64::NAN;
+        assert!(renderer.batch(labels).is_err());
+    }
+
     #[test]
     fn shared_renderer() {
         #[derive(Deserialize)]
