@@ -60,14 +60,18 @@ def exercise(page, url, clipboard):
     assert swatches.all_text_contents() != before
     page.get_by_role("checkbox", name="Optimize new placements").uncheck()
     # Two submissions in one event handler guarantee the first result is still pending.
-    page.evaluate("""() => {
+    retained = page.evaluate("""() => {
+            const previous = document.querySelector("#results table");
             const labels = document.querySelector('#labels');
             const form = labels.form;
             labels.value = Array.from({length:250}, (_, i) => 'item:' + i).join(String.fromCharCode(10));
             form.requestSubmit();
+            const retained = previous.isConnected;
             labels.value = 'fresh';
             form.requestSubmit();
+            return retained && previous.isConnected;
         }""")
+    assert retained, "Last completed palette disappeared while replacement was pending"
     expect(status).to_have_text("1 distinct labels")
     expect(page.get_by_text("fresh", exact=True).first).to_be_visible()
     outputs = {}

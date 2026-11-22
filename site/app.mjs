@@ -33,7 +33,6 @@ function download(title, filename, type, serialize) {
 function run() {
   worker?.terminate();
   worker = undefined;
-  results.replaceChildren();
   const field = id => document.getElementById(id).value;
   try {
     const input = {labels:field('labels').split(/\r?\n/).filter(Boolean), options:JSON.parse(field('options')),
@@ -49,6 +48,7 @@ function run() {
       if (data.error) { status.textContent = data.error; return; }
       const {rows, diagnostics, findings, config, registry} = data.result;
       status.textContent = rows.length + ' distinct labels';
+      results.replaceChildren();
       const table = append(results, 'table');
       const head = append(table, 'tr');
       for (const title of ['Label','Hash','Assigned','Registry']) append(head,'th',title);
@@ -86,7 +86,7 @@ function run() {
           await navigator.clipboard.writeText(css);
           if (worker === active) status.textContent = 'Registry CSS copied';
         } catch {
-          if (worker !== active) return;
+          if (!copy.isConnected) return;
           const label = append(results, 'label', 'Select and copy registry CSS');
           const field = append(label, 'textarea');
           field.readOnly = true;
