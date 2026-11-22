@@ -88,7 +88,10 @@ Color = {
   hex: "#rrggbb",
   rgb: { r: integer, g: integer, b: integer },
   hsl: { h: number, s: number, l: number },
-  oklch: { l: number, c: number, h: number }
+  oklch: { l: number, c: number, h: number },
+  p3?: { r: number, g: number, b: number },
+  css?: string,
+  srgbClipped?: boolean
 }
 
 ContrastResult = {
@@ -103,7 +106,7 @@ ContrastResult = {
 }
 ```
 
-The result excludes input text, namespace, and digest. `hue` is the sampled OKLCH identity hue before conversion, with no decimal rounding. All colors are opaque sRGB. RGB channels are integers in 0–255. HSL hue uses degrees and saturation/lightness use percentages. OKLCH lightness uses 0–1, chroma is a number, and hue uses degrees.
+The result excludes input text, namespace, and digest. `hue` is the sampled OKLCH identity hue before conversion, with no decimal rounding. All colors are opaque. The default rendition uses sRGB. In Display-P3 mode, `p3` gives encoded Display-P3 channels in [0, 1] rounded to six decimals, and `css` serializes them as `color(display-p3 r g b)`. Hex, RGB and HSL describe the sRGB fallback. OKLCH describes the canonical rendition. RGB channels are integers in 0–255. HSL hue uses degrees and saturation/lightness use percentages. OKLCH lightness uses 0–1, chroma is a number, and hue uses degrees.
 
 Fill, hover and active measure onFill against the respective surface. Border, text and strong measure against the theme background. textOnSubtle measures text against subtle. Each relationship reports a luminance ratio in the selected gamut. The Display-P3 ratio uses P3 luminance coefficients. WCAG mode compares the unrounded ratio to the relationship target. APCA mode also returns signed Lc in `value`, positive for dark text on a lighter surface. It compares absolute Lc to the target. `chromaReduced` compares the final retained pre-quantization chroma with the requested chroma; it does not compare rounded output OKLCH values. `lightnessAdjusted` compares the selected pre-quantization lightness with the original sampled lightness.
 
@@ -205,6 +208,24 @@ decode(x) = x/12.92                          if x <= 0.04045
 ```
 
 Quantized eight-bit RGB is the authoritative color. All contrast calculations and output formats use it, rather than the originally requested OKLCH values.
+
+### Display-P3 conversion
+
+Display-P3 uses the same transfer functions as sRGB. For P3 gamut fitting, replace the XYZ-to-linear-sRGB transform with the XYZ-to-linear-P3 matrix below. For P3 output to XYZ, decode the encoded channels before using the inverse matrix.
+
+```text
+XYZ D65 to linear Display-P3
+[ 446124/178915, -333277/357830, -72051/178915 ]
+[ -14852/17905,     63121/35810,     423/17905 ]
+[  11844/330415,  -50337/660830, 316169/330415 ]
+
+Linear Display-P3 to XYZ D65
+[ 608311/1250200, 189793/714400,  198249/1000160 ]
+[   35783/156275, 247089/357200,  198249/2500400 ]
+[              0,  32229/714400, 5220557/5000800 ]
+```
+
+To produce the sRGB fallback, transform the decoded P3 rendition through XYZ D65 into linear sRGB. Set `srgbClipped` if any channel is below -1e-12 or above 1 + 1e-12. Clamp each channel to [0, 1], encode and round to the nearest byte (half up). Evaluate P3 contrast before fallback clipping.
 
 ## 4. Contrast and lightness adjustment
 
