@@ -17,6 +17,12 @@ mapping itself changes.
 - Kotlin, Swift, Dart, C#, Rust, and WebAssembly have package-specific verification commands. The release guide lists their distribution formats and verification paths.
 - The palette inspector compares hash, collection, and registry colors. The React and Tailwind adapters integrate those colors into component rendering and stylesheet builds. Performance checks bound renderer work across five contrast scenarios.
 
+- Applications that resolve individual labels can import `texthue/single`. Its runtime import graph excludes collection assignment, vision diagnostics, registry fingerprinting, migration, and CSS exports.
+- Rust, C#, Kotlin, Swift, and Dart support collection assignment and replay of pinned placements. Their strict hex helpers report a failed contrast target for the selected role.
+- JavaScript, Python, and Go batch calls share rendering work for labels that normalize to the same identity and return results in input order.
+- The inspector can open saved configuration and registry JSON files. The last completed palette stays visible while the next calculation runs.
+- All eight implementations have measured median and p95 latency for assigning 40 labels. [Performance results](docs/PERFORMANCE.md)
+
 ### Added
 - `tools/packages.json`, a language-neutral manifest describing every
   distribution (directory, shared files, version files, build/test/lint
@@ -24,10 +30,10 @@ mapping itself changes.
   `tools/verify.py`, and `tools/build-packages.py` now read it instead of
   hardcoding each language.
 - `CONTRIBUTING.md` and `SECURITY.md`.
-- A conformance runner contract (`docs/CONFORMANCE-RUNNER.md`): every
-  implementation ships an executable that reads `[{text, options}]` JSON on
-  stdin and writes `[ColorSet]` JSON on stdout, used by the cross-language
-  parity test.
+- JavaScript, Python, Go, Rust, and Swift register JSON conformance runners.
+  They read resolution requests from stdin and return palettes in input order.
+  JavaScript, Python, and Go also accept exported configurations for replay.
+  [Runner contract](docs/CONFORMANCE-RUNNER.md)
 - `tools/release.py`, extracted from `.github/workflows/publish.yml`, with
   its own unit tests: strict version validation, and per-registry release
   state (not-requested / absent / matching / conflicting / lookup-failed)
