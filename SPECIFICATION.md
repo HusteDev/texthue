@@ -40,7 +40,9 @@ Options are JSON-style records with these keys. Omission selects a default; expl
 | `namespace` | `""` | Exact text; UTF-8 byte length at most `2^32 - 1` |
 | `backgrounds.light` | `"#ffffff"` | Opaque six-digit Hex, case-insensitive |
 | `backgrounds.dark` | `"#121212"` | Opaque six-digit Hex, case-insensitive |
-| `contrastTarget` | `4.5` | Inclusive range 1–21 |
+| `gamut` | `srgb` | `srgb` or `display-p3` |
+| `contrastModel` | `wcag2` | `wcag2` or `apca` |
+| `contrastTarget` | WCAG 4.5 (7 for controls), APCA 60 | Inclusive range 1–21 for WCAG or 0–106 for APCA |
 | `profiles.light.fill.lightness` | `[0.72, 0.82]` | `0 <= min <= max <= 1` |
 | `profiles.dark.fill.lightness` | `[0.40, 0.50]` | `0 <= min <= max <= 1` |
 | `profiles.light.text.lightness` | `[0.43, 0.53]` | `0 <= min <= max <= 1` |
@@ -48,7 +50,7 @@ Options are JSON-style records with these keys. Omission selects a default; expl
 | Each profile's `chromaScale` | [0.6,0.8] | ordered range in [0,1] |
 | Each profile's `chromaCap` | fill 0.16, text 0.19 | [0,0.4] |
 | seed | 0 | uint32 |
-| contrastTargets | contrastTarget, except border min(3, contrastTarget) | fill, fillHover, fillActive, border, text, textOnSubtle, strong (each 1 to 21) |
+| contrastTargets | contrastTarget, except WCAG border min(3, contrastTarget) | fill, fillHover, fillActive, border, text, textOnSubtle, strong (each uses the selected model's range) |
 
 The chroma bound of 0.4 is this API's input limit, not a universal limit on OKLCH. The theme names identify output slots; a supplied background is always used as supplied, even if its brightness differs from its theme name. Background parsing does not accept shorthand, alpha, named colors, or other CSS expressions.
 
@@ -91,17 +93,19 @@ Color = {
 
 ContrastResult = {
   ratio: number,
+  model?: "apca",
+  value?: number,
   meetsTarget: boolean,
   lightnessAdjusted: boolean,
   chromaCapped: boolean,
   chromaReduced: boolean,
-  fallback: null | "unattainable-contrast"
+  fallback: null | "unattainable-contrast" | "palette-constraint"
 }
 ```
 
 The result excludes input text, namespace, and digest. `hue` is the sampled OKLCH identity hue before conversion, with no decimal rounding. All colors are opaque sRGB. RGB channels are integers in 0–255. HSL hue uses degrees and saturation/lightness use percentages. OKLCH lightness uses 0–1, chroma is a number, and hue uses degrees.
 
-`onFill` is either black or white. `contrast.fill` measures fill against onFill. `contrast.text` measures text against background. The ratio is retained at computational precision; `meetsTarget` uses that ratio without display rounding. A fallback only represents an unattainable text contrast target. `chromaReduced` compares the final retained pre-quantization chroma with the requested chroma; it does not compare rounded output OKLCH values. `lightnessAdjusted` compares the selected pre-quantization lightness with the original sampled lightness.
+Fill, hover and active measure onFill against the respective surface. Border, text and strong measure against the theme background. textOnSubtle measures text against subtle. Each relationship reports a luminance ratio in the selected gamut. The Display-P3 ratio uses P3 luminance coefficients. WCAG mode compares the unrounded ratio to the relationship target. APCA mode also returns signed Lc in `value`, positive for dark text on a lighter surface. It compares absolute Lc to the target. `chromaReduced` compares the final retained pre-quantization chroma with the requested chroma; it does not compare rounded output OKLCH values. `lightnessAdjusted` compares the selected pre-quantization lightness with the original sampled lightness.
 
 ## 2. Text to sampling fractions
 
