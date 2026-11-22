@@ -10,8 +10,8 @@
         { "path": "packages/npm/package.json", "kind": "json", "field": "version" }
       ],
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
-      "conformanceRunner": ["node", "--input-type=module", "-e",
-        "import{resolveTextColors}from'./packages/npm/dist/index.js';import{readFileSync}from'node:fs';const cases=JSON.parse(readFileSync(0,'utf8'));const out=[];for(const c of cases)out.push(await resolveTextColors(c.text,c.options));process.stdout.write(JSON.stringify(out));"],
+      "conformanceRunner": ["node", "tools/conformance-js.mjs"],
+      "conformanceReplay": true,
       "coverageFlag": "javascript",
       "archiveRequiredFiles": [
         "assets/gallery.svg", "dist/index.js", "dist/index.d.ts", "src/index.ts", "README.md",
@@ -54,6 +54,7 @@
         { "source": "root:conformance/vectors.json", "dest": "testdata/vectors.json" }
       ],
       "conformanceRunner": ["go", "-C", "packages/go", "run", "./cmd/conformance"],
+      "conformanceReplay": true,
       "coverageFlag": "go",
       "publish": { "registry": "go-module", "modulePath": "github.com/HusteDev/texthue/packages/go" }
     },

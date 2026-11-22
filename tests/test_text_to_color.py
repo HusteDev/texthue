@@ -530,45 +530,37 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
             {"text": item["text"], "config": Resolver(item["options"]).export_config()}
             for item in cases
         ]
-        script = """
-import { importConfig, resolveTextColors } from './packages/npm/dist/index.js';
-let input = '';
-process.stdin.setEncoding('utf8');
-for await (const chunk of process.stdin) input += chunk;
-const output = [];
-for (const item of JSON.parse(input)) {
-  output.push(item.config ? importConfig(item.config).resolve(item.text) : resolveTextColors(item.text, item.options));
-}
-process.stdout.write(JSON.stringify(output));
-"""
-        completed = subprocess.run(
-            ["node", "--input-type=module", "-e", script],
-            cwd=ROOT,
-            input=json.dumps(cases + replay, ensure_ascii=True),
-            text=True,
-            capture_output=True,
-            check=True,
-            timeout=60,
-        )
-        expected = json.loads(completed.stdout)
-        go_completed = subprocess.run(
-            ["go", "-C", "packages/go", "run", "./cmd/conformance"],
-            cwd=ROOT,
-            input=json.dumps(cases + replay, ensure_ascii=True),
-            text=True,
-            capture_output=True,
-            check=True,
-            timeout=60,
-        )
-        go_results = json.loads(go_completed.stdout)
-        self.assertEqual(len(go_results), 2 * len(cases))
-        self.assertEqual(go_results[: len(cases)], go_results[len(cases) :])
-        self.assertEqual(expected[: len(cases)], expected[len(cases) :])
-        expected = expected[: len(cases)]
+        packages = json.loads((ROOT / "tools/packages.json").read_text(encoding="utf-8"))[
+            "packages"
+        ]
+        runners = {p["id"]: p for p in packages if p.get("conformanceRunner")}
+        self.assertTrue({"npm", "go"}.issubset(runners))
+        results = {}
+        for name, package in runners.items():
+            inputs = cases + replay if package.get("conformanceReplay") else cases
+            with self.subTest(runner=name):
+                run = subprocess.run(
+                    package["conformanceRunner"],
+                    cwd=ROOT,
+                    input=json.dumps(inputs, ensure_ascii=True),
+                    text=True,
+                    encoding="utf-8",
+                    capture_output=True,
+                    timeout=60,
+                )
+                self.assertEqual(run.returncode, 0, run.stderr)
+                output = json.loads(run.stdout)
+                self.assertEqual(len(output), len(inputs))
+                results[name] = output[: len(cases)]
+                if package.get("conformanceReplay"):
+                    self.assertEqual(results[name], output[len(cases) :])
+        expected = results.pop("npm")
         for index, (item, result) in enumerate(zip(cases, expected, strict=True)):
-            with self.subTest(index=index):
+            with self.subTest(index=index, runner="python"):
                 self.compare(resolve_text_colors(item["text"], item["options"]).to_dict(), result)
-                self.compare(go_results[index], result)
+            for name, output in results.items():
+                with self.subTest(index=index, runner=name):
+                    self.compare(output[index], result)
 
 
 if __name__ == "__main__":

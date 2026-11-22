@@ -1,6 +1,6 @@
 # Conformance runner contract
 
-Every TextHue implementation ships a small executable used only for testing:
+A port can register a conformance executable for testing:
 it lets the cross-language parity test drive that implementation from a
 single process without a language-specific test harness. It is not part of
 the published library and carries no compatibility promise beyond this
@@ -19,17 +19,16 @@ document.
   contract) regardless of the host language's normal naming convention.
 - **Exit code**: `0` if every case resolved successfully. Any resolution
   error (invalid text or options) is a bug in the *test's* input, not an
-  expected outcome the runner should report per-item — the runner should
+  expected outcome the runner should report per-item â€” the runner should
   print the error to stderr and exit non-zero. The generated-case test only
   ever sends valid input to this runner; invalid-input coverage is handled
   by each language's own test suite against the fixed vectors in
   `conformance/vectors.json`, not through this executable.
 - No other output on stdout. Diagnostic logging goes to stderr.
 
-## Existing runner
+## Registered runners
 
-`packages/go/cmd/conformance/main.go` implements this contract for Go. Its
-`README.md` documents how it is invoked. Use it as the template for a new
+`tools/conformance-js.mjs` runs the JavaScript reference. `packages/go/cmd/conformance/main.go` implements the Go runner. Python participates through its public API in the same test process. The Go runner’s README documents its invocation. Use it as the template for a new
 language's runner: same stdin/stdout shapes, same exit-code rule.
 
 ## Registering a runner
@@ -40,3 +39,5 @@ cross-language test in `tests/` builds the manifest's runner list and
 invokes each one; JavaScript (`packages/npm/dist/index.js`) is always the
 reference implementation that every other runner's output is compared
 against, not a peer.
+
+Set `conformanceReplay` to `true` for runners that also accept inputs containing `text` and an exported `config`. The test replays every generated case through these runners and compares the returned results with their direct-resolution outputs.
