@@ -65,6 +65,7 @@
         { "path": "packages/kotlin/build.gradle", "kind": "pyRegex", "pattern": "^version = '([^']+)'$" }
       ],
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+      "verifyCommands": [["./gradlew", "check"]],
       "conformanceRunner": null
     },
     {
@@ -73,6 +74,7 @@
       "dir": "packages/swift",
       "versionFiles": [],
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+      "verifyCommands": [["swift", "test", "--force-resolved-versions"]],
       "conformanceRunner": null
     },
     {
@@ -83,6 +85,8 @@
         { "path": "packages/dart/pubspec.yaml", "kind": "pyRegex", "pattern": "^version: ([^\\s]+)$" }
       ],
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+      "verifyCommands": [["dart", "analyze", "--fatal-infos"], ["dart", "run", "{suite}"]],
+      "verifySuites": "tool/check_*.dart",
       "conformanceRunner": null
     },
     {
@@ -93,6 +97,7 @@
         { "path": "packages/csharp/src/TextHue/TextHue.csproj", "kind": "pyRegex", "pattern": "<Version>([^<]+)</Version>" }
       ],
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+      "verifyCommands": [["dotnet", "run", "--configuration", "Release", "--project", "tests/Conformance"]],
       "conformanceRunner": null
     },
     {
@@ -103,6 +108,7 @@
         { "path": "packages/wasm/package.json", "kind": "json", "field": "version" }
       ],
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+      "verifyCommands": [["python", "../../tools/build-wasm.py"], ["node", "../../tools/check-wasm.mjs"]],
       "conformanceRunner": null
     },
     {
@@ -123,6 +129,7 @@
         { "source": "root:conformance/tone-repair-v1.tsv", "dest": "testdata/tone-repair-v1.tsv" },
         { "source": "root:conformance/vectors.json", "dest": "testdata/vectors.json" }
       ],
+      "verifyCommands": [["cargo", "test", "--locked"]],
       "conformanceRunner": null
     }
   ]

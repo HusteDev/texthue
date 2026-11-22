@@ -6,6 +6,7 @@ vectors, and validates shared-file copies and documentation links. It never
 publishes or uploads anything.
 """
 
+import argparse
 import json
 import os
 import re
@@ -87,6 +88,31 @@ def check_links():
 
 def main():
     """Run all checks in dependency order and exit nonzero on the first failure."""
+    ports = {p["id"]: p for p in load_packages() if "verifyCommands" in p}
+    parser = argparse.ArgumentParser(description="Verify the primary libraries or a native port.")
+    parser.add_argument("--port", choices=sorted(ports), help="Run one port's manifest checks")
+    options = parser.parse_args()
+    if options.port:
+        package = ports[options.port]
+        cwd = ROOT / package["dir"]
+        for command in package["verifyCommands"]:
+            program, *args = command
+            if program == "python":
+                program = sys.executable
+            elif program.startswith("./"):
+                program = str(cwd / (program[2:] + (".bat" if os.name == "nt" else "")))
+            else:
+                program = shutil.which(program + ".exe") if os.name == "nt" else None
+                program = program or shutil.which(command[0])
+                if not program:
+                    raise SystemExit(f"Missing executable: {command[0]}")
+            suites = sorted(cwd.glob(package["verifySuites"])) if "{suite}" in args else [None]
+            if not suites:
+                raise SystemExit(f"No conformance suites matched {package['verifySuites']}")
+            for suite in suites:
+                argv = [str(suite) if arg == "{suite}" else arg for arg in args]
+                run(f"{options.port} {' '.join(argv)}", [program, *argv], cwd=cwd, timeout=1200)
+        return
     npm = shutil.which("npm.cmd" if os.name == "nt" else "npm")
     if not npm or not shutil.which("node") or not shutil.which("go"):
         raise SystemExit("Install Node.js 22+, npm, and Go 1.23+ first.")

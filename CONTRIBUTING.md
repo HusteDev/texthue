@@ -18,11 +18,15 @@ python -m venv .venv
 ```
 
 Use `.venv/bin/python` on macOS/Linux. `pre-commit install` applies the same
-lint and format checks as a Git pre-commit hook. `tools/verify.py` is the
-single gate: it builds the npm package, runs every language's tests and
-examples, checks the frozen conformance vectors, lints everything, and
-validates shared-file copies and documentation links. Run it before opening
-a pull request; CI runs it again on Windows, Linux, and macOS.
+lint and format checks as a Git pre-commit hook. The default verifier builds and tests the JavaScript,
+Python, and Go libraries, compares conformance vectors, and checks lint,
+shared files, and documentation links.
+
+For an additional port, run `python tools/verify.py --port NAME` with its
+toolchain installed. The supported names are `rust`, `csharp`, `kotlin`,
+`swift`, `dart`, and `wasm`. Kotlin uses the built JavaScript reference.
+See each package README for toolchain prerequisites. CI runs these commands
+in the corresponding port jobs.
 
 ## Rules that keep the three (soon more) implementations in agreement
 
