@@ -140,6 +140,11 @@ from the file inventory reported by pub and runs the consumer against its
 extracted contents. The draft stores these tested bytes and their SHA-256 digest.
 The archive is assembled by TextHue because pub's dry run only prints the inventory.
 
+The optional Dart publish job uses the `pub-dev` environment's `PUB_TOKEN`
+secret, which must grant upload access for texthue. It compares the staged
+archive digest with pub.dev and uploads an absent version using Dart 3.12.2's
+`--from-archive` option. Selecting Dart on a retry reuses the draft archive.
+
 From the repository root, run `python tools/check-dart-publication.py` to inspect the pub archive and validate its publication metadata. The dry run accepts the two advisories about the deliberately pinned runtime dependencies. Other validation warnings or failures require review.
 
 ## Signing the staged Kotlin bundle
