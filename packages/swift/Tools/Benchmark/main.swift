@@ -3,10 +3,12 @@ import TextHue
 
 for (scenario, target, light) in [
     ("default", 4.5, "#ffffff"), ("aaa", 7, "#ffffff"), ("maximum", 21, "#ffffff"),
-    ("gray", 4.5, "#777777"), ("impossible", 21, "#777777"), ("apca", 75, "#ffffff")
+    ("gray", 4.5, "#777777"), ("impossible", 21, "#777777"), ("apca", 75, "#ffffff"),
+    ("p3", 4.5, "#ffffff")
 ] {
     var options = RenderOptions()
     options.contrastModel = scenario == "apca" ? .apca : .wcag2
+    options.gamut = scenario == "p3" ? .displayP3 : .sRGB
     options.contrastTarget = target
     options.backgrounds = ["light": light]
     let renderer = try Renderer(options: options)
@@ -17,6 +19,7 @@ for (scenario, target, light) in [
         let palette = try renderer.resolve(label)
         let elapsed = DispatchTime.now().uptimeNanoseconds - start
         precondition(palette.light["fill"] != nil && palette.dark["fill"] != nil)
+        if scenario == "p3" { precondition(palette.light["fill"]?.p3 != nil && palette.dark["fill"]?.p3 != nil) }
         if i >= 0 { samples.append(Double(elapsed) / 1000) }
     }
     samples.sort()

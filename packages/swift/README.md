@@ -31,6 +31,8 @@ Read `lightContrast.relationships` and `darkContrast.relationships` for the seve
 
 For brand colors, construct `RenderOptions` and pass it to `Renderer(options:)`. The `palette` property accepts entries with stable IDs and light or dark fills. The `overrides` property pins both theme fills for a label and takes precedence over the palette. Inspect the result's `source` for `hash`, `palette` or `override`.
 
+Set `options.gamut = .displayP3` before constructing `Renderer(options: options)` to render in Display-P3. Each color carries native `p3` channels, a `css` string, an sRGB `hex` fallback, and `srgbClipped`. Strict role lookups evaluate the relationship in the selected gamut.
+
 ## Verify the checkout
 
 Run the single-role example with `swift run --package-path packages/swift TextHueLabels apple pear apple`. Each line prints the label, light fill from `renderer.hex(label)`, and dark foreground from `renderer.color(label, dark: true, role: "onFill")`. Both helpers throw on an unknown role.
@@ -39,7 +41,7 @@ Run `swift test --package-path packages/swift --force-resolved-versions` from th
 
 The package uses CryptoKit on Apple platforms and pins swift-crypto 3.0.0 for Linux and Windows. The package manifest declares deployment minimums of macOS 10.15, iOS 13, tvOS 13 and watchOS 6.
 
-On the Windows development host, Swift 6.1.3 passed all 31 XCTest cases in the Linux x86_64 container. The Linux Swift conformance executable also matched the JavaScript reference on all 228 generated sRGB cases. Collection tests cover all nine shared assignment fixtures and byte-distinct Unicode label replay. Use `try renderer.assign(labels, pinned: previous.assignments)` to retain earlier placements. The returned dictionaries use normalized UTF-8 `Data` keys because Swift strings compare canonically equivalent spellings as equal. The renderer test checks ten roles in each theme for all 32 frozen identity vectors. The following PowerShell command reproduces the locked build from the repository root. Keep the cache mounted at the same container path across runs because Swift precompiled headers record absolute paths.
+On the Windows development host, Swift 6.1.3 passed all 34 XCTest cases at commit `f42cd89` in the Linux x86_64 container. The complete two-theme results matched JavaScript for 24 Display-P3 cases covering both contrast models. The Linux Swift conformance executable also matched the JavaScript reference on all 228 generated sRGB cases. Collection tests cover all nine shared assignment fixtures and byte-distinct Unicode label replay. Use `try renderer.assign(labels, pinned: previous.assignments)` to retain earlier placements. The returned dictionaries use normalized UTF-8 `Data` keys because Swift strings compare canonically equivalent spellings as equal. The renderer test checks ten roles in each theme for all 32 frozen identity vectors. The following PowerShell command reproduces the locked build from the repository root. Keep the cache mounted at the same container path across runs because Swift precompiled headers record absolute paths.
 
 ```powershell
 $source = (Resolve-Path packages/swift).Path

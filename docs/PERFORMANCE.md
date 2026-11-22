@@ -35,6 +35,8 @@ The resolver benchmarks also exercise APCA at a target of 75 Lc on white and Dis
 
 The Kotlin P3 measurement used the 100-label corpus on the Windows JVM after commit `dcdc463`.
 
+Swift 6.1.3 in the Linux x86-64 container measured 233 µs median and 399 µs p95 for the same P3 workload in a release build. The default sRGB workload in that run measured 203 µs median and 260 µs p95. Each P3 iteration checked for native channels in both themes after stopping its timer.
+
 Python counted 11,133 fits for APCA and 1,600 for Display P3. Each scenario performed 1,600 cusp evaluations and 100 hashes.
 
 The four other native ports ran the same 75 Lc scenario sequentially. Swift used a Linux x86_64 container on the Windows host. The other measurements ran directly on Windows x64.
