@@ -1,4 +1,5 @@
 export { default as initialize, initSync } from './dist/texthue.js';
+
 import { resolveRoleHex } from './dist/texthue.js';
 
 export function roleHex(text, role, {namespace = '', seed = 0, theme = 'light'} = {}) {

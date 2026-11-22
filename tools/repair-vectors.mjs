@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { chooseColor, contrast, apcaContrast, p3Contrast, p3ApcaContrast, XYZ_TO_P3 } from '../packages/npm/dist/color-math.js';
+import { apcaContrast, chooseColor, contrast, p3ApcaContrast, p3Contrast, XYZ_TO_P3 } from '../packages/npm/dist/color-math.js';
 
 const rows = [];
 for (const [gamut, model, metric] of [

@@ -34,8 +34,12 @@ def runtime(args, jar):
 
 def run_suites(runner):
     composites = json.loads((ROOT / "conformance/composite-v1.json").read_text(encoding="utf-8"))
-    rows = "".join("{source}\t{alpha}\t{backdrop}\t{expected}\n".format(**row) for row in composites)
-    subprocess.run([*runner, "com.hustedev.texthue.CompositeTestKt"], input=rows.encode(), check=True)
+    rows = "".join(
+        "{source}\t{alpha}\t{backdrop}\t{expected}\n".format(**row) for row in composites
+    )
+    subprocess.run(
+        [*runner, "com.hustedev.texthue.CompositeTestKt"], input=rows.encode(), check=True
+    )
     for corpus, entry in (
         ("identity", "IdentityTestKt"),
         ("gamut", "ColorMathTestKt"),

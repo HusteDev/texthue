@@ -16,7 +16,9 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("browser", help="Path or command name of a Chromium browser")
-    parser.add_argument("--wasm-package", type=Path, help="Test this npm tarball instead of the CSS renderer")
+    parser.add_argument(
+        "--wasm-package", type=Path, help="Test this npm tarball instead of the CSS renderer"
+    )
     args = parser.parse_args()
     with tempfile.TemporaryDirectory() as directory:
         base = Path(directory)
