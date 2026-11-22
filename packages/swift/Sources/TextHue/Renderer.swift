@@ -81,6 +81,9 @@ private struct ThemeBackground {
 }
 
 public struct RenderedPalette: Equatable {
+    public let version: String
+    public let source: String
+    public let hueFraction: Double
     public let hue: Double
     public let light, dark: [String: Color]
 }
@@ -162,7 +165,8 @@ public struct Renderer {
         let naturalHue = (anchors[slot] + (anchors[slot + 1] - anchors[slot]) * (position - Double(slot)))
             .truncatingRemainder(dividingBy: 360)
         let hue = hueDomain.map(naturalHue)
-        return try RenderedPalette(hue: hue, light: theme("light", hue, lightness, chroma),
+        return try RenderedPalette(version: "text-to-color-v1", source: "hash", hueFraction: hueFraction,
+                                   hue: hue, light: theme("light", hue, lightness, chroma),
                                    dark: theme("dark", hue, lightness, chroma))
     }
 
