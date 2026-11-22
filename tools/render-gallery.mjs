@@ -5,6 +5,8 @@ import { assignTextColors, resolveTextColors } from '../packages/npm/dist/index.
 const labels = ['Design', 'Research', 'Platform', 'Support', 'Finance', 'Operations'];
 const hashed = labels.map(label => resolveTextColors(label));
 const assigned = assignTextColors(labels).colors;
+const collisionPair = ['item:33', 'item:633'];
+const separated = assignTextColors(collisionPair).colors;
 const scale = ['background', 'subtle', 'muted', 'fill', 'fillHover', 'fillActive', 'border', 'text', 'strong'];
 
 function row(title, swatches, y, dark = false) {
@@ -28,8 +30,16 @@ const rows = [
     `Collection assignment · ${vision} simulation (severity 1)`,
     labels.map(s => [s, simulateVision(assigned[s].light.fill.hex, vision)]), 376 + 94 * i,
   )),
+  row('Near-collision · independent light fills', collisionPair.map(label => {
+    const hex = resolveTextColors(label).light.fill.hex;
+    return [`${label} · ${hex}`, hex];
+  }), 658),
+  row('Same labels · assigned together', collisionPair.map(label => {
+    const hex = separated[label].light.fill.hex;
+    return [`${label} · ${hex}`, hex];
+  }), 752),
 ];
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 658" role="img" aria-labelledby="title" font-family="system-ui, sans-serif">
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 ${94 * rows.length}" role="img" aria-labelledby="title" font-family="system-ui, sans-serif">
 <title id="title">TextHue label colors in both themes, collection assignment, tonal roles, and simulated color vision</title>
 ${rows.join('\n')}
 </svg>
