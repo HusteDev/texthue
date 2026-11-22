@@ -1,7 +1,10 @@
 """Check the actual release job gates and archive step ordering without uploading."""
 
+import json
+import os
 import shutil
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -27,6 +30,35 @@ class PublishWorkflowTests(unittest.TestCase):
                 for step in steps[state + 1 : -1]:
                     self.assertEqual(step["if"], "steps.state.outputs.state == 'absent'")
                 self.assertEqual(steps[-1]["if"], "steps.state.outputs.state == 'matching'")
+
+    def test_version_step_emits_output_only_after_validation(self):
+        step = next(step for step in self.jobs["build"]["steps"] if step.get("id") == "version")
+        self.assertEqual(step["env"]["REQUESTED"], "${{ inputs.version }}")
+        self.assertNotIn("${{", step["run"])
+        bash = shutil.which("bash")
+        if os.name == "nt":
+            git = Path(shutil.which("git"))
+            bash = git.parent.parent / "bin" / "bash.exe"
+        version = json.loads((ROOT / "package.json").read_text())["version"]
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+            output = Path(directory) / "output"
+            for requested in (version, "", "99.99.99", "1.0.0\nversion=unexpected"):
+                with self.subTest(requested=requested):
+                    output.write_bytes(b"")
+                    run = subprocess.run(
+                        [bash, "-c", step["run"]],
+                        cwd=ROOT,
+                        env={
+                            **os.environ,
+                            "REQUESTED": requested,
+                            "GITHUB_OUTPUT": output.relative_to(ROOT).as_posix(),
+                        },
+                        capture_output=True,
+                    )
+                    self.assertEqual(run.returncode == 0, requested == version, run.stderr)
+                    self.assertEqual(
+                        output.read_text(), f"version={version}\n" if requested == version else ""
+                    )
 
     def test_dry_run_stages_the_bundle_without_promoting_it(self):
         build = self.jobs["build"]
