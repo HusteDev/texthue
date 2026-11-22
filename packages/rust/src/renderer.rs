@@ -1,3 +1,4 @@
+use crate::hue::HueDomain;
 use crate::tables::{ANCHORS, BIASES};
 use crate::{identity_digest, identity_fractions, Color, ContrastModel, Gamut, Normalization};
 use std::collections::{hash_map::Entry, BTreeMap, HashMap};
@@ -39,6 +40,8 @@ pub struct ThemeProfile {
 }
 
 pub struct Renderer {
+    pub hue_range: (f64, f64),
+    pub exclude_hues: Vec<(f64, f64)>,
     pub light_profile: ThemeProfile,
     pub dark_profile: ThemeProfile,
     pub contrast_targets: BTreeMap<String, f64>,
@@ -54,6 +57,8 @@ impl Default for Renderer {
     fn default() -> Self {
         Self {
             namespace: String::new(),
+            hue_range: (0.0, 360.0),
+            exclude_hues: Vec::new(),
             seed: 0,
             contrast_targets: Default::default(),
             light_profile: Default::default(),
@@ -68,10 +73,11 @@ impl Default for Renderer {
 
 impl Renderer {
     pub fn resolve(&self, text: &str) -> Result<RenderedPalette, &'static str> {
-        self.validate()?;
+        let domain = self.validate()?;
         self.resolve_normalized(
             &self.normalization.apply(text),
             &self.normalization.apply(&self.namespace),
+            &domain,
         )
     }
 
@@ -80,7 +86,7 @@ impl Renderer {
         &self,
         labels: impl IntoIterator<Item = S>,
     ) -> Result<Vec<Arc<RenderedPalette>>, &'static str> {
-        self.validate()?;
+        let domain = self.validate()?;
         let scope = self.normalization.apply(&self.namespace);
         let mut cache = HashMap::new();
         let mut result = Vec::new();
@@ -89,7 +95,8 @@ impl Renderer {
             let palette = match cache.entry(key) {
                 Entry::Occupied(entry) => Arc::clone(entry.get()),
                 Entry::Vacant(entry) => {
-                    let palette = Arc::new(self.resolve_normalized(entry.key(), &scope)?);
+                    let palette =
+                        Arc::new(self.resolve_normalized(entry.key(), &scope, &domain)?);
                     entry.insert(Arc::clone(&palette));
                     palette
                 }
@@ -99,7 +106,7 @@ impl Renderer {
         Ok(result)
     }
 
-    fn validate(&self) -> Result<(), &'static str> {
+    fn validate(&self) -> Result<HueDomain, &'static str> {
         if !(1.0..=21.0).contains(&self.contrast_target) {
             return Err("Invalid contrast target");
         }
@@ -117,15 +124,21 @@ impl Renderer {
                 return Err("Invalid role profile");
             }
         }
-        Ok(())
+        HueDomain::new(self.hue_range, &self.exclude_hues)
     }
 
-    fn resolve_normalized(&self, text: &str, scope: &str) -> Result<RenderedPalette, &'static str> {
+    fn resolve_normalized(
+        &self,
+        text: &str,
+        scope: &str,
+        domain: &HueDomain,
+    ) -> Result<RenderedPalette, &'static str> {
         let digest = identity_digest(text, scope, self.seed).map_err(|_| "Namespace too long")?;
         let [u_h, u_l, u_c] = identity_fractions(&digest);
         let position = u_h * 12.0;
         let i = position as usize;
         let hue = (ANCHORS[i] + (ANCHORS[i + 1] - ANCHORS[i]) * (position - i as f64)) % 360.0;
+        let hue = domain.map(hue);
         Ok(RenderedPalette {
             version: "text-to-color-v1",
             source: "hash",
@@ -272,6 +285,52 @@ mod tests {
     use super::*;
     use serde::Deserialize;
     use serde_json::Value;
+    #[test]
+    fn restricted_hues() {
+        for (allowed, excluded, hue, fill) in [
+            (
+                (300.0, 60.0),
+                vec![(350.0, 10.0)],
+                341.06283164159765,
+                "#e496c8",
+            ),
+            (
+                (10.0, 220.0),
+                vec![(30.0, 80.0), (70.0, 120.0), (190.0, 240.0)],
+                181.9565484774379,
+                "#6dbbae",
+            ),
+            (
+                (0.0, 360.0),
+                vec![(120.0, 110.0)],
+                119.10628316415976,
+                "#a4b566",
+            ),
+            ((35.125, 35.25), vec![], 35.238828539551996, "#e39d8b"),
+        ] {
+            let renderer = Renderer {
+                hue_range: allowed,
+                exclude_hues: excluded,
+                ..Renderer::default()
+            };
+            let result = renderer.resolve("a").unwrap();
+            assert!((result.hue - hue).abs() < 1e-12);
+            assert_eq!(result.light["fill"].hex, fill);
+            assert_eq!(renderer.batch(["a"]).unwrap()[0].as_ref(), &result);
+        }
+        for excluded in [
+            vec![(0.0, 360.0)],
+            vec![(f64::NAN, 2.0)],
+            vec![(0.0, 1.0); 17],
+        ] {
+            let renderer = Renderer {
+                exclude_hues: excluded,
+                ..Renderer::default()
+            };
+            assert!(renderer.batch(std::iter::empty::<&str>()).is_err());
+        }
+    }
+
     #[test]
     fn ordered_batch() {
         let mut renderer = Renderer::default();

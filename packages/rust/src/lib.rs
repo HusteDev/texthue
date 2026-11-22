@@ -1,4 +1,5 @@
 mod composite;
+mod hue;
 pub use composite::composite_over;
 mod renderer;
 mod tables;
