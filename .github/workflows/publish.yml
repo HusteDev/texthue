@@ -138,6 +138,20 @@ jobs:
         run: python tools/verify.py
       - if: steps.bundle.outputs.state == 'absent'
         run: python tools/build-packages.py
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        if: steps.bundle.outputs.state == 'absent'
+        with:
+          dotnet-version: '9.0.x'
+      - name: Build and verify the NuGet release archive
+        if: steps.bundle.outputs.state == 'absent'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          python tools/verify.py --port csharp
+          dotnet pack packages/csharp/src/TextHue --configuration Release --no-build --output artifacts
+          python tools/check-nuget.py artifacts
+          (cd artifacts && sha256sum "TextHue.${VERSION}.nupkg" >> SHA256SUMS)
       - name: Write the release manifest (commit, versions, algorithm id, archive digests)
         if: steps.bundle.outputs.state == 'absent'
         env:

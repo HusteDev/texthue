@@ -18,6 +18,10 @@ For Rust distribution testing, run `python tools/stage-rust.py .cache/rust-stagi
 
 These local checks exercise the listed packages. Public registry delivery for these rows requires separate publishing integration.
 
+New draft bundles also contain the tested `TextHue.<version>.nupkg`. The build job
+installs the archive into an isolated consumer before recording its digest.
+Resuming an older bundle preserves its original archive set.
+
 ## Build and verify locally
 
 Install Node.js 22+, Python 3.11+, and Go 1.23+. From the repository root:
