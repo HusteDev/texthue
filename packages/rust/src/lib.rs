@@ -1,6 +1,8 @@
 #![doc = include_str!("../README.md")]
 mod composite;
 mod hue;
+#[cfg(feature = "wasm-bindgen")]
+mod wasm;
 pub use composite::composite_over;
 mod renderer;
 mod tables;

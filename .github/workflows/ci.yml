@@ -54,6 +54,15 @@ jobs:
           output=$(cargo run --locked --manifest-path "$manifest" --example labels)
           test "$output" = '#5ab95a #ffffff'
 
+      - name: Verify WebAssembly bindings and package contents
+        working-directory: .
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo install --locked --version 0.2.130 wasm-bindgen-cli
+          python tools/build-wasm.py
+          node tools/check-wasm.mjs
+          npm pack --dry-run ./packages/wasm
+
   csharp:
     name: C# conformance and NuGet packaging (${{ matrix.os }})
     strategy:

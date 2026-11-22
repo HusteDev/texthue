@@ -1,0 +1,9 @@
+{
+  "name": "@texthue/wasm",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": { ".": { "types": "./index.d.ts", "import": "./index.js" } },
+  "files": ["index.js", "index.d.ts", "dist", "LICENSE"],
+  "license": "SEE LICENSE IN LICENSE",
+  "scripts": { "build": "python ../../tools/build-wasm.py", "prepack": "npm run build" }
+}
