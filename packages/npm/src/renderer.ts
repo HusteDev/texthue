@@ -328,8 +328,8 @@ function optionsValue(options: unknown): ResolvedOptions {
  * for four OKLCH profiles. Each color is gamut-fitted to sRGB, checked against
  * the contrast target, and returned in Hex, RGB, HSL, and OKLCH.
  *
- * Text is used exactly as given: no trimming, case folding, or Unicode
- * normalization is applied. The same text and options produce the same
+ * Identity preserves exact text by default. The normalize option applies Unicode form,
+ * lowercase mapping, and whitespace handling to both text and namespace before hashing. The same text and options produce the same
  * result in every TextHue library. No input is retained after the call.
  *
  * @param text - Any well-formed Unicode string, including the empty string.

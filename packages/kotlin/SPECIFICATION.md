@@ -12,13 +12,19 @@ Language-neutral operation:
 resolveTextColors(text, options = {}) -> ColorSet
 ```
 
-The TypeScript/npm library uses this name and returns ColorSet synchronously. Python uses `resolve_text_colors` and returns directly. Go uses `Resolve(text string, options *Options) (ColorSet, error)`. Language-specific naming and synchronous/asynchronous execution do not alter the mapping. Each library's README documents native types, examples, and installation.
+The TypeScript/npm library uses this name and returns ColorSet synchronously. Python uses `resolve_text_colors` and returns directly. Go uses `Resolve(text string, options ...Option) (ColorSet, error)`. Language-specific naming and synchronous/asynchronous execution do not alter the mapping. Each library's README documents native types, examples, and installation.
 
 Package versions are independent of the `text-to-color-v1` identifier. The identifier is part of the hashed payload, so it is fixed for as long as this mapping is in use.
 
 ### Input text
 
-`text` and `options.namespace` are sequences of Unicode scalar values. Empty strings, embedded U+0000, whitespace, combining marks, noncharacters, and supplementary characters are accepted. Encode as UTF-8 without a BOM; an actual U+FEFF character supplied by the caller is preserved. Do not normalize Unicode, fold case, trim, interpret tokens, or coerce non-string values.
+`text` and `options.namespace` are sequences of Unicode scalar values. Empty strings, embedded U+0000, whitespace, combining marks, noncharacters, and supplementary characters are accepted. Encode as UTF-8 without a BOM; an actual U+FEFF character supplied by the caller is preserved. By default the identity preserves every scalar. When callers enable normalization, transform both namespace and label independently before encoding:
+
+1. Apply the requested Unicode form (NFC or NFKC).
+2. Apply default Unicode lowercase mapping when requested. This preserves the distinction between lowercase mapping and full case folding.
+3. For trim or collapse, remove leading and trailing Unicode White_Space characters. For collapse, replace each remaining White_Space run with one U+0020. U+FEFF is outside White_Space.
+
+Each step defaults to `none`. For example, with NFKC, lower and collapse enabled, `"  Ａ   B "` and `"a b"` share one identity. Apply the same rules to override and pinned keys. Runtimes use their Unicode data versions. Newly assigned characters can yield different results on older runtimes. See [Unicode normalization stability](https://www.unicode.org/reports/tr15/#Versioning).
 
 Reject malformed text, including unpaired UTF-16 surrogates. A valid UTF-16 surrogate pair represents one supplementary scalar and must encode accordingly. A Python string containing surrogate code points is malformed.
 
@@ -28,6 +34,9 @@ Options are JSON-style records with these keys. Omission selects a default; expl
 
 | Key | Default | Allowed values |
 |---|---|---|
+| `normalize.unicode` | `none` | `none`, `NFC`, `NFKC` |
+| `normalize.case` | `none` | `none`, `lower` |
+| `normalize.whitespace` | `none` | `none`, `trim`, `collapse` |
 | `namespace` | `""` | Exact text; UTF-8 byte length at most `2^32 - 1` |
 | `backgrounds.light` | `"#ffffff"` | Opaque six-digit Hex, case-insensitive |
 | `backgrounds.dark` | `"#121212"` | Opaque six-digit Hex, case-insensitive |
@@ -97,7 +106,7 @@ The result excludes input text, namespace, and digest. `hue` is the sampled OKLC
 ## 2. Text to sampling fractions
 
 1. Validate text and copy validated option values before any asynchronous boundary.
-2. Encode namespace and text independently as UTF-8.
+2. Apply the configured identity transformations to namespace and text independently, then encode each result as UTF-8. Measure the namespace byte length after transformation.
 3. Assemble the following bytes in exactly this order:
 
 ```text
