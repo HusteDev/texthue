@@ -339,14 +339,14 @@ func (r *Resolver) Batch(texts []string) ([]ColorSet, error) {
 	result := make([]ColorSet, len(texts))
 	seen := make(map[string]ColorSet)
 	for i, text := range texts {
-		value, ok := seen[text]
+		name, err := r.identity(text)
+		if err != nil {
+			return nil, err
+		}
+		value, ok := seen[name]
 		if !ok {
-			var err error
-			value, err = r.Resolve(text)
-			if err != nil {
-				return nil, err
-			}
-			seen[text] = value
+			value = r.renderTones(r.digest(name), nil, name, false)
+			seen[name] = value
 		} else {
 			value = value.detached()
 		}
@@ -365,11 +365,18 @@ func (r *Resolver) ResolveWithTrace(text string) (ColorSet, error) {
 }
 
 func (r *Resolver) resolve(text string, trace bool) (ColorSet, error) {
-	if !utf8.ValidString(text) {
-		return ColorSet{}, &Error{Code: "INVALID_TEXT", Message: "text contains malformed UTF-8"}
+	name, err := r.identity(text)
+	if err != nil {
+		return ColorSet{}, err
 	}
-	name := r.normalize.transform(text)
 	return r.renderTones(r.digest(name), nil, name, trace), nil
+}
+
+func (r *Resolver) identity(text string) (string, error) {
+	if !utf8.ValidString(text) {
+		return "", &Error{Code: "INVALID_TEXT", Message: "text contains malformed UTF-8"}
+	}
+	return r.normalize.transform(text), nil
 }
 
 func (r *Resolver) digest(normalized string) []byte {

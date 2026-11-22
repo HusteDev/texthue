@@ -218,10 +218,10 @@ class Resolver:
         cache = {}
         result = []
         for text in texts:
-            _core._text(text, "text", "INVALID_TEXT")
-            if text not in cache:
-                cache[text] = self.resolve(text)
-            result.append(cache[text])
+            name = self.identity(text)
+            if name not in cache:
+                cache[name] = self.resolve(text)
+            result.append(cache[name])
         return result
 
     def _selected_theme(self, text: str, theme: str, role: str) -> ThemeColors:

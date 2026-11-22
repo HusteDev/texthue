@@ -377,17 +377,17 @@ export function compileRenderer(options: TextColorOptions = {}) {
     const input = encoder.encode(text);
     return sha256(prefix, new Uint8Array(header.buffer), namespace, input);
   };
-  const resolve = (text:string) => {
-    const name = settings.normalize(textValue(text,'text','INVALID_TEXT'));
-    return render(settings,bases,digestOf(name),name);
-  };
+  const identity = (text:string) => settings.normalize(textValue(text,'text','INVALID_TEXT'));
+  const resolveName = (name:string) => render(settings,bases,digestOf(name),name);
+  const resolve = (text:string) => resolveName(identity(text));
   const batch = (texts: readonly string[]) => {
     const seen = new Map<string,ColorSet>();
     return texts.map(text => {
-      const previous = seen.get(text);
+      const name = identity(text);
+      const previous = seen.get(name);
       if (previous) return structuredClone(previous);
-      const result = resolve(text);
-      seen.set(text,result);
+      const result = resolveName(name);
+      seen.set(name,result);
       return result;
     });
   };
@@ -413,7 +413,6 @@ export function compileRenderer(options: TextColorOptions = {}) {
         !Number.isSafeInteger(ring) || ring < 0 || typeof moved !== 'boolean') fail('INVALID_OPTIONS','Invalid registry placement');
     return {hueFraction,ring,moved};
   }
-  const identity = (text:string) => settings.normalize(textValue(text,'text','INVALID_TEXT'));
   const renderPlacement = (digest:DataView, placement:Placement, name:string) => render(settings,bases,digest,name,placement);
   const fixedFraction = (name:string,digest:DataView) => {
     const entry = settings.brand(name,digest);
