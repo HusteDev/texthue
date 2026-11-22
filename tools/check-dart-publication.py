@@ -1,9 +1,12 @@
 """Validate the Dart publication without uploading. Account for the required exact pins."""
 
+import argparse
+import gzip
 import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 from pathlib import Path
 
@@ -43,6 +46,7 @@ def check_archive_listing(output):
         raise ValueError(
             f"Unexpected pub archive inventory: {sorted(files)}; expected {sorted(expected)}"
         )
+    return sorted(files)
 
 
 def accepted_pin_warnings(output):
@@ -61,13 +65,13 @@ def accepted_pin_warnings(output):
     )
 
 
-def check_consumer(dart):
+def check_consumer(dart, archive):
     """Exercise the public library with no monorepo fixtures or package-local tool state."""
     with tempfile.TemporaryDirectory() as temp:
         root = Path(temp)
         library = root / "library"
-        shutil.copytree(PACKAGE / "lib", library / "lib")
-        shutil.copy2(PACKAGE / "pubspec.yaml", library)
+        with tarfile.open(archive) as staged:
+            staged.extractall(library, filter="data")
         app = root / "consumer"
         app.mkdir()
         (app / "pubspec.yaml").write_text(
@@ -75,7 +79,7 @@ def check_consumer(dart):
             "dependencies:\n  texthue:\n    path: ../library\n",
             encoding="utf-8",
         )
-        shutil.copy2(PACKAGE / "example/texthue_example.dart", app / "main.dart")
+        shutil.copy2(library / "example/texthue_example.dart", app / "main.dart")
         subprocess.run([dart, "pub", "get", "--offline"], cwd=app, check=True)
         output = subprocess.check_output([dart, "run", "main.dart"], cwd=app, text=True)
         if output.strip() != "#5ab95a #ffffff":
@@ -84,6 +88,9 @@ def check_consumer(dart):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--stage", type=Path, help="Save the verified tar.gz at this new path")
+    args = parser.parse_args()
     dart = shutil.which("dart.exe") or shutil.which("dart")
     if not dart:
         raise SystemExit("Dart is required")
@@ -102,8 +109,24 @@ def main():
     )
     if result.returncode and not (result.returncode == 65 and accepted_pin_warnings(result.stdout)):
         raise SystemExit(result.returncode)
-    check_archive_listing(result.stdout)
-    check_consumer(dart)
+    files = check_archive_listing(result.stdout)
+    with tempfile.TemporaryDirectory() as directory:
+        archive = Path(directory) / "package.tar.gz"
+        with (
+            archive.open("wb") as raw,
+            gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0) as compressed,
+        ):
+            with tarfile.open(fileobj=compressed, mode="w|") as staged:
+                for name in files:
+                    path = PACKAGE / name
+                    info = tarfile.TarInfo(name)
+                    info.size = path.stat().st_size
+                    with path.open("rb") as source:
+                        staged.addfile(info, source)
+        check_consumer(dart, archive)
+        if args.stage:
+            with args.stage.open("xb") as output, archive.open("rb") as source:
+                shutil.copyfileobj(source, output)
 
 
 if __name__ == "__main__":

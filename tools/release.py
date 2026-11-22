@@ -335,6 +335,7 @@ def verify_bundle(version: str, commit: str, directory: Path) -> None:
         f"TextHue.{version}.nupkg",
         f"texthue-{version}.crate",
         f"texthue-{version}-maven.zip",
+        f"texthue-{version}-dart.tar.gz",
         f"texthue-react-{version}.tgz",
         f"texthue-tailwind-{version}.tgz",
         f"texthue-wasm-{version}.tgz",

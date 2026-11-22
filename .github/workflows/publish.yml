@@ -184,12 +184,16 @@ jobs:
           sdk: '3.8.1'
       - name: Verify Dart conformance and publication contents
         if: steps.bundle.outputs.state == 'absent'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         working-directory: packages/dart
         run: |
           set -euo pipefail
           dart pub get --enforce-lockfile
           python ../../tools/verify.py --port dart
-          python ../../tools/check-dart-publication.py
+          archive="texthue-${VERSION}-dart.tar.gz"
+          python ../../tools/check-dart-publication.py --stage "../../artifacts/$archive"
+          (cd ../../artifacts && sha256sum "$archive" >> SHA256SUMS)
       - name: Stage the Kotlin Maven repository
         if: steps.bundle.outputs.state == 'absent'
         env:
