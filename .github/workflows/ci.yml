@@ -59,6 +59,8 @@ jobs:
           cargo install --locked --version 0.2.130 wasm-bindgen-cli
           python tools/verify.py --port wasm
           archive=$(npm pack --silent ./packages/wasm | tail -1)
+          npm ci
+          python3 tools/check-wasm-consumer.py "$archive"
           python3 tools/check-browser.py google-chrome --wasm-package "$archive"
           python3 -m pip install playwright==1.59.0
           python3 -m playwright install --with-deps firefox webkit
