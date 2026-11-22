@@ -141,7 +141,11 @@ def main():
         return
     if args.android_serial and not args.android_jar:
         parser.error("--android-jar is required for Android execution")
-    sources = sorted((ROOT / "packages/kotlin/src").rglob("*.kt"))
+    sources = sorted(
+        path
+        for source_set in ("main", "test")
+        for path in (ROOT / "packages/kotlin/src" / source_set / "kotlin").rglob("*.kt")
+    )
     cache = ROOT / ".cache"
     cache.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(dir=cache) as directory:
