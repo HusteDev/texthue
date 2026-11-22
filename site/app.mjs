@@ -51,7 +51,7 @@ function run() {
       results.replaceChildren();
       const table = append(results, 'table');
       const head = append(table, 'tr');
-      for (const title of ['Label','Hash','Assigned','Registry']) append(head,'th',title);
+      for (const title of ['Label','Hash','Assigned','Registry','Registry fill / background (sRGB)']) append(head,'th',title);
       for (const row of rows) {
         const line = append(table, 'tr');
         const labelCell = append(line,'th');
@@ -68,6 +68,7 @@ function run() {
           chip.style.color = hex;
           cell.append(hex);
         }
+        append(line,'td',`${row.fillOnBackground.srgbRatio.toFixed(2)}:1`);
       }
       for (const [title,items] of [
         ['Normalized aliases',findings.aliases], ['Closest pairs in selected vision profile',findings.closest],
@@ -75,7 +76,7 @@ function run() {
         ['Placement searches below target after 24 positions across scored themes and profiles',findings.exhaustedSearches],
       ]) details(results,`${title} (${items.length})`,items);
       details(results,'Registry palette distances (row indices start at zero)',diagnostics);
-      for (const row of rows) details(results,row.label,{contrast:row.contrast,fill:row.fill,registryFillTrace:row.registryFillTrace,css:row.variables});
+      for (const row of rows) details(results,row.label,{contrast:row.contrast,fillOnBackground:row.fillOnBackground,fill:row.fill,registryFillTrace:row.registryFillTrace,css:row.variables});
       download('Download configuration', 'texthue-config.json', 'application/json', () => JSON.stringify(config, null, 2));
       download('Download registry', 'texthue-registry.json', 'application/json', () => JSON.stringify(registry, null, 2));
       download('Download swatch sheet', 'texthue-swatches.svg', 'image/svg+xml', () => swatchSheet(rows, input.theme, input.vision));

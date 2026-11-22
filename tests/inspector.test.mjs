@@ -2,6 +2,16 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {inspect} from '../site/inspect.mjs';
 
+test('registry fill visibility is measured separately from text contrast and vision previews', () => {
+  const input = {labels:['badge'],options:{overrides:{badge:'#ffffff'},backgrounds:{light:'#ffffff',dark:'#000000'}},vision:'deutan'};
+  const light = inspect({...input,theme:'light'}).rows[0];
+  assert.equal(light.fillOnBackground.srgbRatio,1);
+  assert.equal(light.contrast.fill.ratio,21);
+  const dark = inspect({...input,theme:'dark',options:{...input.options,gamut:'display-p3'}}).rows[0];
+  assert.equal(dark.fillOnBackground.srgbRatio,21);
+  assert.ok(Math.abs(dark.fillOnBackground.displayP3LuminanceRatio - 21) < 1e-10);
+});
+
 test('inspector compares placements and preserves a registry across label changes', () => {
   const input = {labels:['design','research'], options:{}, theme:'light', vision:'normal'};
   const first = inspect(input);

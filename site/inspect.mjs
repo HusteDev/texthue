@@ -1,5 +1,17 @@
 import {analyzePalette, simulateVision} from '../packages/npm/dist/diagnostics.js';
+import {contrast, p3Contrast} from '../packages/npm/dist/color-math.js';
 import {createResolver, cssVariables, importConfig} from '../packages/npm/dist/index.js';
+
+function surfaceContrast({fill, background}) {
+  const bytes = ({r,g,b}) => [r,g,b];
+  const result = {srgbRatio:contrast(bytes(fill.rgb), bytes(background.rgb))};
+  if (fill.p3 && background.p3) {
+    // The renderer serializes quantized P3 channels in the CSS 0–1 range.
+    const p3Bytes = color => bytes(color.p3).map(v => Math.round(v * 255));
+    result.displayP3LuminanceRatio = p3Contrast(p3Bytes(fill), p3Bytes(background));
+  }
+  return result;
+}
 
 export function inspect({labels, options, theme, vision, registry, optimizeVision = false, markers = false, minimumDistance = 0}) {
   const resolver = options && Object.hasOwn(options, 'schema') ? importConfig(options) : createResolver(options);
@@ -27,7 +39,7 @@ export function inspect({labels, options, theme, vision, registry, optimizeVisio
     const projection = resolver.project(label, {themes:[theme], roles:['fill'], formats:['hex','trace']},
       false, persistent.assignments[label]);
     return {label, ...(markers && {marker:persistent.markers[label]}), swatches, registryFillTrace:projection[theme].fill, contrast: saved[theme].contrast, fill: saved[theme].fill,
-      variables: cssVariables(saved, {theme, slug:label})};
+      fillOnBackground:surfaceContrast(saved[theme]), variables: cssVariables(saved, {theme, slug:label})};
   });
   const diagnostics = analyzePalette(rows.map(row => row.fill.hex), vision);
   const names = (first,second) => [rows[first].label,rows[second].label];
