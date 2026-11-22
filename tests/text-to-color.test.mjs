@@ -51,7 +51,17 @@ function checkFormats(color) {
 for (const item of fixture.vectors) {
   test(`v1 vector: ${item.id}`, async () => {
     const actual = await resolveTextColors(item.text, item.options);
-    assert.deepEqual(actual, item.expected);
+    // V8 versions can differ in the final bits of the unrounded luminance ratio.
+    const comparison = structuredClone(actual);
+    for (const theme of ['light','dark']) {
+      for (const [role, report] of Object.entries(item.expected[theme].contrast)) {
+        if (role === 'target') continue;
+        const measured = comparison[theme].contrast[role];
+        assert.ok(Math.abs(measured.ratio - report.ratio) <= 1e-12, `${theme}.${role}.ratio`);
+        measured.ratio = report.ratio;
+      }
+    }
+    assert.deepEqual(comparison, item.expected);
     const payload = Buffer.from(item.encoding.payloadHex, 'hex');
     assert.equal(createHash('sha256').update(payload).digest('hex'), item.encoding.sha256);
     assert.equal(actual.hueFraction, item.fractions[0]);

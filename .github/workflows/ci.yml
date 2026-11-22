@@ -293,6 +293,14 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
         run: python tools/check-browser.py google-chrome
       - run: python tools/build-packages.py
+      - name: Select the minimum supported consumer runtime
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '20.0.0'
+      - name: Verify the compiled library on Node 20.0.0
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        run: node --test tests/text-to-color.test.mjs tests/resolver.test.mjs tests/sha256.test.mjs
 
   coverage:
     name: Coverage
