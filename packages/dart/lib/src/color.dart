@@ -28,6 +28,19 @@ final class Color {
 
   const Color._(this.hex, this.rgb, this.hsl, this.oklch);
 
+  /// Composite this sRGB color over an opaque backdrop in linear light.
+  Color compositeOver(double alpha, Color backdrop) {
+    if (!(alpha >= 0 && alpha <= 1)) {
+      throw RangeError.value(
+          alpha, 'alpha', 'Expected a value between zero and one');
+    }
+    int blend(int front, int back) =>
+        channelByte(alpha * linearChannel(front / 255) +
+            (1 - alpha) * linearChannel(back / 255));
+    return Color.fromRgb(blend(rgb.r, backdrop.rgb.r),
+        blend(rgb.g, backdrop.rgb.g), blend(rgb.b, backdrop.rgb.b));
+  }
+
   factory Color.fromRgb(int red, int green, int blue) {
     final bytes = [red, green, blue];
     for (final byte in bytes) {
