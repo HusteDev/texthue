@@ -62,10 +62,18 @@ internal object ColorMath {
         return if (x <= 0.04045) x / 12.92 else ((x + 0.055) / 1.055).pow(2.4)
     }
 
-    fun channelByte(linear: Double): Int {
+    private fun encodedChannel(linear: Double): Double {
         val x = linear.coerceIn(0.0, 1.0)
-        val encoded = if (x <= 0.0031308) 12.92 * x else 1.055 * x.pow(1 / 2.4) - 0.055
-        return floor(encoded * 255 + 0.5).toInt()
+        return if (x <= 0.0031308) 12.92 * x else 1.055 * x.pow(1 / 2.4) - 0.055
+    }
+
+    fun channelByte(linear: Double): Int = floor(encodedChannel(linear) * 255 + 0.5).toInt()
+
+    // Supplied sRGB colors retain fractional encoded channels for P3 contrast.
+    fun srgbToP3(rgb: IntArray): DoubleArray {
+        val linear = DoubleArray(3) { linearChannel(rgb[it]) }
+        val p3 = multiply(Gamut.DISPLAY_P3.fromXyz, multiply(rgbToXyz, linear))
+        return DoubleArray(3) { encodedChannel(p3[it]) * 255 }
     }
 
     fun p3Fallback(rgb: IntArray): Pair<IntArray, Boolean> {
