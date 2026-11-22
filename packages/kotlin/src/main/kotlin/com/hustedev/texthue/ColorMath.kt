@@ -51,11 +51,19 @@ internal object ColorMath {
         doubleArrayOf(0.0259040424655478, 0.7827717124575296, -0.8086757549230774),
     )
 
+    fun linearChannel(byte: Int): Double {
+        val x = byte / 255.0
+        return if (x <= 0.04045) x / 12.92 else ((x + 0.055) / 1.055).pow(2.4)
+    }
+
+    fun channelByte(linear: Double): Int {
+        val x = linear.coerceIn(0.0, 1.0)
+        val encoded = if (x <= 0.0031308) 12.92 * x else 1.055 * x.pow(1 / 2.4) - 0.055
+        return floor(encoded * 255 + 0.5).toInt()
+    }
+
     fun oklch(rgb: IntArray): Oklch {
-        val linear = DoubleArray(3) { i ->
-            val x = rgb[i] / 255.0
-            if (x <= 0.04045) x / 12.92 else ((x + 0.055) / 1.055).pow(2.4)
-        }
+        val linear = DoubleArray(3) { i -> linearChannel(rgb[i]) }
         val lms = multiply(xyzToLms, multiply(rgbToXyz, linear))
         for (i in lms.indices) lms[i] = Math.cbrt(lms[i])
         val (l, a, b) = multiply(lmsToLab, lms)
@@ -99,11 +107,7 @@ internal object ColorMath {
             retained = limit(l, c, h, gamut, 24)
             channels = linear(l, retained, h, gamut)
         }
-        val bytes = IntArray(3) { i ->
-            val x = channels[i].coerceIn(0.0, 1.0)
-            val encoded = if (x <= 0.0031308) 12.92 * x else 1.055 * x.pow(1 / 2.4) - 0.055
-            floor(encoded * 255 + 0.5).toInt()
-        }
+        val bytes = IntArray(3) { i -> channelByte(channels[i]) }
         return FittedColor(bytes, retained, l)
     }
 }

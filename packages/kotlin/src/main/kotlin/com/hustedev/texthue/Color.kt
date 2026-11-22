@@ -27,3 +27,14 @@ internal fun renderedColor(bytes: IntArray): Color {
         Hsl(round6(60 * hue) % 360, round6(100 * saturation), round6(100 * lightness)),
         ColorMath.oklch(bytes))
 }
+
+/** Composite a six-digit sRGB source over an opaque backdrop in linear light. */
+fun compositeOver(source: String, alpha: Double, backdrop: String): Color {
+    require(alpha in 0.0..1.0) { "Alpha must be between zero and one" }
+    val front = parseHex(source)
+    val back = parseHex(backdrop)
+    return renderedColor(IntArray(3) { i ->
+        ColorMath.channelByte(alpha * ColorMath.linearChannel(front[i]) +
+            (1 - alpha) * ColorMath.linearChannel(back[i]))
+    })
+}

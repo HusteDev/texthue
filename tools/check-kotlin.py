@@ -2,6 +2,7 @@
 
 import argparse
 import contextlib
+import json
 import os
 import subprocess
 import sys
@@ -49,6 +50,9 @@ def main():
         jar = Path(directory) / "conformance.jar"
         subprocess.run([args.kotlinc, *sources, "-include-runtime", "-d", jar], check=True)
         with runtime(args, jar) as runner:
+            composites = json.loads((ROOT / "conformance/composite-v1.json").read_text(encoding="utf-8"))
+            rows = "".join("{source}\t{alpha}\t{backdrop}\t{expected}\n".format(**row) for row in composites)
+            subprocess.run([*runner, "com.hustedev.texthue.CompositeTestKt"], input=rows.encode(), check=True)
             for corpus, entry in (
                 ("identity", "IdentityTestKt"),
                 ("gamut", "ColorMathTestKt"),

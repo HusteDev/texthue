@@ -46,4 +46,4 @@ $adb = "$sdk/platform-tools/adb.exe"
 python tools/check-kotlin.py --kotlinc $compiler --android-serial $serial --adb $adb --d8 "$sdk/build-tools/37.0.0/d8.bat" --android-jar "$sdk/platforms/android-34/android.jar"
 ```
 
-The runner compiles production and test sources, converts the test JAR to DEX, executes the six suites through ART, and removes the temporary device file. Tests cover identity framing, gamut fitting, contrast, rendered formats, contrast repair, and resolver and batch behavior. APK packaging and application lifecycle behavior require separate tests.
+The runner compiles production and test sources, converts the test JAR to DEX, executes the seven suites through ART, and removes the temporary device file. Tests cover linear-light sRGB compositing, identity framing, gamut fitting, contrast, rendered formats, contrast repair, and resolver and batch behavior. APK packaging and application lifecycle behavior require separate tests.

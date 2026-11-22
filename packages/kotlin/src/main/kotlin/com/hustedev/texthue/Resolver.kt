@@ -33,7 +33,7 @@ data class Backgrounds(val light: String = "#ffffff", val dark: String = "#12121
 
 private val hexColor = Regex("#[0-9A-Fa-f]{6}")
 
-private fun parseHex(hex: String): IntArray {
+internal fun parseHex(hex: String): IntArray {
     require(hexColor.matches(hex)) { "Expected a six-digit hex color" }
     return IntArray(3) { i -> hex.substring(1 + 2 * i, 3 + 2 * i).toInt(16) }
 }
