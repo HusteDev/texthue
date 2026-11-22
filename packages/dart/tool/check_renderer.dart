@@ -43,6 +43,20 @@ void main() {
         p.version != expected['version'])
       throw StateError('Identity mismatch for ${row["id"]}');
     for (final theme in {'light': p.light, 'dark': p.dark}.entries) {
+      final report = theme.key == 'dark' ? p.darkContrast : p.lightContrast;
+      if (report.length != 7) throw StateError('Missing contrast measurements');
+      for (final entry in report.entries) {
+        final reference = expected[theme.key]['contrast'][entry.key];
+        final pair = entry.value;
+        if ((pair.ratio - reference['ratio']).abs() > 1e-10 ||
+            pair.meetsTarget != reference['meetsTarget'] ||
+            pair.lightnessAdjusted != reference['lightnessAdjusted'] ||
+            pair.chromaCapped != reference['chromaCapped'] ||
+            pair.chromaReduced != reference['chromaReduced'] ||
+            pair.fallback != reference['fallback'])
+          throw StateError(
+              'Contrast mismatch for ${row["id"]} ${theme.key} ${entry.key}');
+      }
       if (theme.value.length != 10) throw StateError('Missing roles');
       for (final role in theme.value.entries) {
         if (renderer.hex(row['text'],

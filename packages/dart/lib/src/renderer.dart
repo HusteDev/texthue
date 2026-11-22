@@ -13,13 +13,32 @@ import 'tone_repair.dart';
 
 part 'assignment.dart';
 
+typedef ContrastRelationship = ({
+  double ratio,
+  double value,
+  ContrastModel model,
+  bool meetsTarget,
+  bool lightnessAdjusted,
+  bool chromaCapped,
+  bool chromaReduced,
+  String? fallback
+});
+typedef _Adjustment = ({
+  bool adjusted,
+  bool capped,
+  bool reduced,
+  String? fallback
+});
+
 typedef RenderedPalette = ({
   String version,
   String source,
   double hue,
   double hueFraction,
   Map<String, Color> light,
-  Map<String, Color> dark
+  Map<String, Color> dark,
+  Map<String, ContrastRelationship> lightContrast,
+  Map<String, ContrastRelationship> darkContrast
 });
 
 List<int> _parseHex(String hex) {
@@ -241,16 +260,20 @@ final class Renderer {
   RenderedPalette _resolveNormalized(String text) => _render(_mapping(text));
 
   RenderedPalette _render(_Mapping mapping, [int ring = 0]) {
-    Map<String, Color> theme(bool dark) =>
-        Map.unmodifiable(_theme(dark, mapping, null, ring)
-            .map((role, v) => MapEntry(role, Color.fromRgb(v[0], v[1], v[2]))));
+    final lightReport = <String, ContrastRelationship>{},
+        darkReport = <String, ContrastRelationship>{};
+    Map<String, Color> theme(bool dark) => Map.unmodifiable(_theme(
+            dark, mapping, null, ring, false, dark ? darkReport : lightReport)
+        .map((role, v) => MapEntry(role, Color.fromRgb(v[0], v[1], v[2]))));
     return (
       version: 'text-to-color-v1',
       source: mapping.source,
       hue: mapping.hue,
       hueFraction: mapping.fraction,
       light: theme(false),
-      dark: theme(true)
+      dark: theme(true),
+      lightContrast: Map.unmodifiable(lightReport),
+      darkContrast: Map.unmodifiable(darkReport)
     );
   }
 
@@ -296,7 +319,10 @@ final class Renderer {
   }
 
   Map<String, List<int>> _theme(bool dark, _Mapping mapping,
-      [String? selected, int ring = 0, bool strict = false]) {
+      [String? selected,
+      int ring = 0,
+      bool strict = false,
+      Map<String, ContrastRelationship>? report]) {
     final fixed = dark ? mapping.fixed?.$2 : mapping.fixed?.$1;
     final hue = fixed?.hue ?? mapping.hue, uL = mapping.uL, uC = mapping.uC;
     final base = dark ? _dark : _light, direction = dark ? 1 : -1;
@@ -341,64 +367,72 @@ final class Renderer {
       return best;
     }
 
-    List<int> tone(double value, bool fill, double threshold,
+    final flags = report == null ? null : <String, _Adjustment>{};
+    List<int> tone(String name, double value, bool fill, double threshold,
         {List<int>? background, List<int>? subtle, bool surface = false}) {
       final l = value.clamp(0.0, 1.0);
       final role = fill ? profile.fill : profile.text;
       final scale = role?.chromaScale ?? (preset.low, preset.high);
-      final c = fixed?.neutral == true
+      final cap = fixed?.neutral == true
           ? 0.0
-          : math.min(
-              role?.chromaCap ?? (fill ? 0.16 : 0.19),
-              Gamut.sRGB.cusp(l, hue) *
-                  ((scale.$1 + (scale.$2 - scale.$1) * uC) *
-                      (ring % 5 < 3 ? 1 : 0.6)));
+          : role?.chromaCap ?? (fill ? 0.16 : 0.19);
+      final requested = Gamut.sRGB.cusp(l, hue) *
+          ((scale.$1 + (scale.$2 - scale.$1) * uC) * (ring % 5 < 3 ? 1 : 0.6));
+      final c = math.min(cap, requested);
       final secondary = subtle == null ? 0.0 : target('textOnSubtle');
-      return Gamut.sRGB
+      final repaired = Gamut.sRGB
           .repair(l, c, hue, threshold == 0 ? secondary : threshold, (bytes) {
-            final primary = background == null
-                ? score(foreground(bytes, threshold), bytes)
-                : surface
-                    ? score(background, bytes)
-                    : score(bytes, background);
-            if (subtle == null || secondary == 0) return primary;
-            final other = score(bytes, subtle);
-            return threshold == 0
-                ? other
-                : math.min(primary, other * (threshold / secondary));
-          })
-          .color
-          .bytes;
+        final primary = background == null
+            ? score(foreground(bytes, threshold), bytes)
+            : surface
+                ? score(background, bytes)
+                : score(bytes, background);
+        if (subtle == null || secondary == 0) return primary;
+        final other = score(bytes, subtle);
+        return threshold == 0
+            ? other
+            : math.min(primary, other * (threshold / secondary));
+      });
+      flags?[name] = (
+        adjusted: repaired.color.lightness != l,
+        capped: requested > cap,
+        reduced: repaired.color.chroma < c,
+        fallback: repaired.fallback
+      );
+      return repaired.color.bytes;
     }
 
     late final lb = base.lightness,
         lf = fixed?.lightness ?? sample(true),
         lt = sample(false);
-    late final subtle = tone(lb + direction * 0.04, true, unconstrained);
-    late final fill = fixed?.bytes ?? tone(lf, true, target('fill')),
+    late final subtle =
+        tone('subtle', lb + direction * 0.04, true, unconstrained);
+    late final fill = fixed?.bytes ?? tone('fill', lf, true, target('fill')),
         onFill = foreground(fill, target('fill'));
     final colors = {
       if (selected == null || selected == 'background')
         'background': base.bytes,
       if (selected == null || selected == 'subtle') 'subtle': subtle,
       if (selected == null || selected == 'muted')
-        'muted': tone(lb + direction * 0.10, true, unconstrained),
+        'muted': tone('muted', lb + direction * 0.10, true, unconstrained),
       if (selected == null || selected == 'fill') 'fill': fill,
       if (selected == null || selected == 'onFill') 'onFill': onFill,
       if (selected == null || selected == 'fillHover')
-        'fillHover': tone(lf + direction * 0.025, true, target('fillHover'),
+        'fillHover': tone(
+            'fillHover', lf + direction * 0.025, true, target('fillHover'),
             background: onFill, surface: true),
       if (selected == null || selected == 'fillActive')
-        'fillActive': tone(lf + direction * 0.05, true, target('fillActive'),
+        'fillActive': tone(
+            'fillActive', lf + direction * 0.05, true, target('fillActive'),
             background: onFill, surface: true),
       if (selected == null || selected == 'border')
-        'border': tone(lb + direction * 0.39, true, target('border'),
+        'border': tone('border', lb + direction * 0.39, true, target('border'),
             background: base.bytes),
       if (selected == null || selected == 'text')
-        'text': tone(lt, false, target('text'),
+        'text': tone('text', lt, false, target('text'),
             background: base.bytes, subtle: subtle),
       if (selected == null || selected == 'strong')
-        'strong': tone(lt + direction * 0.10, false, target('strong'),
+        'strong': tone('strong', lt + direction * 0.10, false, target('strong'),
             background: base.bytes)
     };
     if (strict && selected != null && colors.containsKey(selected)) {
@@ -419,6 +453,37 @@ final class Renderer {
           require('textOnSubtle', value, subtle);
         case 'strong' || 'border':
           require(selected, value, base.bytes);
+      }
+    }
+    if (report != null) {
+      for (final (pair, front, back) in const [
+        ('fill', 'onFill', 'fill'),
+        ('fillHover', 'onFill', 'fillHover'),
+        ('fillActive', 'onFill', 'fillActive'),
+        ('text', 'text', 'background'),
+        ('textOnSubtle', 'text', 'subtle'),
+        ('strong', 'strong', 'background'),
+        ('border', 'border', 'background')
+      ]) {
+        final value = measureContrast(colors[front]!, colors[back]!,
+            model: contrastModel);
+        final passes = value.abs() >= target(pair);
+        final adjustment = flags![pair == 'textOnSubtle' ? 'text' : pair];
+        report[pair] = (
+          ratio: contrastModel == ContrastModel.wcag2
+              ? value
+              : measureContrast(colors[front]!, colors[back]!,
+                  model: ContrastModel.wcag2),
+          model: contrastModel,
+          value: value,
+          meetsTarget: passes,
+          lightnessAdjusted: adjustment?.adjusted ?? false,
+          chromaCapped: adjustment?.capped ?? false,
+          chromaReduced: adjustment?.reduced ?? false,
+          fallback: pair == 'fill' && fixed != null && !passes
+              ? 'palette-constraint'
+              : adjustment?.fallback
+        );
       }
     }
     return colors;

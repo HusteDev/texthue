@@ -29,6 +29,8 @@ The package pins `crypto` 3.0.6 for SHA-256 and `unorm_dart` 0.3.3 for Unicode n
 
 From the repository root, `python tools/check-dart-publication.py` runs pub’s publication dry run, then installs a temporary path consumer from a copy of the public library and manifest. The consumer resolves dependencies from the local pub cache and verifies the example output. Run `dart pub get --enforce-lockfile` in the package directory first to populate that cache.
 
+Read `palette.lightContrast` and `palette.darkContrast` for the seven measured relationships in each theme. Each entry reports the WCAG ratio, selected model measurement, target status, adjustments and fallback reason.
+
 Pass `strict: true` to `renderer.hex` to raise a `StateError` when the selected role misses a contrast target. Text is checked against both the background and subtle surface.
 
 Use `renderer.assign(labels)` to assign a collection together. Pass
