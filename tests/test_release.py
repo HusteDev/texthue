@@ -9,6 +9,7 @@ testable without touching a real registry.
 
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -165,6 +166,24 @@ class PypiTargetStateTests(unittest.TestCase):
 
 
 class GoTargetStateTests(unittest.TestCase):
+    def test_real_annotated_tag_matches_peeled_commit(self):
+        with tempfile.TemporaryDirectory() as directory:
+
+            def git(*args):
+                return subprocess.check_output(["git", "-C", directory, *args], text=True).strip()
+
+            git("init", "--quiet")
+            identity = ["-c", "user.name=Test", "-c", "user.email=test@example.invalid"]
+            git(*identity, "commit", "--allow-empty", "--no-gpg-sign", "-m", "fixture")
+            commit = git("rev-parse", "HEAD")
+            name = "packages/go/v1.0.0"
+            git(*identity, "tag", "--no-sign", "-a", name, "-m", "fixture")
+            ref = "refs/tags/" + name
+            self.assertEqual(release.tag_state(directory, ref, commit).state, release.MATCHING)
+            self.assertEqual(
+                release.tag_state(directory, ref, git("rev-parse", ref)).state, release.CONFLICTING
+            )
+
     def test_missing_tag_is_absent(self):
         def run(_command):
             return fake_result(0, stdout="")

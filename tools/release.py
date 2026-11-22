@@ -204,13 +204,26 @@ def go_target_state(
     """
     remote = f"https://{module_path.split('/packages/go')[0]}.git"
     tag = f"refs/tags/packages/go/v{version}"
-    result = run(["git", "ls-remote", remote, tag])
+    return tag_state(remote, tag, expected_commit, run=run)
+
+
+def tag_state(remote: str, tag: str, expected_commit: str, *, run: Runner = _default_runner):
+    peeled = tag + "^{}"
+    result = run(["git", "ls-remote", remote, tag, peeled])
     if result.returncode != 0:
         return TargetState(LOOKUP_FAILED, result.stderr.strip())
     line = result.stdout.strip()
     if not line:
         return TargetState(ABSENT)
-    commit = line.split()[0]
+    refs = {}
+    for record in line.splitlines():
+        fields = record.split()
+        if len(fields) != 2 or fields[1] not in (tag, peeled) or fields[1] in refs:
+            return TargetState(LOOKUP_FAILED, "unexpected git ls-remote response")
+        refs[fields[1]] = fields[0]
+    if tag not in refs:
+        return TargetState(LOOKUP_FAILED, "missing tag object")
+    commit = refs.get(peeled, refs[tag])
     return TargetState(MATCHING if commit == expected_commit else CONFLICTING)
 
 
