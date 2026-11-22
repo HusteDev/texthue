@@ -2,6 +2,23 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {createResolver} from '../packages/npm/dist/index.js';
 import {anchors} from '../packages/npm/dist/tables.js';
+import {cusp} from '../packages/npm/dist/color-math.js';
+
+test('uncapped rendered tones retain at least 55 percent of available sRGB chroma', () => {
+  const resolver = createResolver();
+  const roles = ['subtle','muted','fill','fillHover','fillActive','border','text','strong'];
+  for (let i = 0; i < 4000; i++) {
+    const palette = resolver.resolve(`item:${i}`);
+    for (const theme of ['light','dark']) {
+      for (const role of roles) {
+        const tones = palette[theme];
+        if (tones.contrast[role]?.chromaCapped) continue;
+        const {l,c,h} = tones[role].oklch;
+        assert.ok(c >= 0.55 * cusp(l,h), `item:${i} ${theme}.${role}`);
+      }
+    }
+  }
+});
 
 test('default hash assignments distribute 4,000 labels across the twelve hue warp segments', () => {
   const resolver = createResolver();
