@@ -517,17 +517,68 @@ extension Renderer {
             placements[name] = Placement(hueFraction: mapped.fraction, ring: 0, moved: false)
         }
         var colors: [Data: RenderedPalette] = [:]
-        for (name, _, original) in entries {
+        func placed(_ original: Mapping, _ p: Placement) throws -> RenderedPalette {
             var mapped = original
-            let p = placements[name] ?? Placement.choose(mapped.fraction, placements.values, separation)
-            placements[name] = p
             mapped.ring = Int(p.ring % Int64(Placement.offsets.count))
             if mapped.light == nil {
                 mapped.source = "assigned"
                 mapped.fraction = p.hueFraction
                 mapped.hue = mappedHue(p.hueFraction)
             }
-            colors[name] = try render(mapped)
+            return try render(mapped)
+        }
+        func project(_ palette: RenderedPalette) -> [[Double]] {
+            [palette.light, palette.dark].map { theme in
+                let rgb = theme["fill"]!.rgb
+                return Color.lab([rgb.r, rgb.g, rgb.b].map { Double($0) / 255 })
+            }
+        }
+        var occupied = try placements.map { bytes, p in
+            try project(placed(mapping(String(decoding: bytes, as: UTF8.self)), p))
+        }
+        func score(_ points: [[Double]]) -> Double {
+            var minimum = Double.infinity
+            for prior in occupied {
+                for (a, b) in zip(points, prior) {
+                    let squared = zip(a, b).reduce(0.0) { sum, pair in
+                        let delta = pair.0 - pair.1
+                        return sum + delta * delta
+                    }
+                    minimum = min(minimum, sqrt(squared))
+                }
+            }
+            return minimum
+        }
+        for (name, _, original) in entries {
+            if let fixed = placements[name] {
+                colors[name] = try placed(original, fixed)
+                continue
+            }
+            let initial = Placement.choose(original.fraction, placements.values, separation)
+            var selected = initial
+            var palette = try placed(original, initial)
+            var points = project(palette)
+            var best = score(points)
+            for step in 1..<(24 * Placement.offsets.count) {
+                if best >= 0.04 { break }
+                let raw = initial.hueFraction + Double(step % 24) / 24
+                let hue = raw - floor(raw)
+                let ring = initial.ring + Int64(step / 24)
+                if placements.values.contains(where: { p in
+                    let delta = abs(p.hueFraction - hue)
+                    return p.ring == ring && min(delta, 1 - delta) < separation
+                }) { continue }
+                let candidate = Placement(hueFraction: hue, ring: ring, moved: true)
+                let rendered = try placed(original, candidate)
+                let projected = project(rendered)
+                let distance = score(projected)
+                if distance > best {
+                    (selected, palette, points, best) = (candidate, rendered, projected, distance)
+                }
+            }
+            placements[name] = selected
+            colors[name] = palette
+            occupied.append(points)
         }
         return Assignment(assignments: placements, colors: colors, report: AssignmentReport(
             fills: entries.map { ($0.0, colors[$0.0]!.light["fill"]!) }, size: size, separation: separation))
