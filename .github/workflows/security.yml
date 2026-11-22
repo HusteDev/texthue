@@ -29,14 +29,22 @@ jobs:
 
   codeql:
     name: CodeQL (${{ matrix.language }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
       security-events: write
     strategy:
       fail-fast: false
       matrix:
-        language: [javascript-typescript, python, go, actions, csharp]
+        language: [javascript-typescript, python, go, actions, csharp, java-kotlin, swift]
+        include:
+          - os: ubuntu-latest
+            mode: none
+          - language: java-kotlin
+            mode: manual
+          - language: swift
+            os: macos-latest
+            mode: manual
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -44,8 +52,14 @@ jobs:
       - uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
         with:
           languages: ${{ matrix.language }}
-          build-mode: none
+          build-mode: ${{ matrix.mode }}
           queries: security-extended
+      - name: Compile Kotlin JVM sources under CodeQL
+        if: matrix.language == 'java-kotlin'
+        run: JAVA_HOME="$JAVA_HOME_17_X64" packages/kotlin/gradlew -p packages/kotlin --no-daemon --no-build-cache -Pkotlin.compiler.execution.strategy=in-process compileKotlin
+      - name: Compile Swift package under CodeQL
+        if: matrix.language == 'swift'
+        run: swift build --package-path packages/swift --force-resolved-versions
       - uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
         with:
           category: /language:${{ matrix.language }}
