@@ -242,6 +242,30 @@ class ConformanceTests(unittest.TestCase):
                 }
             )
             expected.append(preview)
+        apca = Resolver(
+            contrast_model="apca",
+            overrides={"old": "#777777", "keep": "#777777"},
+            foregrounds=["#777777"],
+        )
+        for left, right in ((after, apca), (apca, after), (apca, apca)):
+            preview = compare_assignments({"resolver": left}, {"resolver": right}, texts)
+            if left is right:
+                self.assertEqual(preview["contrast"], [])
+            else:
+                fill = next(row for row in preview["contrast"] if row["pair"] == "fill")
+                self.assertEqual(fill["before"], fill["after"])
+                self.assertEqual(fill["passedBefore"], fill["passedAfter"])
+                self.assertEqual(fill["beforeLc" if left is apca else "afterLc"], 0)
+            requests.append(
+                {
+                    "texts": texts,
+                    "migration": {
+                        "old": {"config": left.export_config()},
+                        "next": {"config": right.export_config()},
+                    },
+                }
+            )
+            expected.append(preview)
         cases = json.dumps(requests)
         script = """
 import {compareAssignments,importConfig} from './packages/npm/dist/index.js';

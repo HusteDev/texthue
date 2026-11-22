@@ -26,13 +26,15 @@ type ColorChange struct {
 	AfterP3  string  `json:"afterP3,omitempty"`
 }
 type ContrastChange struct {
-	Text         string  `json:"text"`
-	Theme        string  `json:"theme"`
-	Pair         string  `json:"pair"`
-	Before       float64 `json:"before"`
-	After        float64 `json:"after"`
-	PassedBefore bool    `json:"passedBefore"`
-	PassedAfter  bool    `json:"passedAfter"`
+	Text         string   `json:"text"`
+	Theme        string   `json:"theme"`
+	Pair         string   `json:"pair"`
+	Before       float64  `json:"before"`
+	After        float64  `json:"after"`
+	PassedBefore bool     `json:"passedBefore"`
+	PassedAfter  bool     `json:"passedAfter"`
+	BeforeLc     *float64 `json:"beforeLc,omitempty"`
+	AfterLc      *float64 `json:"afterLc,omitempty"`
 }
 type MigrationReport struct {
 	Moved      []string         `json:"moved"`
@@ -132,8 +134,12 @@ func CompareAssignments(old, next MigrationSide, texts []string) (MigrationRepor
 				{"text", x.Contrast.Text, y.Contrast.Text}, {"textOnSubtle", x.Contrast.TextOnSubtle, y.Contrast.TextOnSubtle},
 				{"strong", x.Contrast.Strong, y.Contrast.Strong},
 			} {
-				if pair.f.Ratio != pair.s.Ratio || pair.f.MeetsTarget != pair.s.MeetsTarget {
-					report.Contrast = append(report.Contrast, ContrastChange{text, theme, pair.name, pair.f.Ratio, pair.s.Ratio, pair.f.MeetsTarget, pair.s.MeetsTarget})
+				beforeLc, afterLc := pair.f.Value, pair.s.Value
+				lcChanged := (beforeLc == nil) != (afterLc == nil) || (beforeLc != nil && afterLc != nil && *beforeLc != *afterLc)
+				if pair.f.Ratio != pair.s.Ratio || pair.f.MeetsTarget != pair.s.MeetsTarget || lcChanged {
+					report.Contrast = append(report.Contrast, ContrastChange{Text: text, Theme: theme, Pair: pair.name,
+						Before: pair.f.Ratio, After: pair.s.Ratio, PassedBefore: pair.f.MeetsTarget, PassedAfter: pair.s.MeetsTarget,
+						BeforeLc: beforeLc, AfterLc: afterLc})
 				}
 			}
 		}

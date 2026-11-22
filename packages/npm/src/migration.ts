@@ -40,7 +40,7 @@ export function compareAssignments(old:Side,next:Side,texts:readonly string[]) {
   const before = snapshot(old,labels), after = snapshot(next,labels);
   const moved:string[] = [];
   const colors:{text:string;theme:Theme;role:keyof Omit<ThemeColors,'contrast'>;before:string;after:string;beforeP3?:string;afterP3?:string;deltaE:number}[]=[];
-  const contrast:{text:string;theme:Theme;pair:typeof pairs[number];before:number;after:number;passedBefore:boolean;passedAfter:boolean}[]=[];
+  const contrast:{text:string;theme:Theme;pair:typeof pairs[number];before:number;after:number;beforeLc?:number;afterLc?:number;passedBefore:boolean;passedAfter:boolean}[]=[];
   for (const text of labels) {
     const a = before.aliases.get(text), b = after.aliases.get(text);
     if (a === undefined || b === undefined) throw new Error('Missing assignment identity');
@@ -56,8 +56,9 @@ export function compareAssignments(old:Side,next:Side,texts:readonly string[]) {
       }
       for (const pair of pairs) {
         const x = left[theme].contrast[pair], y = right[theme].contrast[pair];
-        if (x.ratio !== y.ratio || x.meetsTarget !== y.meetsTarget) {
-          contrast.push({text,theme,pair,before:x.ratio,after:y.ratio,passedBefore:x.meetsTarget,passedAfter:y.meetsTarget});
+        if (x.ratio !== y.ratio || x.meetsTarget !== y.meetsTarget || x.value !== y.value) {
+          contrast.push({text,theme,pair,before:x.ratio,after:y.ratio,passedBefore:x.meetsTarget,passedAfter:y.meetsTarget,
+            ...(x.value !== undefined && {beforeLc:x.value}), ...(y.value !== undefined && {afterLc:y.value})});
         }
       }
     }

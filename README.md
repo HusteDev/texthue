@@ -175,6 +175,8 @@ and pass/fail changes, and exact fill collisions in both themes. Collision
 groups contain distinct normalized identities sharing a fallback hex. Color changes
 include the old and new hex values and, when present, the native CSS values in
 `beforeP3` and `afterP3`. A change of rendition can preserve the same hex.
+Contrast changes include signed `beforeLc` or `afterLc` values for sides using APCA,
+including zero when the pair has no measurable APCA contrast.
 The preview leaves caller-owned
 registries untouched.
 

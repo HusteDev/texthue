@@ -77,7 +77,11 @@ def compare_assignments(old, new, texts):
                 "strong",
             ):
                 x, y = before["contrast"][pair], after["contrast"][pair]
-                if x["ratio"] != y["ratio"] or x["meetsTarget"] != y["meetsTarget"]:
+                if (
+                    x["ratio"] != y["ratio"]
+                    or x["meetsTarget"] != y["meetsTarget"]
+                    or x.get("value") != y.get("value")
+                ):
                     contrast.append(
                         {
                             "text": text,
@@ -87,6 +91,8 @@ def compare_assignments(old, new, texts):
                             "after": y["ratio"],
                             "passedBefore": x["meetsTarget"],
                             "passedAfter": y["meetsTarget"],
+                            **({"beforeLc": x["value"]} if "value" in x else {}),
+                            **({"afterLc": y["value"]} if "value" in y else {}),
                         }
                     )
     return {
