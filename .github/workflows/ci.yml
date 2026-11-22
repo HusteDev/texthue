@@ -34,6 +34,7 @@ jobs:
           export JAVA_HOME="$JAVA_HOME_17_X64"
           python tools/verify.py --port kotlin
           packages/kotlin/gradlew -p packages/kotlin publishLibraryPublicationToStagingRepository
+          python tools/check-maven.py
 
   rust:
     name: Rust conformance and packaging

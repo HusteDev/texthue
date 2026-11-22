@@ -23,6 +23,8 @@ Batch results follow input order. The resolver shares work for duplicate normali
 
 From the repository root, run `packages/kotlin/gradlew -p packages/kotlin publishLibraryPublicationToStagingRepository` with a JDK. This creates a Maven repository under `packages/kotlin/build/repository` with the library JAR, source JAR, POM and Gradle module metadata.
 
+Run `python tools/check-maven.py` to compile and execute a temporary consumer against the staged Maven coordinates. It reads the version from repository metadata and resolves the TextHue group exclusively from staging.
+
 In a separate Kotlin/JVM project's Gradle build, add the staging repository and dependency, adjusting the checkout path.
 
 ```kotlin
