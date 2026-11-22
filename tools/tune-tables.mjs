@@ -46,6 +46,7 @@ const kotlinRow = values => values.map(v => Number.isInteger(v) ? v.toFixed(1) :
 const outputs = new Map([
   ['packages/swift/Sources/TextHue/Tables.swift', `// ${header}\nlet anchors: [Double] = [${row(anchors)}]\nlet biases: [[Double]] = [\n${biases.map(v => `    [${row(v)}],`).join('\n')}\n]\n`],
   ['packages/kotlin/src/main/kotlin/com/hustedev/texthue/Tables.kt', `// ${header}\npackage com.hustedev.texthue\n\ninternal val anchors = doubleArrayOf(${kotlinRow(anchors)})\ninternal val biases = arrayOf(\n${biases.map(v => `    doubleArrayOf(${kotlinRow(v)}),`).join('\n')}\n)\n`],
+  ['packages/dart/lib/src/tables.dart', `// ${header}\nconst anchors = <double>[${row(anchors)}];\nconst biases = <List<double>>[\n${biases.map(v => `  [${row(v)}],`).join('\n')}\n];\n`],
   ['packages/npm/src/tables.ts', `// ${header}\nexport const anchors = [${row(anchors)}];\nexport const biases = [\n${biases.map(v => `  [${row(v)}],`).join('\n')}\n];\n`],
   ['packages/python/src/texthue/_tables.py', `# ${header}\n# fmt: off\nANCHORS = (${row(anchors)})\nBIASES = (\n${biases.map(v => `    (${row(v)}),`).join('\n')}\n)\n`],
   ['packages/go/tables.go', `// ${header}\npackage texthue\n\nvar anchors = [...]float64{${row(anchors)}}\nvar biases = [...][12]float64{\n${biases.map(v => `\t{${row(v)}},`).join('\n')}\n}\n`],
