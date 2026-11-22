@@ -27,3 +27,5 @@ Reproduce with `npm run build`, `node tools/bench.mjs`, `python tools/bench.py`,
 ### JavaScript renderer work budgets
 
 The JavaScript benchmark collects V8 function-entry counts separately from latency measurements. Each row covers the full 100-label corpus. The default run made 1,600 gamut fits. The 7:1 and 21:1 white-background runs made 5,732 and 12,725. The gray-background runs made 2,868 fits at 4.5:1 and 11,452 at 21:1. Every scenario made 1,600 cusp evaluations and 100 identity hashes. The JavaScript test suite enforces these fit and cusp ceilings and checks for one hash per label.
+
+Python's benchmark measures the same operations in a separate counting pass. Across all five scenarios it produced the same fit, cusp, and hash counts as JavaScript. Python's conformance suite enforces the same ceilings.
