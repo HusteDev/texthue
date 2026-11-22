@@ -176,7 +176,9 @@ foreach (var row in vectors.EnumerateArray())
     {
         if (colors.Count != 10) throw new InvalidDataException("Missing roles.");
         foreach (var (role, color) in colors)
-            if (color.Hex != expected.GetProperty(theme).GetProperty(role).GetProperty("hex").GetString())
+            if (renderer.Hex(row.GetProperty("text").GetString()!, theme == "dark", role) != color.Hex ||
+                renderer.ResolveColor(row.GetProperty("text").GetString()!, theme == "dark", role).Oklch != color.Oklch ||
+                color.Hex != expected.GetProperty(theme).GetProperty(role).GetProperty("hex").GetString())
                 throw new InvalidDataException($"Renderer mismatch for {row.GetProperty("id")} {theme} {role}");
     }
     rendered++;

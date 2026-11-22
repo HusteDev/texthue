@@ -146,7 +146,33 @@ public sealed class Renderer
 
     public RenderedPalette Resolve(string text) => ResolveNormalized(normalization.Apply(text));
 
+    private readonly record struct Mapping(double Fraction, double Hue, double UL, double UC,
+        FixedTone? Light = null, FixedTone? Dark = null, string Source = "hash");
+
+    private static readonly string[] Roles = ["background", "subtle", "muted", "fill", "onFill",
+        "fillHover", "fillActive", "border", "text", "strong"];
+
     private RenderedPalette ResolveNormalized(string text)
+    {
+        var mapping = Map(text);
+        IReadOnlyDictionary<string, Color> Theme(bool dark)
+        {
+            var bytes = RoleRenderer(mapping, dark);
+            return Roles.ToFrozenDictionary(role => role, role => new Color(bytes(role)));
+        }
+        return new(mapping.Fraction, mapping.Hue, Theme(false), Theme(true)) { Source = mapping.Source };
+    }
+
+    public Color ResolveColor(string text, bool dark = false, string role = "fill") =>
+        new(SelectedBytes(text, dark, role));
+
+    public string Hex(string text, bool dark = false, string role = "fill") =>
+        Color.FormatHex(SelectedBytes(text, dark, role));
+
+    private Rgb SelectedBytes(string text, bool dark, string role) =>
+        RoleRenderer(Map(normalization.Apply(text)), dark)(role);
+
+    private Mapping Map(string text)
     {
         if (overrides.TryGetValue(text, out var pinned)) return Fixed(pinned.Light, pinned.Dark, "override");
         var digest = Identity.Digest(text, scope, seed);
@@ -168,21 +194,22 @@ public sealed class Renderer
         int i = (int)position;
         var anchors = Tables.Anchors;
         double hue = hueDomain.Map((anchors[i] + (anchors[i + 1] - anchors[i]) * (position - i)) % 360);
-        return new(uH, hue, Theme(false, hue, uL, uC), Theme(true, hue, uL, uC));
+        return new(uH, hue, uL, uC);
     }
 
-    private RenderedPalette Fixed(FixedTone light, FixedTone dark, string source)
+    private static Mapping Fixed(FixedTone light, FixedTone dark, string source)
     {
         var anchors = Tables.Anchors;
         double angle = light.Hue < anchors[0] ? light.Hue + 360 : light.Hue;
         int i = Array.FindLastIndex(anchors, anchor => anchor <= angle);
         double fraction = (i + (angle - anchors[i]) / (anchors[i + 1] - anchors[i])) / 12;
-        return new(fraction, light.Hue, Theme(false, light.Hue, 0.5, 0.5, light),
-            Theme(true, dark.Hue, 0.5, 0.5, dark)) { Source = source };
+        return new(fraction, light.Hue, 0.5, 0.5, light, dark, source);
     }
 
-    private IReadOnlyDictionary<string, Color> Theme(bool dark, double hue, double uL, double uC, FixedTone? fixedTone = null)
+    private Func<string, Rgb> RoleRenderer(Mapping mapping, bool dark)
     {
+        var fixedTone = dark ? mapping.Dark : mapping.Light;
+        double hue = fixedTone?.Hue ?? mapping.Hue, uL = mapping.UL, uC = mapping.UC;
         var background = dark ? darkBackground : lightBackground;
         double lb = Math.Floor(background.Oklch.L * 4096 + 0.5) / 4096;
         var profile = dark ? darkProfile : lightProfile;
@@ -236,18 +263,23 @@ public sealed class Renderer
 
         double lf = fixedTone?.Lightness ?? Sample(true), lt = Sample(false);
         double unconstrained = contrastModel == ContrastModel.Apca ? 0 : 1;
-        var subtle = Tone(lb + direction * 0.04, true, unconstrained);
-        var fill = fixedTone?.Bytes ?? Tone(lf, true, Target("fill"));
-        var onFill = Foreground(fill, Target("fill"));
-        return new Dictionary<string, Rgb>
+        Rgb? subtle = null, fill = null, onFill = null;
+        Rgb Subtle() => subtle ??= Tone(lb + direction * 0.04, true, unconstrained);
+        Rgb Fill() => fill ??= fixedTone?.Bytes ?? Tone(lf, true, Target("fill"));
+        Rgb OnFill() => onFill ??= Foreground(Fill(), Target("fill"));
+        return role => role switch
         {
-            ["background"] = background.Rgb, ["subtle"] = subtle,
-            ["muted"] = Tone(lb + direction * 0.10, true, unconstrained), ["fill"] = fill, ["onFill"] = onFill,
-            ["fillHover"] = Tone(lf + direction * 0.025, true, Target("fillHover"), onFill, surface: true),
-            ["fillActive"] = Tone(lf + direction * 0.05, true, Target("fillActive"), onFill, surface: true),
-            ["border"] = Tone(lb + direction * 0.39, true, Target("border"), background.Rgb),
-            ["text"] = Tone(lt, false, Target("text"), background.Rgb, subtle),
-            ["strong"] = Tone(lt + direction * 0.10, false, Target("strong"), background.Rgb)
-        }.ToFrozenDictionary(pair => pair.Key, pair => new Color(pair.Value));
+            "background" => background.Rgb,
+            "subtle" => Subtle(),
+            "muted" => Tone(lb + direction * 0.10, true, unconstrained),
+            "fill" => Fill(),
+            "onFill" => OnFill(),
+            "fillHover" => Tone(lf + direction * 0.025, true, Target("fillHover"), OnFill(), surface: true),
+            "fillActive" => Tone(lf + direction * 0.05, true, Target("fillActive"), OnFill(), surface: true),
+            "border" => Tone(lb + direction * 0.39, true, Target("border"), background.Rgb),
+            "text" => Tone(lt, false, Target("text"), background.Rgb, Subtle()),
+            "strong" => Tone(lt + direction * 0.10, false, Target("strong"), background.Rgb),
+            _ => throw new ArgumentOutOfRangeException(nameof(role), role, "Unknown color role.")
+        };
     }
 }

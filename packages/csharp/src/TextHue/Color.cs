@@ -24,10 +24,12 @@ public sealed class Color
         return new Color(new Rgb(Blend(Rgb.R, backdrop.R), Blend(Rgb.G, backdrop.G), Blend(Rgb.B, backdrop.B)));
     }
 
+    internal static string FormatHex(Rgb rgb) => $"#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}";
+
     public Color(Rgb rgb)
     {
         Rgb = rgb;
-        Hex = $"#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}";
+        Hex = FormatHex(rgb);
         double r = rgb.R / 255.0, g = rgb.G / 255.0, b = rgb.B / 255.0;
         double hi = Math.Max(r, Math.Max(g, b)), lo = Math.Min(r, Math.Min(g, b));
         double light = (hi + lo) / 2, delta = hi - lo;
