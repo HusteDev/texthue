@@ -534,13 +534,16 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
             "packages"
         ]
         runners = {p["id"]: p for p in packages if p.get("conformanceRunner")}
-        self.assertTrue({"npm", "go"}.issubset(runners))
+        self.assertTrue({"npm", "python", "go"}.issubset(runners))
         results = {}
         for name, package in runners.items():
             inputs = cases + replay if package.get("conformanceReplay") else cases
             with self.subTest(runner=name):
+                command = list(package["conformanceRunner"])
+                if command[0] == "python":
+                    command[0] = sys.executable
                 run = subprocess.run(
-                    package["conformanceRunner"],
+                    command,
                     cwd=ROOT,
                     input=json.dumps(inputs, ensure_ascii=True),
                     text=True,
@@ -555,9 +558,7 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
                 if package.get("conformanceReplay"):
                     self.assertEqual(results[name], output[len(cases) :])
         expected = results.pop("npm")
-        for index, (item, result) in enumerate(zip(cases, expected, strict=True)):
-            with self.subTest(index=index, runner="python"):
-                self.compare(resolve_text_colors(item["text"], item["options"]).to_dict(), result)
+        for index, result in enumerate(expected):
             for name, output in results.items():
                 with self.subTest(index=index, runner=name):
                     self.compare(output[index], result)

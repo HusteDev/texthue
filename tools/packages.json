@@ -36,7 +36,8 @@
         { "source": "root:LICENSE", "dest": "src/texthue/_docs/LICENSE" },
         { "source": "root:THIRD_PARTY_NOTICES.md", "dest": "src/texthue/_docs/THIRD_PARTY_NOTICES.md" }
       ],
-      "conformanceRunner": null,
+      "conformanceRunner": ["python", "tools/conformance-python.py"],
+      "conformanceReplay": true,
       "coverageFlag": "python",
       "archiveRequiredFiles": [
         "__init__.py", "_core.py", "_types.py", "py.typed",

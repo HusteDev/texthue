@@ -28,7 +28,7 @@ document.
 
 ## Registered runners
 
-`tools/conformance-js.mjs` runs the JavaScript reference. `packages/go/cmd/conformance/main.go` implements the Go runner. Python participates through its public API in the same test process. The Go runner’s README documents its invocation. Use it as the template for a new
+`tools/conformance-js.mjs` runs the JavaScript reference. `packages/go/cmd/conformance/main.go` implements the Go runner. `tools/conformance-python.py` runs the Python implementation in a subprocess using the active Python interpreter. The Go runner’s README documents its invocation. Use it as the template for a new
 language's runner: same stdin/stdout shapes, same exit-code rule.
 
 ## Registering a runner
