@@ -54,6 +54,10 @@ Go's count-mode coverage confirms the same operation counts in all five scenario
 
 ## Historical near-collision pairs
 
+Run `node tools/measure-separation.mjs` after building the JavaScript package to measure default collection assignment across 300 reproducible sets of ten decimal identifiers. The harness generates unsigned 32-bit values from seed 4217 and compares every pair of rendered fills within each theme using normal-vision OKLab distance.
+
+Of 13,500 pairs per theme, 20 light pairs and 115 dark pairs fell below 0.04. The minimum distances were 0.01161 and 0.01313 respectively. Default assignment currently misses the plan's zero-violation criterion on this corpus.
+
 The shared assignment corpus includes two pairs from the original review. The table gives Euclidean OKLab distance between the two emitted sRGB fills for each pair in isolation, using default options. Larger values indicate more separation in this metric.
 
 | Labels | Light hash / assigned | Dark hash / assigned |
