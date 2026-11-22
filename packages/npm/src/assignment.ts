@@ -1,3 +1,4 @@
+import { toOklab } from './color-math.js';
 import type { ColorSet } from './types.js';
 
 export interface Placement { hueFraction: number; ring: number; moved: boolean }
@@ -71,8 +72,9 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
   const points = entries.map(({name}) => {
     const color = colors[name];
     if (!color) throw new Error('Missing assigned color');
-    const {l,c,h} = color.light.fill.oklch;
-    return {name,l,a:c*Math.cos(h*Math.PI/180),b:c*Math.sin(h*Math.PI/180)};
+    const {r,g,b} = color.light.fill.rgb;
+    const [l, a, blueYellow] = toOklab([r,g,b]);
+    return {name,l,a,b:blueYellow};
   });
   for (const [index,first] of points.entries()) {
     for (const second of points.slice(index + 1)) {

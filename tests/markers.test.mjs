@@ -20,3 +20,12 @@ test('shape markers follow normalized identity across reordering and registry ex
   const sample = Array.from({length: 128}, (_, i) => String(i));
   assert.equal(new Set(Object.values(resolver.assign(sample, {markers: true}).markers)).size, 8);
 });
+
+test('assignment reports the distance between the rendered sRGB swatches', async () => {
+  const {analyzePalette} = await import('texthue/diagnostics');
+  for (const gamut of ['srgb', 'display-p3']) {
+    const {colors,report} = createResolver({gamut}).assign(['research','design']);
+    const palette = Object.values(colors).map(color => color.light.fill.hex);
+    assert.equal(report.minDistance, analyzePalette(palette).stats.min);
+  }
+});
