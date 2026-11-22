@@ -521,3 +521,24 @@ func TestDisplayP3BatchIsolation(t *testing.T) {
 		t.Fatal("native P3 CSS was lost")
 	}
 }
+
+func TestSelectedRolesMatchBothFullThemes(t *testing.T) {
+	for _, gamut := range []string{"srgb", "display-p3"} {
+		resolver, err := NewResolver(WithGamut(gamut), WithBackgrounds("#458ac2", "#cc9142"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		full, err := resolver.Resolve("example")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for theme, palette := range map[string]ThemeColors{"light": full.Light, "dark": full.Dark} {
+			for role, want := range palette.roles() {
+				got, err := resolver.Color("example", theme, role)
+				if err != nil || !reflect.DeepEqual(got, want) {
+					t.Fatalf("%s %s.%s: got %+v, want %+v, error %v", gamut, theme, role, got, want, err)
+				}
+			}
+		}
+	}
+}

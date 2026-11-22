@@ -78,13 +78,28 @@ func CSSVariables(colors ColorSet, theme, slug, prefix string) (map[string]strin
 }
 
 func (r *Resolver) selectedColor(text, theme, role string, strict bool) (Color, error) {
-	colors, err := r.Resolve(text)
+	name, err := r.identity(text)
 	if err != nil {
 		return Color{}, err
 	}
-	t, err := themeColors(colors, theme)
-	if err != nil {
-		return Color{}, err
+	index := 0
+	switch theme {
+	case "light":
+	case "dark":
+		index = 1
+	default:
+		return Color{}, invalid("theme")
+	}
+	if role == "background" {
+		if r.wide {
+			return rendition(canonicalRGB(r.profiles[index].background, true), true), nil
+		}
+		return r.bases[index], nil
+	}
+	colors := r.renderTones(r.digest(name), nil, name, false, index)
+	t := colors.Light
+	if index == 1 {
+		t = colors.Dark
 	}
 	c, ok := t.roles()[role]
 	if !ok {

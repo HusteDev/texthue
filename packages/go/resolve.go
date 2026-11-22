@@ -357,7 +357,7 @@ func (r *Resolver) Batch(texts []string) ([]ColorSet, error) {
 		}
 		value, ok := seen[name]
 		if !ok {
-			value = r.renderTones(r.digest(name), nil, name, false)
+			value = r.renderTones(r.digest(name), nil, name, false, -1)
 			seen[name] = value
 		} else {
 			value = value.detached()
@@ -381,7 +381,7 @@ func (r *Resolver) resolve(text string, trace bool) (ColorSet, error) {
 	if err != nil {
 		return ColorSet{}, err
 	}
-	return r.renderTones(r.digest(name), nil, name, trace), nil
+	return r.renderTones(r.digest(name), nil, name, trace, -1), nil
 }
 
 func (r *Resolver) identity(text string) (string, error) {
@@ -399,10 +399,10 @@ func (r *Resolver) digest(normalized string) []byte {
 }
 
 func (r *Resolver) render(digest []byte, placement *Assignment, name string) ColorSet {
-	return r.renderTones(digest, placement, name, false)
+	return r.renderTones(digest, placement, name, false, -1)
 }
 
-func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string, trace bool) ColorSet {
+func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string, trace bool, onlyTheme int) ColorSet {
 	target := r.target
 	// The first three big-endian 32-bit digest words become fractions in [0, 1) for hue, lightness, and chroma.
 	uH := float64(binary.BigEndian.Uint32(digest[0:4])) / 4294967296
@@ -438,6 +438,9 @@ func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string
 	}
 	var themes [2]ThemeColors
 	for i, theme := range r.profiles {
+		if onlyTheme >= 0 && i != onlyTheme {
+			continue
+		}
 		hue = naturalHue
 		if brand != nil {
 			hue = snappedHue(brand[i])
