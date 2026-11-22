@@ -25,6 +25,7 @@ def main():
             ("identity", "IdentityTestKt"),
             ("gamut", "ColorMathTestKt"),
             ("contrast", "ContrastTestKt"),
+            ("formats", "FormatsTestKt"),
             ("repair", "ToneRepairTestKt"),
             ("kotlin-resolver", "ResolverTestKt"),
         ):

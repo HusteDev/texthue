@@ -51,14 +51,17 @@ internal object ColorMath {
         doubleArrayOf(0.0259040424655478, 0.7827717124575296, -0.8086757549230774),
     )
 
-    fun lightness(rgb: IntArray): Double {
+    fun oklch(rgb: IntArray): Oklch {
         val linear = DoubleArray(3) { i ->
             val x = rgb[i] / 255.0
             if (x <= 0.04045) x / 12.92 else ((x + 0.055) / 1.055).pow(2.4)
         }
         val lms = multiply(xyzToLms, multiply(rgbToXyz, linear))
         for (i in lms.indices) lms[i] = Math.cbrt(lms[i])
-        return floor(multiply(lmsToLab, lms)[0] * 1e6 + 0.5) / 1e6
+        val (l, a, b) = multiply(lmsToLab, lms)
+        if (rgb[0] == rgb[1] && rgb[1] == rgb[2]) return Oklch(round6(l), 0.0, 0.0)
+        val hue = ((Math.atan2(b, a) * 180 / PI) % 360 + 360) % 360
+        return Oklch(round6(l), round6(Math.sqrt(a * a + b * b)), round6(hue) % 360)
     }
 
     private fun multiply(matrix: Array<DoubleArray>, v: DoubleArray) = DoubleArray(3) { i ->

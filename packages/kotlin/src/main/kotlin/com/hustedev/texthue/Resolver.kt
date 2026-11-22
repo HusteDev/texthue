@@ -3,7 +3,9 @@ package com.hustedev.texthue
 import kotlin.math.abs
 import kotlin.math.floor
 
-data class ThemePalette(val colors: Map<String, String>)
+data class ThemePalette(val colors: Map<String, String>) {
+    fun color(role: String): Color = renderedColor(parseHex(colors.getValue(role)))
+}
 data class Palette(val hue: Double, val light: ThemePalette, val dark: ThemePalette)
 
 enum class Preset(internal val minScale: Double, internal val maxScale: Double, internal val target: Double = 4.5) {
@@ -37,7 +39,7 @@ private fun parseHex(hex: String): IntArray {
 
 private class ThemeBackground(hex: String) {
     val bytes = parseHex(hex)
-    val lightness = floor(ColorMath.lightness(bytes) * 4096 + 0.5) / 4096
+    val lightness = floor(ColorMath.oklch(bytes).l * 4096 + 0.5) / 4096
 }
 
 class Resolver(
