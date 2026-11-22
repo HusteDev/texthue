@@ -46,6 +46,7 @@ export interface NormalizeOptions {
   whitespace?: 'none'|'trim'|'collapse';
 }
 export interface TextColorOptions {
+  gamut?: 'srgb'|'display-p3';
   contrastModel?: 'wcag2'|'apca';
   overrides?: Readonly<Record<string,string | {light:string;dark:string}>>;
   palette?: readonly {id:string;light?:string;dark?:string}[];
@@ -87,6 +88,9 @@ export interface OKLCH { l: number; c: number; h: number }
  * The RGB bytes are canonical; `hex`, `hsl`, and `oklch` are derived from them.
  */
 export interface Color {
+  p3?: RGB;
+  css?: string;
+  srgbClipped?: boolean;
   /** Lowercase six-digit `#rrggbb`. */
   hex: string;
   rgb: RGB;
@@ -166,6 +170,8 @@ export interface ResolvedProfile { lightness: Range; chromaCap: number; chromaSc
 
 /** Options after validation, with defaults applied and backgrounds parsed to RGB bytes. */
 export interface ResolvedOptions {
+  gamut: 'srgb'|'display-p3';
+  canonical: (rgb:Triple)=>Triple;
   contrastModel: 'wcag2'|'apca';
   measure: (text:Triple, background:Triple)=>number;
   exportOptions: () => Record<string,unknown>;

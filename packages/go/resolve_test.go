@@ -480,3 +480,23 @@ func TestDisplayP3Fit(t *testing.T) {
 		t.Fatal("expected wider green gamut")
 	}
 }
+
+func TestDisplayP3Contrast(t *testing.T) {
+	data, err := os.ReadFile("../../conformance/p3-contrast-v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []struct {
+		Text, Background rgb8
+		Ratio, Lc        float64
+	}
+	if err = json.Unmarshal(data, &rows); err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range rows {
+		if math.Abs(p3Contrast(row.Text, row.Background)-row.Ratio) > 1e-10 ||
+			math.Abs(p3APCAContrast(row.Text, row.Background)-row.Lc) > 1e-10 {
+			t.Fatalf("P3 pair %v %v", row.Text, row.Background)
+		}
+	}
+}

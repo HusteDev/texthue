@@ -207,3 +207,35 @@ test('Display-P3 fits and clipped sRGB fallbacks match Color.js', async () => {
   assert.equal(toCss(red,'p3'),'color(display-p3 0.917488 0.200287 0.138561)');
   assert.ok(cusp(.7,145,XYZ_TO_P3)>cusp(.7,145));
 });
+
+test('P3 resolver renders and checks the canonical rendition', async () => {
+  const {readFile} = await import('node:fs/promises');
+  const {p3Contrast,p3ApcaContrast,contrast} = await import('../packages/npm/dist/color-math.js');
+  const {importConfig,toCss} = await import('../packages/npm/dist/index.js');
+  const cases=JSON.parse(await readFile(new URL('../conformance/p3-contrast-v1.json',import.meta.url),'utf8'));
+  for (const row of cases) {
+    assert.ok(Math.abs(p3Contrast(row.text,row.background)-row.ratio)<1e-10);
+    assert.ok(Math.abs(p3ApcaContrast(row.text,row.background)-row.lc)<1e-10);
+  }
+  const r=createResolver({gamut:'display-p3',preset:'chart'});
+  const light=r.resolve('0').light;
+  assert.equal(light.fill.srgbClipped,true);
+  assert.equal(toCss(light.fill,'p3'),light.fill.css);
+  assert.deepEqual(importConfig(r.exportConfig()).resolve('0').light,light);
+  const bytes = color=>Object.values(color.p3).map(v=>Math.round(v*255));
+  assert.equal(p3Contrast(bytes(light.onFill),bytes(light.fill)),light.contrast.fill.ratio);
+  assert.notEqual(contrast(Object.values(light.onFill.rgb),Object.values(light.fill.rgb)),light.contrast.fill.ratio);
+  assert.deepEqual(r.project('0',{themes:['light'],roles:['fill'],formats:['p3','hex']}),
+    {light:{fill:{p3:light.fill.p3,hex:light.fill.hex}}});
+});
+
+test('P3 APCA keeps the supplied brand color and measures foreground polarity', async () => {
+  const {p3ApcaContrast,srgbToP3}=await import('../packages/npm/dist/color-math.js');
+  const r=createResolver({gamut:'display-p3',contrastModel:'apca',overrides:{label:'#ff0000'}});
+  const t=r.resolve('label').light;
+  assert.equal(t.fill.hex,'#ff0000');
+  assert.equal(t.fill.srgbClipped,false);
+  const native = rgb=>srgbToP3(Object.values(rgb),true).map(v=>255*v);
+  assert.equal(t.contrast.fill.value,p3ApcaContrast(native(t.onFill.rgb),native(t.fill.rgb)));
+  assert.equal(t.contrast.fill.meetsTarget,Math.abs(t.contrast.fill.value)>=60);
+});

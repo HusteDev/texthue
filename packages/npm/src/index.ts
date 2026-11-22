@@ -9,7 +9,7 @@
  */
 
 import { assignCollection, type Placement } from './assignment.js';
-import { apcaContrast, blendOver, chooseColor, contrast, cusp, formats, hexFormat, hslFormat, oklchFormat, rgbFormat } from './color-math.js';
+import { apcaContrast, blendOver, chooseColor, contrast, cusp, formats, hexFormat, hslFormat, oklchFormat, p3ApcaContrast, p3Contrast, p3Formats, rgbFormat, srgbToP3, XYZ_TO_P3 } from './color-math.js';
 import { compareBytes, fingerprint } from './fingerprint.js';
 import { sha256 } from './sha256.js';
 import { anchors, biases } from './tables.js';
@@ -175,11 +175,15 @@ function compileHueDomain(allowed:unknown, excluded:unknown) {
 }
 
 function optionsValue(options: unknown): ResolvedOptions {
-  const source = record(options, ['contrastModel','overrides','palette','foregrounds','foregroundPolicy','preset','hueRange','excludeHues','normalize','namespace', 'seed', 'backgrounds', 'contrastTarget', 'contrastTargets', 'profiles'], 'options');
+  const source = record(options, ['gamut','contrastModel','overrides','palette','foregrounds','foregroundPolicy','preset','hueRange','excludeHues','normalize','namespace', 'seed', 'backgrounds', 'contrastTarget', 'contrastTargets', 'profiles'], 'options');
   const contrastModel = own(source,'contrastModel','wcag2');
   if (contrastModel !== 'wcag2' && contrastModel !== 'apca') fail('INVALID_OPTIONS','Unknown contrast model');
   const apca = contrastModel === 'apca';
-  const measure = apca ? apcaContrast : contrast;
+  const gamut = own(source,'gamut','srgb');
+  if (gamut !== 'srgb' && gamut !== 'display-p3') fail('INVALID_OPTIONS','Unknown gamut');
+  const wide = gamut === 'display-p3';
+  const canonical = (rgb:Triple):Triple => wide ? srgbToP3(rgb,true).map(v=>v*255) as Triple : rgb;
+  const measure = apca ? (wide ? p3ApcaContrast : apcaContrast) : (wide ? p3Contrast : contrast);
   const validTarget = (target:unknown):target is number =>
     finite(target) && target >= (apca ? 0 : 1) && target <= (apca ? 106 : 21);
   const candidates = own(source,'foregrounds',['#000000','#ffffff']);
@@ -191,9 +195,10 @@ function optionsValue(options: unknown): ResolvedOptions {
     if (typeof hex !== 'string' || !/^#[0-9a-f]{6}$/i.test(hex)) fail('INVALID_OPTIONS','Invalid foreground color');
     return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)) as Triple;
   });
+  const canonicalForegrounds = foregrounds.map(canonical);
   const selectForeground = (rgb:Triple,target:number):Triple => {
     let selected:Triple = [0,0,0], best = -1;
-    for (const candidate of foregrounds) {
+    for (const candidate of canonicalForegrounds) {
       const ratio = Math.abs(measure(candidate,rgb));
       if (policy === 'first-passing' && ratio >= target) return candidate;
       if (ratio > best) { best = ratio; selected = candidate; }
@@ -283,7 +288,7 @@ function optionsValue(options: unknown): ResolvedOptions {
     if (ids.has(id)) fail('INVALID_OPTIONS','Duplicate palette ID');
     ids.add(id);
     const light = parseBrandHex(own(entry,'light',entry.dark)), dark = parseBrandHex(own(entry,'dark',entry.light));
-    const passing = [light,dark].every(rgb => Math.abs(measure(selectForeground(rgb,targets.fill),rgb)) >= targets.fill);
+    const passing = [light,dark].map(canonical).every(rgb => Math.abs(measure(selectForeground(rgb,targets.fill),rgb)) >= targets.fill);
     return {name:id,id:new TextEncoder().encode(id),light,dark,passing};
   });
   const brand:ResolvedOptions['brand'] = (name,digest) => {
@@ -304,7 +309,7 @@ function optionsValue(options: unknown): ResolvedOptions {
   const exportOptions = () => ({
     preset, seed, namespace, hueRange, excludeHues: exclusions,
     normalize: {unicode:form, case:casing, whitespace:space},
-    ...(apca ? {contrastModel} : {}), contrastTarget, contrastTargets:targets, profiles,
+    ...(wide ? {gamut} : {}), ...(apca ? {contrastModel} : {}), contrastTarget, contrastTargets:targets, profiles,
     backgrounds:{light:hexFormat(backgrounds.light),dark:hexFormat(backgrounds.dark)},
     foregroundPolicy:policy, foregrounds:foregrounds.map(hexFormat),
     overrides:Object.fromEntries([...pairs].map(([name,pair]) => [originalNames.get(name) ?? name,{light:hexFormat(pair.light),dark:hexFormat(pair.dark)}])),
@@ -312,7 +317,7 @@ function optionsValue(options: unknown): ResolvedOptions {
       id:entry.name,light:hexFormat(entry.light),dark:hexFormat(entry.dark)
     }))} : {})
   });
-  return { contrastModel, measure, exportOptions, brand, selectForeground, hueDomain, normalize, targets, seed, namespace:normalize(namespace), backgrounds, contrastTarget, profiles };
+  return { gamut, canonical, contrastModel, measure, exportOptions, brand, selectForeground, hueDomain, normalize, targets, seed, namespace:normalize(namespace), backgrounds, contrastTarget, profiles };
 }
 
 /**
@@ -366,7 +371,8 @@ export function createResolver(options: TextColorOptions = {}) {
   const header = new DataView(new ArrayBuffer(8));
   header.setUint32(0, settings.seed);
   header.setUint32(4, namespace.length);
-  const bases = {light: formats(settings.backgrounds.light), dark: formats(settings.backgrounds.dark)};
+  const baseColor = (rgb:Triple) => settings.gamut === 'srgb' ? formats(rgb) : p3Formats(settings.canonical(rgb));
+  const bases = {light:baseColor(settings.backgrounds.light),dark:baseColor(settings.backgrounds.dark)};
   const digestOf = (text: string) => {
     const input = encoder.encode(text);
     return sha256(prefix, new Uint8Array(header.buffer), namespace, input);
@@ -476,7 +482,10 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
 function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string,placement?:Placement,only?:Only, strict = false):ColorSet|Projection {
   const output:Projection = {};
   const roleNames = ['background','subtle','muted','fill','onFill','fillHover','fillActive','border','text','strong'] as const;
-  const formatNames = ['hex','rgb','hsl','oklch'] as const;
+  const wide = settings.gamut === 'display-p3';
+  const display = wide ? p3Formats : formats;
+  const matrix = wide ? XYZ_TO_P3 : undefined;
+  const formatNames = ['hex','rgb','hsl','oklch',...(wide ? ['p3','css','srgbClipped'] as const : [])] as const;
   if (only) {
     record(only,['themes','roles','formats'],'only');
     for (const [key,allowed] of [['themes',['light','dark']],['roles',roleNames],['formats',formatNames]] as const) {
@@ -500,7 +509,7 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
     if (only?.themes && !only.themes.includes(theme)) continue;
     const hue = brand ? snappedHue(brand[theme]) : naturalHue;
     const direction = theme === 'light' ? -1 : 1;
-    const background = settings.backgrounds[theme];
+    const background = settings.canonical(settings.backgrounds[theme]);
     const base = bases[theme];
     const lb = Math.round(base.oklch.l * 4096) / 4096;
     const sample = (role: 'fill' | 'text') => {
@@ -521,11 +530,11 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
     }
     const tone = (l: number, profile: typeof fillProfile, backdrop: Triple | null, target: number, second?: Triple, secondTarget = target, surface = false) => {
       const lightness = Math.max(0, Math.min(1, l));
-      const chroma = cusp(lightness, hue) * profile.scale;
+      const chroma = cusp(lightness, hue,matrix) * profile.scale;
       // Each active relationship must pass. Scale the second score to the first
       // target for bisection; a zero target drops that relationship entirely.
       const threshold = target || (second ? secondTarget : 0);
-      const apcaScore = (rgb:Triple) => {
+      const gamutScore = (rgb:Triple) => {
         const primary = backdrop && !surface ? settings.measure(rgb,backdrop) :
           settings.measure(backdrop ?? settings.selectForeground(rgb,target),rgb);
         if (!second || secondTarget === 0) return Math.abs(primary);
@@ -533,7 +542,7 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
         return target === 0 ? secondary : Math.min(Math.abs(primary),secondary*(target/secondTarget));
       };
       const result = chooseColor(lightness, Math.min(chroma, profile.cap), hue, backdrop, threshold, second, secondTarget, settings.selectForeground,
-        settings.contrastModel === 'apca' ? apcaScore : undefined);
+        settings.contrastModel === 'apca' || wide ? gamutScore : undefined,matrix);
       result.metadata.chromaCapped = chroma > profile.cap;
       return result;
     };
@@ -541,7 +550,7 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
     const fill = once(() => {
       const chosen = tone(fillProfile.l, fillProfile, null, targets.fill);
       if (brand) {
-        chosen.rgb = brand[theme];
+        chosen.rgb = settings.canonical(brand[theme]);
         const foreground = settings.selectForeground(chosen.rgb,targets.fill);
         const meetsTarget = Math.abs(settings.measure(foreground,chosen.rgb)) >= targets.fill;
         chosen.metadata = {ratio:contrast(foreground,chosen.rgb),meetsTarget,lightnessAdjusted:false,
@@ -558,7 +567,7 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
     const text = once(() => tone(textProfile.l, textProfile, background, targets.text, subtle().rgb, targets.textOnSubtle));
     const strong = once(() => tone(textProfile.l + direction*0.10, textProfile, background, targets.strong));
     const relationship = (color: ChosenColor, backdrop: Triple, required: number, surface = false) => {
-      const ratio = contrast(color.rgb, backdrop);
+      const ratio = wide ? p3Contrast(color.rgb,backdrop) : contrast(color.rgb, backdrop);
       if (settings.contrastModel === 'apca') {
         const value = surface ? settings.measure(backdrop,color.rgb) : settings.measure(color.rgb,backdrop);
         return {...color.metadata,model:'apca' as const,value,ratio,meetsTarget:Math.abs(value)>=required};
@@ -587,6 +596,12 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
           }
         }
         const value:Partial<ThemeColors['background']> = {};
+        if (wide) {
+          const rendered = display(raw[role]());
+          for (const format of only.formats ?? formatNames) Object.assign(value,{[format]:rendered[format]});
+          selected[role]=value;
+          continue;
+        }
         for (const format of only.formats ?? formatNames) {
           switch(format) {
             case 'hex': value.hex=hexFormat(raw[role]()); break;
@@ -600,9 +615,9 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
       output[theme]=selected;
       continue;
     }
-    themes[theme] = {background: structuredClone(base), subtle: formats(subtle().rgb), muted: formats(muted().rgb),
-      fill: formats(fill().rgb), onFill: formats(onFill()), fillHover: formats(fillHover().rgb), fillActive: formats(fillActive().rgb),
-      border: formats(border().rgb), text: formats(text().rgb), strong: formats(strong().rgb),
+    themes[theme] = {background: structuredClone(base), subtle: display(subtle().rgb), muted: display(muted().rgb),
+      fill: display(fill().rgb), onFill: display(onFill()), fillHover: display(fillHover().rgb), fillActive: display(fillActive().rgb),
+      border: display(border().rgb), text: display(text().rgb), strong: display(strong().rgb),
       contrast: {target, fill: relationship(fill(),onFill(),targets.fill,true), fillHover: relationship(fillHover(),onFill(),targets.fillHover,true), fillActive: relationship(fillActive(),onFill(),targets.fillActive,true), border: relationship(border(),background,targets.border),
         text: relationship(text(),background,targets.text), textOnSubtle: relationship(text(),subtle().rgb,targets.textOnSubtle), strong: relationship(strong(),background,targets.strong)}};
 

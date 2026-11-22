@@ -143,9 +143,9 @@ export function fitColor(lightness: number, chroma: number, hue: number, target:
  * @param rgb - Integer channels in `0..255`.
  * @returns Relative luminance in `0..1`.
  */
-export function luminance(rgb: Triple): number {
+export function luminance(rgb: Triple, weights:Triple = [0.2126,0.7152,0.0722]): number {
   const [r, g, b] = rgb.map(x => decode(x / 255)) as Triple;
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return weights[0]*r + weights[1]*g + weights[2]*b;
 }
 
 /**
@@ -153,9 +153,9 @@ export function luminance(rgb: Triple): number {
  *
  * @returns A ratio in `1..21`, at full computational precision.
  */
-export function contrast(first: Triple, second: Triple): number {
-  const a = luminance(first);
-  const b = luminance(second);
+export function contrast(first: Triple, second: Triple, weights?:Triple): number {
+  const a = luminance(first,weights);
+  const b = luminance(second,weights);
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
@@ -208,10 +208,10 @@ export function hslFormat(rgb:Triple) {
   }
   return {h:round6(hue)%360,s:round6(saturation*100),l:round6(light*100)};
 }
-export function oklchFormat(rgb:Triple) {
+export function oklchFormat(rgb:Triple, matrix:Matrix=RGB_TO_XYZ) {
   const [r,g,b] = rgb;
   const values = rgb.map(x => x/255);
-  const xyz = multiply(RGB_TO_XYZ, values.map(decode) as Triple);
+  const xyz = multiply(matrix, values.map(decode) as Triple);
   const lab = multiply(LMS_TO_LAB, multiply(XYZ_TO_LMS, xyz).map(Math.cbrt) as Triple);
   const neutral = r === g && g === b;
   const chroma = neutral ? 0 : Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
@@ -238,9 +238,9 @@ export function oklchFormat(rgb:Triple) {
  * @returns Final RGB bytes with contrast metadata.
  * @throws {Error} If no lightness candidate passes for a fill. The endpoints guarantee this cannot happen for valid targets.
  */
-export function chooseColor(lightness: number, chroma: number, hue: number, background: Triple | null, target: number, second?: Triple, secondTarget = target, selectForeground: (rgb:Triple, target:number)=>Triple = foreground, score?: (rgb:Triple)=>number): ChosenColor {
+export function chooseColor(lightness: number, chroma: number, hue: number, background: Triple | null, target: number, second?: Triple, secondTarget = target, selectForeground: (rgb:Triple, target:number)=>Triple = foreground, score?: (rgb:Triple)=>number, matrix?:Matrix): ChosenColor {
   const measure = score ?? ((rgb: Triple) => Math.min(contrast(rgb, background ?? selectForeground(rgb,target)), second ? contrast(rgb, second) * (target / secondTarget) : Infinity));
-  const initial = fitColor(lightness, chroma, hue);
+  const initial = fitColor(lightness, chroma, hue,matrix);
   let chosen = initial;
   let ratio = measure(initial.rgb);
   let fallback: ChosenColor['metadata']['fallback'] = null;
@@ -255,12 +255,12 @@ export function chooseColor(lightness: number, chroma: number, hue: number, back
       for (const endpoint of [0, 4096]) {
         let pass = endpoint;
         let fail = endpoint === 0 ? Math.ceil(lightness * 4096) : Math.floor(lightness * 4096);
-        let candidate = fitColor(pass / 4096, chroma, hue);
+        let candidate = fitColor(pass / 4096, chroma, hue,matrix);
         let score = measure(candidate.rgb);
         if (score < target) continue;
         while (Math.abs(pass - fail) > 1) {
           const mid = Math.floor((pass + fail) / 2);
-          const probe = fitColor(mid / 4096, chroma, hue);
+          const probe = fitColor(mid / 4096, chroma, hue,matrix);
           const measured = measure(probe.rgb);
           if (measured >= target) {
             pass = mid;
@@ -302,9 +302,9 @@ export function blendOver(source:Triple, alpha:number, background:Triple):Triple
 }
 
 /** Signed APCA-W3 0.1.9 Lc for two opaque sRGB byte triples, text first. */
-export function apcaContrast(text:Triple, background:Triple):number {
+export function apcaContrast(text:Triple, background:Triple, weights:Triple=[0.2126729,0.7151522,0.0721750]):number {
   const luminance = ([r,g,b]:Triple) => {
-    const y = 0.2126729*(r/255)**2.4 + 0.7151522*(g/255)**2.4 + 0.0721750*(b/255)**2.4;
+    const y = weights[0]*(r/255)**2.4 + weights[1]*(g/255)**2.4 + weights[2]*(b/255)**2.4;
     // biome-ignore lint/suspicious/noApproximativeNumericConstant: APCA-W3 specifies 1.414 exactly.
     return y < 0.022 ? y + (0.022-y)**1.414 : y;
   };
@@ -323,7 +323,23 @@ export function p3Fallback(rgb:Triple) {
   return {rgb:linear.map(v=>Math.round(255*encode(clamp(v)))) as Triple,srgbClipped:!inside(linear)};
 }
 
-export function srgbToP3(rgb:Triple):Triple {
+export function srgbToP3(rgb:Triple, fullPrecision = false):Triple {
   const xyz = multiply(RGB_TO_XYZ,rgb.map(v=>decode(v/255)) as Triple);
-  return multiply(XYZ_TO_P3,xyz).map(v=>round6(encode(clamp(v)))) as Triple;
+  const channels = multiply(XYZ_TO_P3,xyz).map(v=>encode(clamp(v))) as Triple;
+  return fullPrecision ? channels : channels.map(round6) as Triple;
+}
+
+export function p3Contrast(text:Triple,background:Triple):number {
+  return contrast(text,background,P3_TO_XYZ[1]);
+}
+
+export function p3ApcaContrast(text:Triple,background:Triple):number {
+  return apcaContrast(text,background,[0.2289829594805780,0.6917492625852380,0.0792677779341829]);
+}
+
+export function p3Formats(rgb:Triple):Color {
+  const fallback = p3Fallback(rgb);
+  const channels = rgb.map(v=>round6(v/255)) as Triple;
+  return {...formats(fallback.rgb),p3:rgbFormat(channels),css:`color(display-p3 ${channels.join(' ')})`,
+    srgbClipped:fallback.srgbClipped,oklch:oklchFormat(rgb,P3_TO_XYZ)};
 }

@@ -148,14 +148,17 @@ func fitIn(l, c, h float64, target matrix) fitted {
 }
 
 // luminance computes WCAG relative luminance from RGB bytes.
-func luminance(rgb rgb8) float64 {
+func luminance(rgb rgb8) float64 { return weightedLuminance(rgb, triple{.2126, .7152, .0722}) }
+func weightedLuminance(rgb rgb8, weights triple) float64 {
 	r, g, b := decode(float64(rgb[0])/255), decode(float64(rgb[1])/255), decode(float64(rgb[2])/255)
-	return float64(float64(float64(.2126*r)+float64(.7152*g)) + float64(.0722*b))
+	return float64(float64(float64(weights[0]*r)+float64(weights[1]*g)) + float64(weights[2]*b))
 }
 
 // contrast computes the WCAG contrast ratio between two colors, in 1..21.
 func contrast(a, b rgb8) float64 {
-	x, y := luminance(a), luminance(b)
+	return luminanceRatio(luminance(a), luminance(b))
+}
+func luminanceRatio(x, y float64) float64 {
 	return (math.Max(x, y) + .05) / (math.Min(x, y) + .05)
 }
 
@@ -339,8 +342,11 @@ func CompositeOver(source Color, alpha float64, backdrop Color) (Color, error) {
 
 // apcaContrast measures signed APCA-W3 0.1.9 Lc for opaque sRGB, text first.
 func apcaContrast(text, background rgb8) float64 {
+	return weightedAPCA(text, background, triple{.2126729, .7151522, .0721750})
+}
+func weightedAPCA(text, background rgb8, weights triple) float64 {
 	luminance := func(rgb rgb8) float64 {
-		y := 0.2126729*math.Pow(float64(rgb[0])/255, 2.4) + 0.7151522*math.Pow(float64(rgb[1])/255, 2.4) + 0.0721750*math.Pow(float64(rgb[2])/255, 2.4)
+		y := weights[0]*math.Pow(float64(rgb[0])/255, 2.4) + weights[1]*math.Pow(float64(rgb[1])/255, 2.4) + weights[2]*math.Pow(float64(rgb[2])/255, 2.4)
 		if y < .022 {
 			y += math.Pow(.022-y, 1.414)
 		}
@@ -384,4 +390,12 @@ func p3Fallback(rgb rgb8) (rgb8, bool) {
 		fallback[i] = int(math.Floor(255*encode(math.Max(0, math.Min(1, c))) + 0.5))
 	}
 	return fallback, !inside(linear)
+}
+
+func p3Contrast(text, background rgb8) float64 {
+	return luminanceRatio(weightedLuminance(text, p3ToXYZ[1]), weightedLuminance(background, p3ToXYZ[1]))
+}
+
+func p3APCAContrast(text, background rgb8) float64 {
+	return weightedAPCA(text, background, triple{0.2289829594805780, 0.6917492625852380, 0.0792677779341829})
 }

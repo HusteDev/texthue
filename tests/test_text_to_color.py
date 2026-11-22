@@ -90,6 +90,18 @@ console.log(JSON.stringify([compareAssignments(side(old),side(next),texts)]));
         self.assertEqual(to_css(red, "p3"), "color(display-p3 0.917488 0.200287 0.138561)")
         self.assertGreater(_cusp(0.7, 145, _XYZ_TO_P3), _cusp(0.7, 145))
 
+    def test_display_p3_contrast(self):
+        from texthue._core import _p3_apca_contrast, _p3_contrast
+
+        rows = json.loads((ROOT / "conformance/p3-contrast-v1.json").read_text())
+        for row in rows:
+            self.assertAlmostEqual(
+                _p3_contrast(row["text"], row["background"]), row["ratio"], delta=1e-10
+            )
+            self.assertAlmostEqual(
+                _p3_apca_contrast(row["text"], row["background"]), row["lc"], delta=1e-10
+            )
+
     def test_apca_reference(self):
         from texthue._core import _apca_contrast
 

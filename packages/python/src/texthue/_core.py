@@ -160,15 +160,15 @@ def _fit(lightness, chroma, hue, target=_XYZ_TO_RGB):
     return {"rgb": rgb, "chroma": retained, "lightness": lightness}
 
 
-def _luminance(rgb):
+def _luminance(rgb, weights=(0.2126, 0.7152, 0.0722)):
     """Compute WCAG relative luminance from RGB bytes."""
     r, g, b = [_decode(value / 255) for value in rgb]
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return weights[0] * r + weights[1] * g + weights[2] * b
 
 
-def _contrast(first, second):
+def _contrast(first, second, weights=(0.2126, 0.7152, 0.0722)):
     """Compute the WCAG contrast ratio between two RGB colors, at full precision."""
-    a, b = _luminance(first), _luminance(second)
+    a, b = _luminance(first, weights), _luminance(second, weights)
     return (max(a, b) + 0.05) / (min(a, b) + 0.05)
 
 
@@ -839,12 +839,12 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
     return result
 
 
-def _apca_contrast(text, background):
+def _apca_contrast(text, background, weights=(0.2126729, 0.7151522, 0.0721750)):
     """Signed APCA-W3 0.1.9 Lc of two opaque sRGB byte triples, text first."""
 
     def luminance(rgb):
         r, g, b = (channel / 255 for channel in rgb)
-        y = 0.2126729 * r**2.4 + 0.7151522 * g**2.4 + 0.0721750 * b**2.4
+        y = weights[0] * r**2.4 + weights[1] * g**2.4 + weights[2] * b**2.4
         return y + (0.022 - y) ** 1.414 if y < 0.022 else y
 
     fg, bg = luminance(text), luminance(background)
@@ -866,3 +866,13 @@ def _p3_fallback(rgb):
 def _srgb_to_p3(rgb):
     xyz = _multiply(_RGB_TO_XYZ, [_decode(v / 255) for v in rgb])
     return [_round6(_encode(max(0, min(1, v)))) for v in _multiply(_XYZ_TO_P3, xyz)]
+
+
+def _p3_contrast(text, background):
+    return _contrast(text, background, _P3_TO_XYZ[1])
+
+
+def _p3_apca_contrast(text, background):
+    return _apca_contrast(
+        text, background, (0.2289829594805780, 0.6917492625852380, 0.0792677779341829)
+    )

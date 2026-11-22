@@ -7,7 +7,7 @@ export function toCss(color: Color, format: 'hex'|'rgb'|'hsl'|'oklch'|'p3' = 'he
   switch(format) {
     case 'hex': return color.hex;
     case 'rgb': return `rgb(${rgb.r} ${rgb.g} ${rgb.b})`;
-    case 'p3': return `color(display-p3 ${srgbToP3([rgb.r,rgb.g,rgb.b]).join(' ')})`;
+    case 'p3': return color.css ?? `color(display-p3 ${srgbToP3([rgb.r,rgb.g,rgb.b]).join(' ')})`;
     case 'hsl': return `hsl(${hsl.h} ${hsl.s}% ${hsl.l}%)`;
     case 'oklch': return `oklch(${oklch.l} ${oklch.c} ${oklch.h})`;
     default: throw new TypeError('Unknown CSS format');
