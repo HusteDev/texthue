@@ -10,6 +10,41 @@ from pathlib import Path
 PACKAGE = Path(__file__).resolve().parents[1] / "packages/dart"
 
 
+def check_archive_listing(output):
+    """Compare pub's reported archive tree with the intended consumer files."""
+    expected = {
+        "CHANGELOG.md",
+        "LICENSE",
+        "README.md",
+        "SPECIFICATION.md",
+        "THIRD_PARTY_NOTICES.md",
+        "pubspec.yaml",
+        "example/texthue_example.dart",
+    }
+    expected.update(
+        path.relative_to(PACKAGE).as_posix() for path in (PACKAGE / "lib").rglob("*.dart")
+    )
+    files = []
+    parents = []
+    for line in output.splitlines():
+        entry = re.fullmatch(r"((?:│   |    )*)[├└]── (.+)", line)
+        if entry is None:
+            continue
+        depth = len(entry[1]) // 4
+        if depth > len(parents):
+            raise ValueError(f"Invalid pub archive tree depth: {line}")
+        parents = parents[:depth]
+        leaf = re.fullmatch(r"(.+) \([^)]+\)", entry[2])
+        if leaf:
+            files.append("/".join([*parents, leaf[1]]))
+        else:
+            parents.append(entry[2])
+    if sorted(files) != sorted(expected):
+        raise ValueError(
+            f"Unexpected pub archive inventory: {sorted(files)}; expected {sorted(expected)}"
+        )
+
+
 def accepted_pin_warnings(output):
     """Only accept pub's exact-version advisory for the two manifest dependencies."""
     warnings = re.findall(r"^\* (.*)$", output, re.MULTILINE)
@@ -67,6 +102,7 @@ def main():
     )
     if result.returncode and not (result.returncode == 65 and accepted_pin_warnings(result.stdout)):
         raise SystemExit(result.returncode)
+    check_archive_listing(result.stdout)
     check_consumer(dart)
 
 
