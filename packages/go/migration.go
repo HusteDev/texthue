@@ -16,12 +16,14 @@ type FillCollision struct {
 	Identities []string `json:"identities"`
 }
 type ColorChange struct {
-	Text   string  `json:"text"`
-	Theme  string  `json:"theme"`
-	Role   string  `json:"role"`
-	Before string  `json:"before"`
-	After  string  `json:"after"`
-	DeltaE float64 `json:"deltaE"`
+	Text     string  `json:"text"`
+	Theme    string  `json:"theme"`
+	Role     string  `json:"role"`
+	Before   string  `json:"before"`
+	After    string  `json:"after"`
+	DeltaE   float64 `json:"deltaE"`
+	BeforeP3 string  `json:"beforeP3,omitempty"`
+	AfterP3  string  `json:"afterP3,omitempty"`
 }
 type ContrastChange struct {
 	Text         string  `json:"text"`
@@ -117,8 +119,8 @@ func CompareAssignments(old, next MigrationSide, texts []string) (MigrationRepor
 			first, second := x.roles(), y.roles()
 			for _, role := range []string{"background", "subtle", "muted", "fill", "onFill", "fillHover", "fillActive", "border", "text", "strong"} {
 				f, s := first[role], second[role]
-				if f.Hex != s.Hex {
-					report.Colors = append(report.Colors, ColorChange{text, theme, role, f.Hex, s.Hex, colorDistance(f.OKLCH, s.OKLCH)})
+				if f.Hex != s.Hex || f.CSS != s.CSS {
+					report.Colors = append(report.Colors, ColorChange{Text: text, Theme: theme, Role: role, Before: f.Hex, After: s.Hex, BeforeP3: f.CSS, AfterP3: s.CSS, DeltaE: colorDistance(f.OKLCH, s.OKLCH)})
 				}
 			}
 			for _, pair := range []struct {

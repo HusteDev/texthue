@@ -39,7 +39,7 @@ export function compareAssignments(old:Side,next:Side,texts:readonly string[]) {
   const labels = [...new Set(texts)].sort((a,b)=>compareBytes(utf8.encode(a),utf8.encode(b)));
   const before = snapshot(old,labels), after = snapshot(next,labels);
   const moved:string[] = [];
-  const colors:{text:string;theme:Theme;role:keyof Omit<ThemeColors,'contrast'>;before:string;after:string;deltaE:number}[]=[];
+  const colors:{text:string;theme:Theme;role:keyof Omit<ThemeColors,'contrast'>;before:string;after:string;beforeP3?:string;afterP3?:string;deltaE:number}[]=[];
   const contrast:{text:string;theme:Theme;pair:typeof pairs[number];before:number;after:number;passedBefore:boolean;passedAfter:boolean}[]=[];
   for (const text of labels) {
     const a = before.aliases.get(text), b = after.aliases.get(text);
@@ -51,7 +51,8 @@ export function compareAssignments(old:Side,next:Side,texts:readonly string[]) {
     for (const theme of themes) {
       for (const role of roles) {
         const x = left[theme][role], y = right[theme][role];
-        if (x.hex !== y.hex) colors.push({text,theme,role,before:x.hex,after:y.hex,deltaE:distance(x,y)});
+        if (x.hex !== y.hex || x.css !== y.css) colors.push({text,theme,role,before:x.hex,after:y.hex,
+          ...(x.css && {beforeP3:x.css}), ...(y.css && {afterP3:y.css}), deltaE:distance(x,y)});
       }
       for (const pair of pairs) {
         const x = left[theme].contrast[pair], y = right[theme].contrast[pair];

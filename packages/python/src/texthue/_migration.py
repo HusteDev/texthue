@@ -54,7 +54,7 @@ def compare_assignments(old, new, texts):
                 "strong",
             ):
                 x, y = before[role], after[role]
-                if x["hex"] != y["hex"]:
+                if x["hex"] != y["hex"] or x.get("css") != y.get("css"):
                     colors.append(
                         {
                             "text": text,
@@ -62,6 +62,8 @@ def compare_assignments(old, new, texts):
                             "role": role,
                             "before": x["hex"],
                             "after": y["hex"],
+                            **({"beforeP3": x["css"]} if "css" in x else {}),
+                            **({"afterP3": y["css"]} if "css" in y else {}),
                             "deltaE": math.dist(_point(x), _point(y)),
                         }
                     )

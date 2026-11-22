@@ -216,13 +216,39 @@ class ConformanceTests(unittest.TestCase):
             "old": {"config": before.export_config(), "registry": registry},
             "next": {"config": after.export_config()},
         }
-        cases = json.dumps([{"texts": texts, "migration": sides}])
+        requests = [{"texts": texts, "migration": sides}]
+        expected = [report]
+        wide = Resolver(
+            gamut="display-p3",
+            overrides={"old": "#777777", "keep": "#777777"},
+            foregrounds=["#777777"],
+        )
+        for left, right in ((after, wide), (wide, after), (wide, wide)):
+            preview = compare_assignments({"resolver": left}, {"resolver": right}, texts)
+            if left is right:
+                self.assertEqual(preview["colors"], [])
+            else:
+                fill = next(row for row in preview["colors"] if row["role"] == "fill")
+                self.assertEqual(fill["before"], fill["after"])
+                self.assertEqual("beforeP3" in fill, left is wide)
+                self.assertEqual("afterP3" in fill, right is wide)
+            requests.append(
+                {
+                    "texts": texts,
+                    "migration": {
+                        "old": {"config": left.export_config()},
+                        "next": {"config": right.export_config()},
+                    },
+                }
+            )
+            expected.append(preview)
+        cases = json.dumps(requests)
         script = """
 import {compareAssignments,importConfig} from './packages/npm/dist/index.js';
 import {readFileSync} from 'node:fs';
 const side = ({config,registry})=>({resolver:importConfig(config),registry});
-const [{texts,migration:{old,next}}] = JSON.parse(readFileSync(0,'utf8'));
-console.log(JSON.stringify([compareAssignments(side(old),side(next),texts)]));
+const requests = JSON.parse(readFileSync(0,'utf8'));
+console.log(JSON.stringify(requests.map(({texts,migration:{old,next}})=>compareAssignments(side(old),side(next),texts))));
 """
         for command in (
             ["node", "--input-type=module", "-e", script],
@@ -237,7 +263,7 @@ console.log(JSON.stringify([compareAssignments(side(old),side(next),texts)]));
                 check=True,
                 timeout=60,
             )
-            self.compare(json.loads(result.stdout)[0], report)
+            self.compare(json.loads(result.stdout), expected)
 
     def test_display_p3_fit(self):
         from texthue import to_css
