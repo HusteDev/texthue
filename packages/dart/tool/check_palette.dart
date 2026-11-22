@@ -26,12 +26,27 @@ void main() {
           '#000000' ||
       strict(entries).resolve('pear').light['fill']!.hex != '#ab1234')
     throw StateError('Contrast filtering');
-  if (Renderer(
-              palette: entries,
-              overrides: {'apple': (light: '#ffeedd', dark: '#001122')})
-          .resolve('apple')
-          .source !=
-      'override') throw StateError('Override precedence');
+  final branded = Renderer(
+      palette: entries,
+      overrides: {'apple': (light: '#ffeedd', dark: '#001122')});
+  for (final label in ['apple', 'pear']) {
+    final result = branded.resolve(label);
+    if (result.source != (label == 'apple' ? 'override' : 'palette')) {
+      throw StateError('Unexpected brand source for $label');
+    }
+    for (final dark in [false, true]) {
+      for (final role in (dark ? result.dark : result.light).entries) {
+        final projected = branded.color(label, dark: dark, role: role.key);
+        if (branded.hex(label, dark: dark, role: role.key) != role.value.hex ||
+            projected.rgb != role.value.rgb ||
+            projected.hsl != role.value.hsl ||
+            projected.oklch != role.value.oklch) {
+          throw StateError(
+              'Brand projection mismatch for $label, dark=$dark, ${role.key}');
+        }
+      }
+    }
+  }
   for (final invalid in <List<PaletteEntry>>[
     [],
     [entries.first, entries.first],

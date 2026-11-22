@@ -12,7 +12,7 @@ dependencies:
     path: ../texthue/packages/dart
 ```
 
-Run `dart pub get`, then import `package:texthue/texthue.dart`. The [runnable example](example/texthue_example.dart) uses namespace `project` and seed `42` to resolve a batch and print the light fill and dark foreground for `apple`.
+Run `dart pub get`, then import `package:texthue/texthue.dart`. The [runnable example](example/texthue_example.dart) uses `renderer.hex('apple')` for the light fill and `renderer.color('apple', dark: true, role: 'onFill')` for the dark foreground. Each call renders only the selected role and its dependencies.
 
 From the Dart package directory, run:
 
