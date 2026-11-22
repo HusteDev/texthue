@@ -120,7 +120,18 @@ int rendered = 0;
 foreach (var row in vectors.EnumerateArray())
 {
     var options = row.GetProperty("options");
-    if (options.TryGetProperty("profiles", out _) || options.TryGetProperty("contrastTargets", out _)) continue;
+    ThemeProfile? Profile(string theme)
+    {
+        if (!options.TryGetProperty("profiles", out var profiles) || !profiles.TryGetProperty(theme, out var roles)) return null;
+        RoleProfile? Role(string name)
+        {
+            if (!roles.TryGetProperty(name, out var role)) return null;
+            (double, double)? Range(string key) => role.TryGetProperty(key, out var pair)
+                ? (pair[0].GetDouble(), pair[1].GetDouble()) : null;
+            return new(Range("lightness"), Range("chromaScale"), role.TryGetProperty("chromaCap", out var cap) ? cap.GetDouble() : null);
+        }
+        return new(Role("fill"), Role("text"));
+    }
     Rgb? Background(string theme)
     {
         if (!options.TryGetProperty("backgrounds", out var backgrounds) || !backgrounds.TryGetProperty(theme, out var hex)) return null;
@@ -130,7 +141,9 @@ foreach (var row in vectors.EnumerateArray())
     var renderer = new Renderer(options.TryGetProperty("namespace", out var scope) ? scope.GetString()! : "",
         options.TryGetProperty("seed", out var seed) ? seed.GetUInt32() : 0,
         options.TryGetProperty("contrastTarget", out var target) ? target.GetDouble() : 4.5,
-        Background("light"), Background("dark"));
+        Background("light"), Background("dark"), Profile("light"), Profile("dark"),
+        options.TryGetProperty("contrastTargets", out var targets)
+            ? targets.EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetDouble()) : null);
     var palette = renderer.Resolve(row.GetProperty("text").GetString()!);
     var expected = row.GetProperty("expected");
     if (palette.Hue != expected.GetProperty("hue").GetDouble() || palette.HueFraction != expected.GetProperty("hueFraction").GetDouble() ||
@@ -145,5 +158,5 @@ foreach (var row in vectors.EnumerateArray())
     }
     rendered++;
 }
-if (rendered != 25) throw new InvalidDataException("Unexpected renderer corpus size.");
+if (rendered != 32) throw new InvalidDataException("Unexpected renderer corpus size.");
 Console.WriteLine($"Passed {rendered} two-theme renderer cases.");
