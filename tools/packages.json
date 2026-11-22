@@ -166,7 +166,8 @@
         { "source": "root:conformance/vectors.json", "dest": "testdata/vectors.json" }
       ],
       "verifyCommands": [["cargo", "test", "--locked"]],
-      "conformanceRunner": null
+      "optionalToolchain": true,
+      "conformanceRunner": ["cargo", "run", "--quiet", "--locked", "--manifest-path", "packages/rust/Cargo.toml", "--example", "conformance"]
     }
   ]
 }
