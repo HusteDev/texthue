@@ -79,7 +79,7 @@ Collection assignment moved one member of the first pair. The redesigned hash re
 
 ### Vision previews for the original review collections
 
-The inspector regression uses the nine issue labels and twelve names in `tools/check-inspector.py`. For each collection, the table gives the smallest pairwise OKLab distance across both themes after full-severity simulation. The default column uses `resolver.assign(labels)`. The optimized column selects `vision: ['normal', profile]` as the inspector does when ìOptimize new placementsî is selected. Both columns use `analyzePalette` on the emitted fill hexes for each theme.
+The inspector regression uses the nine issue labels and twelve names in `tools/check-inspector.py`. For each collection, the table gives the smallest pairwise OKLab distance across both themes after full-severity simulation. The default column uses `resolver.assign(labels)`. The optimized column selects `vision: ['normal', profile]` as the inspector does when ‚ÄúOptimize new placements‚Äù is selected. Both columns use `analyzePalette` on the emitted fill hexes for each theme.
 
 | Collection | Profile | Default | Optimized |
 | --- | --- | ---: | ---: |
