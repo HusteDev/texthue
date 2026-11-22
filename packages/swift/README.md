@@ -2,6 +2,8 @@
 
 Resolve a label into ten sRGB roles for each of two themes. Each role includes hex, RGB, HSL and OKLCH representations. Use the same namespace, seed and options to reproduce an assignment.
 
+Pass `strict: true` to `renderer.hex` to throw `RenderError.unmetConstraint` when the selected role misses a contrast target. Selecting text checks it against both the background and the subtle surface.
+
 ## Use from a local Swift package
 
 The repository root exports the `TextHue` SwiftPM library. A sibling checkout
@@ -37,7 +39,7 @@ Run `swift test --package-path packages/swift --force-resolved-versions` from th
 
 The package uses CryptoKit on Apple platforms and pins swift-crypto 3.0.0 for Linux and Windows. The package manifest declares deployment minimums of macOS 10.15, iOS 13, tvOS 13 and watchOS 6.
 
-On the Windows development host, Swift 6.1.3 passed all 29 XCTest cases in the Linux x86_64 container. Collection tests cover all nine shared assignment fixtures and byte-distinct Unicode label replay. Use `try renderer.assign(labels, pinned: previous.assignments)` to retain earlier placements. The returned dictionaries use normalized UTF-8 `Data` keys because Swift strings compare canonically equivalent spellings as equal. The renderer test checks ten roles in each theme for all 32 frozen identity vectors. The following PowerShell command reproduces the locked build from the repository root. Keep the cache mounted at the same container path across runs because Swift precompiled headers record absolute paths.
+On the Windows development host, Swift 6.1.3 passed all 30 XCTest cases in the Linux x86_64 container. Collection tests cover all nine shared assignment fixtures and byte-distinct Unicode label replay. Use `try renderer.assign(labels, pinned: previous.assignments)` to retain earlier placements. The returned dictionaries use normalized UTF-8 `Data` keys because Swift strings compare canonically equivalent spellings as equal. The renderer test checks ten roles in each theme for all 32 frozen identity vectors. The following PowerShell command reproduces the locked build from the repository root. Keep the cache mounted at the same container path across runs because Swift precompiled headers record absolute paths.
 
 ```powershell
 $source = (Resolve-Path packages/swift).Path

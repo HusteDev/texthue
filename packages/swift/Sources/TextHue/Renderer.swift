@@ -91,7 +91,7 @@ public struct RenderOptions: Decodable {
     public init() {}
 }
 
-public enum RenderError: Error { case invalidOptions }
+public enum RenderError: Error { case invalidOptions, unmetConstraint }
 
 private extension RGB {
     init(hex raw: String) throws {
@@ -314,8 +314,40 @@ public struct Renderer {
         return Color(rgb: RGB(r: bytes[0], g: bytes[1], b: bytes[2]))
     }
 
-    public func hex(_ text: String, dark: Bool = false, role: String = "fill") throws -> String {
-        try Color.hexString(selected(text, dark, role))
+    public func hex(_ text: String, dark: Bool = false, role: String = "fill", strict: Bool = false) throws -> String {
+        if !strict { return try Color.hexString(selected(text, dark, role)) }
+        let mapped = try mapping(normalization.apply(text))
+        let name = dark ? "dark" : "light"
+        let pairs = role == "text" ? ["text", "textOnSubtle"] : [role == "onFill" ? "fill" : role]
+        var needed = [role]
+        for pair in pairs {
+            if let (front, back) = contrastRoles(pair) {
+                for item in [front, back] where !needed.contains(item) { needed.append(item) }
+            }
+        }
+        let colors = try rawTheme(name, mapped, needed).roles
+        for pair in pairs {
+            guard let (front, back) = contrastRoles(pair) else { continue }
+            let model = options.contrastModel ?? .wcag2
+            let value = model.measure(text: colors[front]!, background: colors[back]!, gamut: .sRGB)
+            if abs(value) < requiredContrast(pair) { throw RenderError.unmetConstraint }
+        }
+        return Color.hexString(colors[role]!)
+    }
+
+    private func contrastRoles(_ pair: String) -> (String, String)? {
+        switch pair {
+        case "fill", "fillHover", "fillActive": ("onFill", pair)
+        case "textOnSubtle": ("text", "subtle")
+        case "text", "strong", "border": (pair, "background")
+        default: nil
+        }
+    }
+
+    private func requiredContrast(_ role: String) -> Double {
+        let model = options.contrastModel ?? .wcag2
+        let target = options.contrastTarget ?? (model == .apca ? 60 : options.preset == .controls ? 7 : 4.5)
+        return options.contrastTargets?[role] ?? (role == "border" && model == .wcag2 ? min(target, 3) : target)
     }
 
     private func selected(_ text: String, _ dark: Bool, _ role: String) throws -> [UInt8] {
@@ -440,22 +472,16 @@ public struct Renderer {
     private func theme(_ name: String, _ mapped: Mapping) throws -> ReportedTheme {
         let (roles, metadata) = try rawTheme(name, mapped, ["background", "subtle", "muted", "fill", "onFill",
             "fillHover", "fillActive", "border", "text", "strong"])
-        let onFill = roles["onFill"]!, subtle = roles["subtle"]!, bg = roles["background"]!
         let fixed = name == "dark" ? mapped.dark : mapped.light
         let model = options.contrastModel ?? .wcag2
         let target = options.contrastTarget ?? (model == .apca ? 60 : options.preset == .controls ? 7 : 4.5)
-        func required(_ role: String) -> Double {
-            options.contrastTargets?[role] ?? (role == "border" && model == .wcag2 ? min(target, 3) : target)
-        }
         var relationships: [String: ContrastRelationship] = [:]
         for role in ["fill", "fillHover", "fillActive", "border", "text", "textOnSubtle", "strong"] {
             let colorRole = role == "textOnSubtle" ? "text" : role
-            let surface = ["fill", "fillHover", "fillActive"].contains(role)
-            let color = roles[colorRole]!
-            let front = surface ? onFill : color
-            let back = surface ? color : role == "textOnSubtle" ? subtle : bg
+            let (frontRole, backRole) = contrastRoles(role)!
+            let front = roles[frontRole]!, back = roles[backRole]!
             let measured = model.measure(text: front, background: back, gamut: .sRGB)
-            let passes = abs(measured) >= required(role)
+            let passes = abs(measured) >= requiredContrast(role)
             let flags = metadata[colorRole]
             let fallback = role == "fill" && fixed != nil && !passes ? "palette-constraint" : flags?.fallback
             relationships[role] = ContrastRelationship(
