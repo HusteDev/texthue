@@ -1,3 +1,5 @@
+import {registryCss, swatchSheet} from './exports.mjs';
+
 const form = document.querySelector('form');
 const results = document.querySelector('#results');
 const status = document.querySelector('[role=status]');
@@ -15,11 +17,11 @@ function details(parent, title, data) {
     if (group.open && !group.querySelector('pre')) append(group, 'pre', JSON.stringify(data, null, 2));
   });
 }
-function downloadJson(title, filename, value) {
+function download(title, filename, type, serialize) {
   const button = append(results, 'button', title);
   button.type = 'button';
   button.onclick = () => {
-    const blob = new Blob([JSON.stringify(value, null, 2)], {type:'application/json'});
+    const blob = new Blob([serialize()], {type});
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = filename;
@@ -60,8 +62,25 @@ function run() {
       }
       details(results,'Registry palette distances (row indices start at zero)',diagnostics);
       for (const row of rows) details(results,row.label,{contrast:row.contrast,fill:row.fill,css:row.variables});
-      downloadJson('Download configuration', 'texthue-config.json', config);
-      downloadJson('Download registry', 'texthue-registry.json', registry);
+      download('Download configuration', 'texthue-config.json', 'application/json', () => JSON.stringify(config, null, 2));
+      download('Download registry', 'texthue-registry.json', 'application/json', () => JSON.stringify(registry, null, 2));
+      download('Download swatch sheet', 'texthue-swatches.svg', 'image/svg+xml', () => swatchSheet(rows, input.theme, input.vision));
+      const copy = append(results, 'button', 'Copy registry CSS');
+      copy.onclick = async () => {
+        const css = registryCss(rows);
+        try {
+          await navigator.clipboard.writeText(css);
+          if (worker === active) status.textContent = 'Registry CSS copied';
+        } catch {
+          if (worker !== active) return;
+          const label = append(results, 'label', 'Select and copy registry CSS');
+          const field = append(label, 'textarea');
+          field.readOnly = true;
+          field.value = css;
+          field.focus();
+          field.select();
+        }
+      };
     };
     active.postMessage(input);
   } catch (error) { status.textContent = error.message; }
