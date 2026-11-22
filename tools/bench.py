@@ -43,8 +43,15 @@ def work_counts(resolver):
 
 
 def main():
-    for scenario, target, light in SCENARIOS:
-        resolver = Resolver({"contrastTarget": target, "backgrounds": {"light": light}})
+    scenarios = [(name, target, light, {}) for name, target, light in SCENARIOS]
+    scenarios.extend(
+        [
+            ("apca", 75, "#ffffff", {"contrastModel": "apca"}),
+            ("p3", 4.5, "#ffffff", {"gamut": "display-p3"}),
+        ]
+    )
+    for scenario, target, light, options in scenarios:
+        resolver = Resolver({"contrastTarget": target, "backgrounds": {"light": light}, **options})
         samples = []
         for i in range(-20, 100):
             label = f"item:{i}"

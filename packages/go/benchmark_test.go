@@ -7,13 +7,16 @@ import (
 	"time"
 )
 
-var contrastWorkScenarios = []struct {
+type contrastScenario struct {
 	name   string
 	target float64
 	light  string
-}{
-	{"default", 4.5, "#ffffff"}, {"aaa", 7, "#ffffff"}, {"maximum", 21, "#ffffff"},
-	{"gray", 4.5, "#777777"}, {"impossible", 21, "#777777"},
+	extra  []Option
+}
+
+var contrastWorkScenarios = []contrastScenario{
+	{"default", 4.5, "#ffffff", nil}, {"aaa", 7, "#ffffff", nil}, {"maximum", 21, "#ffffff", nil},
+	{"gray", 4.5, "#777777", nil}, {"impossible", 21, "#777777", nil},
 }
 
 func TestContrastWorkCorpus(t *testing.T) {
@@ -33,9 +36,14 @@ func TestContrastWorkCorpus(t *testing.T) {
 }
 
 func BenchmarkResolverContrast(b *testing.B) {
-	for _, scenario := range contrastWorkScenarios {
+	scenarios := append([]contrastScenario{
+		{"apca", 75, "#ffffff", []Option{WithContrastModel("apca")}},
+		{"p3", 4.5, "#ffffff", []Option{WithGamut("display-p3")}},
+	}, contrastWorkScenarios...)
+	for _, scenario := range scenarios {
 		b.Run(scenario.name, func(b *testing.B) {
-			resolver, err := NewResolver(WithContrastTarget(scenario.target), WithBackgrounds(scenario.light, "#121212"))
+			options := []Option{WithContrastTarget(scenario.target), WithBackgrounds(scenario.light, "#121212")}
+			resolver, err := NewResolver(append(options, scenario.extra...)...)
 			if err != nil {
 				b.Fatal(err)
 			}

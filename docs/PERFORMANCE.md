@@ -24,7 +24,18 @@ Median / p95 in microseconds on Windows x64, AMD Ryzen 7 PRO 7840U. Each harness
 
 Reproduce with `npm run build`, `node tools/bench.mjs`, `python tools/bench.py`, and `go -C packages/go test -run '^$' -bench BenchmarkResolverContrast -benchtime=100x`. Go's standard ns/op column measures a batch of 100. The custom median-us and p95-us columns report per-resolution costs.
 
-### JavaScript renderer work budgets
+### APCA and Display P3 timing
+
+The resolver benchmarks also exercise APCA at a target of 75 Lc on white and Display P3 at a WCAG target of 4.5 on white. The following Windows x64 observations use the same 100-label corpus and include both themes. Other verification processes shared the host during sampling.
+
+| Scenario | JavaScript median / p95 (µs) | Python | Go | Kotlin/JVM |
+| --- | ---: | ---: | ---: | ---: |
+| APCA, sRGB | 605 / 1,516 | 7,104 / 11,363 | 277 / 538 | 259 / 569 |
+| Display P3 | 207 / 429 | 3,961 / 5,144 | 168 / 214 | sRGB resolver only |
+
+Python counted 11,133 fits for APCA and 1,600 for Display P3. Each scenario performed 1,600 cusp evaluations and 100 hashes.
+
+### sRGB WCAG work budgets
 
 The JavaScript benchmark collects V8 function-entry counts separately from latency measurements. Each row covers the full 100-label corpus. The default run made 1,600 gamut fits. The 7:1 and 21:1 white-background runs made 5,732 and 12,725. The gray-background runs made 2,868 fits at 4.5:1 and 11,452 at 21:1. Every scenario made 1,600 cusp evaluations and 100 identity hashes. The JavaScript test suite enforces these fit and cusp ceilings and checks for one hash per label.
 

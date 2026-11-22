@@ -2,11 +2,13 @@ import {performance} from 'node:perf_hooks';
 import {createResolver} from '../packages/npm/dist/index.js';
 import {contrastWork} from './renderer-work.mjs';
 
-for (const [scenario,target,light] of [
+for (const [scenario,target,light,options] of [
   ['default',4.5,'#ffffff'], ['aaa',7,'#ffffff'], ['maximum',21,'#ffffff'],
   ['gray',4.5,'#777777'], ['impossible',21,'#777777'],
+  ['apca',75,'#ffffff',{contrastModel:'apca'}],
+  ['p3',4.5,'#ffffff',{gamut:'display-p3'}],
 ]) {
-  const resolver = createResolver({contrastTarget:target, backgrounds:{light}});
+  const resolver = createResolver({contrastTarget:target, backgrounds:{light}, ...options});
   const samples = [];
   for (let i = -20; i < 100; i++) {
     const start = performance.now();

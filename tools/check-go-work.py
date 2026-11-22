@@ -1,6 +1,7 @@
 """Count renderer function entries using Go's standard count-mode coverage profiles."""
 
 import json
+import os
 import re
 import subprocess
 import tempfile
@@ -23,6 +24,10 @@ def main():
     }
     with tempfile.TemporaryDirectory() as temp:
         profile = Path(temp) / "work.cover"
+        binary = Path(temp) / ("work.test.exe" if os.name == "nt" else "work.test")
+        subprocess.run(
+            ["go", "test", "-c", "-covermode=count", "-o", binary, "."], cwd=GO, check=True
+        )
         for name, fit_limit in (
             ("default", 1600),
             ("aaa", 5732),
@@ -32,14 +37,9 @@ def main():
         ):
             subprocess.run(
                 [
-                    "go",
-                    "test",
-                    "-count=1",
-                    "-run",
-                    f"^TestContrastWorkCorpus$/{name}$",
-                    "-covermode=count",
-                    f"-coverprofile={profile}",
-                    ".",
+                    binary,
+                    f"-test.run=^TestContrastWorkCorpus$/{name}$",
+                    f"-test.coverprofile={profile}",
                 ],
                 cwd=GO,
                 check=True,
