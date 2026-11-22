@@ -14,8 +14,8 @@ export function toCss(color: Color, format: 'hex'|'rgb'|'hsl'|'oklch'|'p3' = 'he
   }
 }
 
-export function cssVariables(colors:ColorSet, {prefix='texthue',theme,slug}:{
-  prefix?:string;theme:'light'|'dark';slug:string
+export function cssVariables(colors:ColorSet, {prefix='texthue',theme,slug,format='hex'}:{
+  prefix?:string;theme:'light'|'dark';slug:string;format?:'hex'|'p3'
 }):Record<string,string> {
   if (!/^[a-z][a-z0-9-]*$/.test(prefix)) throw new TypeError('Invalid CSS variable prefix');
   const suffix = sha256(new TextEncoder().encode(slug)).getUint32(0).toString(16).padStart(8,'0').slice(0,6);
@@ -24,7 +24,7 @@ export function cssVariables(colors:ColorSet, {prefix='texthue',theme,slug}:{
   for (const [role,value] of Object.entries(colors[theme])) {
     if ('hex' in value) {
       const label = role.replace(/[A-Z]/g,c=>`-${c.toLowerCase()}`);
-      variables[`--${prefix}-${stem}-${suffix}-${label}`] = value.hex;
+      variables[`--${prefix}-${stem}-${suffix}-${label}`] = toCss(value,format);
     }
   }
   return variables;

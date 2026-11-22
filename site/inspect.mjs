@@ -41,7 +41,8 @@ export function inspect({labels, options, theme, vision, registry, optimizeVisio
     const projection = resolver.project(label, {themes:[theme], roles:['fill'], formats:['hex','trace']},
       false, persistent.assignments[label]);
     return {label, ...(markers && {marker:persistent.markers[label]}), swatches, ...(nativeSwatches && {nativeSwatches}), registryFillTrace:projection[theme].fill, contrast: saved[theme].contrast, fill: saved[theme].fill,
-      fillOnBackground:surfaceContrast(saved[theme]), variables: cssVariables(saved, {theme, slug:label})};
+      fillOnBackground:surfaceContrast(saved[theme]), variables: cssVariables(saved, {theme, slug:label}),
+      ...(saved[theme].fill.p3 && {p3Variables:cssVariables(saved,{theme,slug:label,format:'p3'})})};
   });
   const diagnostics = analyzePalette(rows.map(row => row.fill.hex), vision);
   const names = (first,second) => [rows[first].label,rows[second].label];

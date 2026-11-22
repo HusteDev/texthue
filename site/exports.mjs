@@ -8,7 +8,11 @@ export function markerGlyph(marker) {
 export function registryCss(rows) {
   const declarations = rows.flatMap(row => Object.entries(row.variables)
     .map(([name, value]) => `  ${name}: ${value};`));
-  return [':root {', ...declarations, '}', ''].join('\n');
+  const stylesheet = [':root {', ...declarations, '}'];
+  const p3 = rows.flatMap(row => Object.entries(row.p3Variables ?? {})
+    .map(([name,value]) => `    ${name}: ${value};`));
+  if (p3.length) stylesheet.push('@supports (color: color(display-p3 1 0 0)) {', '  :root {', ...p3, '  }', '}');
+  return [...stylesheet,''].join('\n');
 }
 
 function xmlText(value) {

@@ -21,10 +21,18 @@ test('native P3 previews and SVG retain fallback paint and separate simulated co
   const {rows} = inspect(input);
   const [row] = rows;
   assert.equal(row.nativeSwatches[2],row.fill.css);
+  const css = registryCss(rows);
+  const [fallback,native] = css.split('@supports (color: color(display-p3 1 0 0))');
+  assert.equal(Object.keys(row.p3Variables).length,10);
+  for (const [name,color] of Object.entries(row.p3Variables)) {
+    assert.ok(fallback.includes(`${name}: ${row.variables[name]};`));
+    assert.ok(native.includes(`${name}: ${color};`));
+  }
   const sheet = swatchSheet(rows,input.theme,input.vision);
   row.swatches.forEach((hex,i) => assert.ok(sheet.includes(`fill="${hex}" style="fill:${row.nativeSwatches[i]}"`)));
   const simulated = inspect({...input,vision:'deutan'}).rows;
   assert.equal(simulated[0].nativeSwatches,undefined);
+  assert.equal(registryCss(simulated),css);
   assert.ok(!swatchSheet(simulated,input.theme,'deutan').includes('display-p3'));
   assert.throws(() => swatchSheet([{...row,nativeSwatches:['url(other.svg)']}],input.theme,input.vision),/Invalid Display-P3/);
 });

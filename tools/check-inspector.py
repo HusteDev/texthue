@@ -74,6 +74,18 @@ def exercise(page, url, clipboard):
             probe.remove();
             return expected.startsWith('color(display-p3 ') && getComputedStyle(el).color === expected;
         }""")
+    if clipboard:
+        page.get_by_role("button", name="Copy registry CSS").click()
+        expect(status).to_have_text("Registry CSS copied")
+        assert chips.last.evaluate("""async el => {
+            const sheet = document.createElement('style');
+            sheet.textContent = await navigator.clipboard.readText();
+            document.head.append(sheet);
+            const key = [...sheet.sheet.cssRules[0].style].find(name => name.endsWith('-fill'));
+            const actual = getComputedStyle(document.documentElement).getPropertyValue(key).trim();
+            sheet.remove();
+            return actual === el.title;
+        }""")
     page.goto(url)
     expect(status).to_have_text("3 distinct labels")
     check_markers(page)
