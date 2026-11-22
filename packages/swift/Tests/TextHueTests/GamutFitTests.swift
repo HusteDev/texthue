@@ -5,13 +5,17 @@ final class GamutFitTests: XCTestCase {
     func testP3Fit() throws {
         struct Row: Decodable {
             let l, c, h: Double
-            let rgb: [UInt8]
+            let rgb, fallback: [UInt8]
+            let clipped: Bool
         }
         let rows = try fixture("p3-fit-v1.json", as: [Row].self)
         XCTAssertFalse(rows.isEmpty)
         for row in rows {
             let fit = Gamut.displayP3.fit(lightness: row.l, chroma: row.c, hue: row.h)
             XCTAssertEqual(fit.bytes, row.rgb)
+            let fallback = Gamut.p3Fallback(RGB(r: fit.bytes[0], g: fit.bytes[1], b: fit.bytes[2]))
+            XCTAssertEqual([fallback.rgb.r, fallback.rgb.g, fallback.rgb.b], row.fallback)
+            XCTAssertEqual(fallback.clipped, row.clipped)
         }
     }
 

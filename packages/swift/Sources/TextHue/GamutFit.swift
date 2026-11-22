@@ -27,6 +27,19 @@ extension Gamut {
         [11844 / 330415, -50337 / 660830, 316169 / 330415],
     ]
 
+    private static let p3ToXYZ: [[Double]] = [
+        [608311 / 1250200, 189793 / 714400, 198249 / 1000160],
+        [35783 / 156275, 247089 / 357200, 198249 / 2500400],
+        [0, 32229 / 714400, 5220557 / 5000800],
+    ]
+
+    static func p3Fallback(_ bytes: RGB) -> (rgb: RGB, clipped: Bool) {
+        let linearP3 = [bytes.r, bytes.g, bytes.b].map { linearChannel(Double($0) / 255) }
+        let linearRGB = multiply(xyzToRGB, multiply(p3ToXYZ, linearP3))
+        return (RGB(r: channelByte(linearRGB[0]), g: channelByte(linearRGB[1]),
+                    b: channelByte(linearRGB[2])), !inside(linearRGB))
+    }
+
     private func linear(_ l: Double, _ c: Double, _ hue: Double) -> [Double] {
         let angle = hue * .pi / 180
         let lms = multiply(Self.labToLMS, [l, c * cos(angle), c * sin(angle)])
@@ -34,7 +47,7 @@ extension Gamut {
         return multiply(self == .sRGB ? Self.xyzToRGB : Self.xyzToP3, xyz)
     }
 
-    private func inside(_ channels: [Double]) -> Bool {
+    private static func inside(_ channels: [Double]) -> Bool {
         channels.allSatisfy { $0 >= -1e-12 && $0 <= 1 + 1e-12 }
     }
 
@@ -42,7 +55,7 @@ extension Gamut {
         var low = 0.0, high = c
         for _ in 0..<steps {
             let mid = (low + high) / 2
-            if inside(linear(l, mid, h)) { low = mid } else { high = mid }
+            if Self.inside(linear(l, mid, h)) { low = mid } else { high = mid }
         }
         return low
     }
@@ -57,7 +70,7 @@ extension Gamut {
         }
         var channels = linear(l, c, h)
         var retained = c
-        if !inside(channels) {
+        if !Self.inside(channels) {
             retained = limit(l, c, h, steps: 24)
             channels = linear(l, retained, h)
         }
