@@ -1,6 +1,6 @@
 # TextHue for Dart
 
-Resolve a label into ten sRGB color roles for each of two themes. Each role exposes hex, RGB, HSL and OKLCH. A namespace separates independent sets of labels, and a seed gives each set a reproducible assignment.
+Resolve a label into ten color roles for each of two themes. The default gamut is sRGB. To render in Display-P3, use `Renderer(gamut: Gamut.displayP3)`. Read the native channels from `renderer.resolve('apple').light['fill']!.p3!` and use the role’s hex value for its sRGB fallback. A namespace separates independent sets of labels, and a seed gives each set a reproducible assignment.
 
 ## Use the checkout
 

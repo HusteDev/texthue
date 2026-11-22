@@ -9,8 +9,10 @@ void main() {
     ('gray', 4.5, '#777777'),
     ('impossible', 21.0, '#777777'),
     ('apca', 75.0, '#ffffff'),
+    ('p3', 4.5, '#ffffff'),
   ]) {
     final renderer = Renderer(
+        gamut: scenario == 'p3' ? Gamut.displayP3 : Gamut.sRGB,
         contrastModel:
             scenario == 'apca' ? ContrastModel.apca : ContrastModel.wcag2,
         contrastTarget: target,
@@ -23,6 +25,11 @@ void main() {
       timer.start();
       final palette = renderer.resolve(label);
       timer.stop();
+      if (scenario == 'p3' &&
+          (palette.light['fill']?.p3 == null ||
+              palette.dark['fill']?.p3 == null)) {
+        throw StateError('Missing Display-P3 channels for $label');
+      }
       if (palette.light['fill'] == null || palette.dark['fill'] == null) {
         throw StateError('Missing fill for $label');
       }
