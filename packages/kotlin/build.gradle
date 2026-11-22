@@ -34,3 +34,14 @@ publishing {
         }
     }
 }
+
+def conformance = tasks.register('conformance', Exec) {
+    dependsOn tasks.named('testClasses')
+    doFirst {
+        commandLine 'python', '../../tools/check-kotlin.py',
+            '--java', new File(System.getProperty('java.home'), 'bin/java').absolutePath,
+            '--classpath', sourceSets.test.runtimeClasspath.asPath
+    }
+}
+tasks.named('check') { dependsOn conformance }
+tasks.named('publishLibraryPublicationToStagingRepository') { dependsOn tasks.named('check') }

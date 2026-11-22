@@ -32,6 +32,27 @@ def runtime(args, jar):
         subprocess.run([*adb, "shell", "rm", "-f", remote], check=True)
 
 
+def run_suites(runner):
+    composites = json.loads((ROOT / "conformance/composite-v1.json").read_text(encoding="utf-8"))
+    rows = "".join("{source}\t{alpha}\t{backdrop}\t{expected}\n".format(**row) for row in composites)
+    subprocess.run([*runner, "com.hustedev.texthue.CompositeTestKt"], input=rows.encode(), check=True)
+    for corpus, entry in (
+        ("identity", "IdentityTestKt"),
+        ("gamut", "ColorMathTestKt"),
+        ("contrast", "ContrastTestKt"),
+        ("formats", "FormatsTestKt"),
+        ("repair", "ToneRepairTestKt"),
+        ("kotlin-resolver", "ResolverTestKt"),
+    ):
+        generator = (
+            ["node", ROOT / f"tools/{corpus}-vectors.mjs"]
+            if corpus in ("repair", "kotlin-resolver")
+            else [sys.executable, ROOT / f"tools/{corpus}-vectors.py"]
+        )
+        rows = subprocess.check_output(generator)
+        subprocess.run([*runner, f"com.hustedev.texthue.{entry}"], input=rows, check=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--kotlinc", default="kotlinc.bat" if os.name == "nt" else "kotlinc")
@@ -40,7 +61,13 @@ def main():
     parser.add_argument("--adb", default="adb")
     parser.add_argument("--d8", default="d8")
     parser.add_argument("--android-jar", help="Android SDK platform android.jar")
+    parser.add_argument("--classpath", help="Run suites against Gradle-compiled classes on the JVM")
     args = parser.parse_args()
+    if args.classpath:
+        if args.android_serial:
+            parser.error("--classpath is only supported on the JVM")
+        run_suites([args.java, "-cp", args.classpath])
+        return
     if args.android_serial and not args.android_jar:
         parser.error("--android-jar is required for Android execution")
     sources = sorted((ROOT / "packages/kotlin/src").rglob("*.kt"))
@@ -50,24 +77,7 @@ def main():
         jar = Path(directory) / "conformance.jar"
         subprocess.run([args.kotlinc, *sources, "-include-runtime", "-d", jar], check=True)
         with runtime(args, jar) as runner:
-            composites = json.loads((ROOT / "conformance/composite-v1.json").read_text(encoding="utf-8"))
-            rows = "".join("{source}\t{alpha}\t{backdrop}\t{expected}\n".format(**row) for row in composites)
-            subprocess.run([*runner, "com.hustedev.texthue.CompositeTestKt"], input=rows.encode(), check=True)
-            for corpus, entry in (
-                ("identity", "IdentityTestKt"),
-                ("gamut", "ColorMathTestKt"),
-                ("contrast", "ContrastTestKt"),
-                ("formats", "FormatsTestKt"),
-                ("repair", "ToneRepairTestKt"),
-                ("kotlin-resolver", "ResolverTestKt"),
-            ):
-                generator = (
-                    ["node", ROOT / f"tools/{corpus}-vectors.mjs"]
-                    if corpus in ("repair", "kotlin-resolver")
-                    else [sys.executable, ROOT / f"tools/{corpus}-vectors.py"]
-                )
-                rows = subprocess.check_output(generator)
-                subprocess.run([*runner, f"com.hustedev.texthue.{entry}"], input=rows, check=True)
+            run_suites(runner)
 
 
 if __name__ == "__main__":

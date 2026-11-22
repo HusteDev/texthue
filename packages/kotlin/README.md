@@ -21,7 +21,7 @@ Batch results follow input order. The resolver shares work for duplicate normali
 
 ## Consume the JVM package
 
-From the repository root, run `gradle -p packages/kotlin publishLibraryPublicationToStagingRepository` with Gradle 8.14 and a JDK. This creates a Maven repository under `packages/kotlin/build/repository` with the library JAR, source JAR, POM and Gradle module metadata.
+From the repository root, run `packages/kotlin/gradlew -p packages/kotlin publishLibraryPublicationToStagingRepository` with a JDK. This creates a Maven repository under `packages/kotlin/build/repository` with the library JAR, source JAR, POM and Gradle module metadata.
 
 In a separate Kotlin/JVM project's Gradle build, add the staging repository and dependency, adjusting the checkout path.
 
@@ -36,6 +36,8 @@ dependencies {
 ```
 
 ## Run the conformance suite
+
+After building the JavaScript reference, run `packages/kotlin/gradlew -p packages/kotlin check` (use `gradlew.bat` on Windows). This compiles with the pinned Kotlin plugin and runs all seven suites on the JVM.
 
 From the repository root, install the locked JavaScript development dependencies and build the reference implementation. The runner requires Python, Node, a Kotlin compiler, and a JDK.
 
