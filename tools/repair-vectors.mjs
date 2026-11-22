@@ -1,5 +1,7 @@
+import { readFile } from 'node:fs/promises';
 import { chooseColor, contrast, apcaContrast, p3Contrast, p3ApcaContrast, XYZ_TO_P3 } from '../packages/npm/dist/color-math.js';
 
+const rows = [];
 for (const [gamut, model, metric] of [
   ['SRGB', 'WCAG2', contrast], ['DISPLAY_P3', 'WCAG2', p3Contrast],
   ['SRGB', 'APCA', apcaContrast], ['DISPLAY_P3', 'APCA', p3ApcaContrast],
@@ -11,9 +13,17 @@ for (const [gamut, model, metric] of [
         const measure = rgb => Math.abs(metric(rgb, background));
         const choice = chooseColor(l,c,h,background,target,undefined,target,undefined,measure,
           gamut === 'DISPLAY_P3' ? XYZ_TO_P3 : undefined);
-        console.log([gamut,model,l,c,h,background.join(','),target,choice.rgb.join(','),
+        rows.push([gamut,model,l,c,h,background.join(','),target,choice.rgb.join(','),
           choice.fitted.lightness,choice.fitted.chroma,choice.metadata.ratio,choice.metadata.fallback ?? '-'].join('\t'));
       }
     }
   }
+}
+
+const output = rows.join('\n') + '\n';
+if (process.argv[2] === '--check') {
+  const frozen = await readFile(new URL('../conformance/tone-repair-v1.tsv', import.meta.url), 'utf8');
+  if (frozen.replaceAll('\r\n','\n') !== output) throw new Error('Tone repair fixtures differ');
+} else {
+  process.stdout.write(output);
 }
