@@ -58,3 +58,19 @@ On the Windows x64 benchmark host, Criterion estimated 19.8 µs for the default 
 Reproduce from the crate directory with `cargo bench --locked --bench renderer -- --warm-up-time 1 --measurement-time 2 --sample-size 20`. The timed loops reuse compiled settings.
 
 For only the Rust corpus percentiles and a smoke test of each Criterion case, run `cargo bench --locked --bench renderer -- --test` from the crate directory.
+
+### C# renderer
+
+Run `dotnet run -c Release --project packages/csharp/benchmarks/Renderer` from
+the root. The benchmark times individual two-theme `Renderer.Resolve` calls on
+the same 100 labels after 20 warm-up labels per scenario. Resolver construction
+and JSON output fall outside the timed region. The C# result contains both role
+palettes. These measurements cover the Windows .NET 9 Release build.
+
+| Light background and target | Median (µs) | p95 (µs) |
+| --- | ---: | ---: |
+| White, 4.5 | 133 | 169 |
+| White, 7 | 313 | 626 |
+| White, 21 | 1,155 | 1,594 |
+| #777777, 4.5 | 247 | 329 |
+| #777777, 21 | 561 | 1,174 |
