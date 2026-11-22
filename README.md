@@ -210,12 +210,20 @@ Option paths below use the shared JSON names. TypeScript and Python use these di
 | `namespace` | `""` | Exact Unicode string; separates domains such as `projects` and `people`; changes the hash |
 | `backgrounds.light` | `"#ffffff"` | Opaque six-digit `#RRGGBB`; case-insensitive hex input |
 | `backgrounds.dark` | `"#121212"` | Same format; used for dark text contrast |
-| `contrastTarget` | `4.5` | Finite number from 1 through 21, inclusive; applies to both contrast pairs in both themes |
+| `contrastTarget` | `4.5` | WCAG ratio 1–21 or APCA magnitude 0–106. The controls preset defaults to 7 under WCAG. APCA defaults to 60 |
 | `profiles.<theme>.<role>.lightness` | See below | Ordered pair `[min, max]`, both from 0 through 1 |
 | `profiles.<theme>.<role>.chromaScale` | [0.60, 0.80] | Ordered fractions of available chroma from 0 through 1 |
 | `profiles.<theme>.<role>.chromaCap` | 0.16 fill, 0.19 text | Maximum requested chroma from 0 through 0.4 |
 | `seed` | 0 | Unsigned 32-bit integer |
-| `contrastTargets` | Global target, border capped at 3 | Per-relationship targets from 1 through 21 |
+| `contrastTargets` | Global target, WCAG border capped at 3 | Override individual role relationships in the selected model’s units |
+| `preset` | `labels` | Role defaults for `labels`, `controls`, `chart`, `subdued`, or `mono` |
+| `gamut` | `srgb` | Select `display-p3` for native P3 output with an sRGB fallback |
+| `contrastModel` | `wcag2` | Select `apca` for polarity-aware contrast measurements |
+| `normalize` | Exact identity | Configure Unicode form (`none`, `NFC`, `NFKC`), case (`none`, `lower`), and whitespace (`none`, `trim`, `collapse`) |
+| `hueRange`, `excludeHues` | Full circle, no exclusions | Set the hue interval and exclude arcs before placing generated colors |
+| `palette` | No supplied palette | Supply stable IDs and theme fills for brand assignments |
+| `overrides` | Empty mapping | Pin a label to one hex fill or a light/dark pair |
+| `foregrounds`, `foregroundPolicy` | Black and white, `best` | Supply foreground candidates and choose `best` or `first-passing` |
 
 | Theme and role | Default lightness | Default chroma |
 | --- | --- | --- |
@@ -224,9 +232,9 @@ Option paths below use the shared JSON names. TypeScript and Python use these di
 | `dark.fill` | `[0.40, 0.50]` | `[0.60, 0.80]` |
 | `dark.text` | `[0.72, 0.82]` | `[0.60, 0.80]` |
 
-Omitted fields keep their defaults. A supplied range replaces the complete range. Equal endpoints fix a value; chroma `[0, 0]` requests grayscale. Lightness is a preference subject to contrast enforcement, and requested chroma may be reduced for the sRGB gamut. Namespace changes identity; profile and background changes preserve the hash-derived hue but can change final colors. There is no seed, random mode, alpha, hue override, implicit theme detection, or format-only parameter in v1. All formats and both themes are always returned.
+Omitted fields inherit their preset defaults. Equal range endpoints fix a value. A chroma scale of `[0, 0]` requests grayscale. Contrast repair can adjust lightness, and gamut fitting can reduce chroma.
 
-Use exactly the same input, namespace, options, and algorithm version wherever colors must match. If your product treats composed/decomposed Unicode or differently cased names as equivalent, canonicalize them consistently before calling TextHue. The library deliberately leaves this policy to the caller.
+Use the same identity policy, seed, namespace, options, and algorithm version wherever colors must match. For a single JavaScript value, `createResolver(options).hex(label, {theme:'dark', role:'fill'})` computes the selected role. Use `resolver.project` to select multiple themes, roles, and formats.
 
 ## Repository and development
 

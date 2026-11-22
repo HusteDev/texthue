@@ -71,7 +71,7 @@ print(colors["light"]["contrast"], colors["dark"]["contrast"])
 | `profiles.dark.text.lightness` | `[0.72, 0.82]` | Ordered two-item list, values 0–1 |
 | Every role's `chroma` | `[0.60, 0.80]` | Ordered two-item list, values 0–0.4 |
 
-Omitted nested fields use defaults. A supplied range replaces both endpoints. Equal endpoints request a fixed value; `[0, 0]` chroma requests grayscale. Lightness is a preference that contrast enforcement can override; gamut fitting can lower chroma. These are all v1 options. Both themes and all formats are always returned.
+Omitted nested fields use defaults. A supplied range replaces both endpoints. Equal endpoints request a fixed value; `[0, 0]` chroma requests grayscale. Lightness is a preference that contrast enforcement can override; gamut fitting can lower chroma. A full resolution returns both themes and all standard formats. For a subset, call `Resolver().project("research", themes=["dark"], roles=["fill"], formats=["hex"])`.
 
 ```python
 gray = resolve_text_colors("plain", {
