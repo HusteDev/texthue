@@ -83,14 +83,14 @@ The inspector regression uses the nine issue labels and twelve names in `tools/c
 
 | Collection | Profile | Default | Optimized |
 | --- | --- | ---: | ---: |
-| Issue labels | Protan | 0.0124 | 0.0165 |
-| Issue labels | Deutan | 0.0088 | 0.0195 |
-| Issue labels | Tritan | 0.0236 | 0.0216 |
-| First names | Protan | 0.0114 | 0.0118 |
-| First names | Deutan | 0.0066 | 0.0183 |
-| First names | Tritan | 0.0151 | 0.0174 |
+| Issue labels | Protan | 0.0124 | 0.0782 |
+| Issue labels | Deutan | 0.0088 | 0.0776 |
+| Issue labels | Tritan | 0.0236 | 0.0667 |
+| First names | Protan | 0.0114 | 0.0571 |
+| First names | Deutan | 0.0066 | 0.0478 |
+| First names | Tritan | 0.0151 | 0.0713 |
 
-For the first names, the closest default deutan pair was Mallory and Grace in the dark theme. Optimization improved the minimum in five of six comparisons. The issue-label tritan minimum decreased. The greedy search scores each new placement against previously placed colors and keeps earlier placements fixed. All six optimized minima remained below the 0.04 threshold used in the normal-vision ten-label regression.
+For the first names, the closest default deutan pair was Mallory and Grace in the dark theme. Searching across five rings improved the minimum in all six comparisons. Each exceeded the 0.04 threshold used in the normal-vision ten-label regression. The search still considers at most 24 positions per new label and preserves earlier placements.
 
 ### Compiled Rust renderer
 

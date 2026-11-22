@@ -55,7 +55,7 @@ console.log(next.colors.question.light.fill.hex, Object.keys(next.assignments).l
 
 For component rendering, see the [React adapter](../packages/react/README.md). For build-time color utilities and runtime CSS variables, see the [Tailwind adapter](../packages/tailwind/README.md).
 
-In JavaScript, pass `{vision:['normal','deutan']}` as the second argument to `resolver.assign` to rank candidate placements under both profiles. For each new identity the resolver considers up to 24 hue positions on the selected ring and maximizes the smallest rendered OKLab distance across the requested profiles, both themes, and earlier placements. Simulations use full severity. Fixed brand colors and pinned registry entries participate in scoring and retain their placements. This bounded search adds rendering cost and can still produce close pairs.
+In JavaScript, pass `{vision:['normal','deutan']}` as the second argument to `resolver.assign` to rank candidate placements under both profiles. For each new identity the resolver considers up to 24 evenly spaced hue offsets, cycling through five lightness rings starting at the selected ring and maximizes the smallest rendered OKLab distance across the requested profiles, both themes, and earlier placements. Simulations use full severity. Fixed brand colors and pinned registry entries participate in scoring and retain their placements. This bounded search adds rendering cost and can still produce close pairs.
 
 ## Browser rendering evidence
 

@@ -94,7 +94,7 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
         for (let step = 1; step < positions && (vision ? best !== Infinity : best < 0.04); step++) {
           positionsConsidered++;
           const hueFraction = wrap(initial.hueFraction + (step % 24) / 24);
-          const ring = initial.ring + Math.floor(step / 24);
+          const ring = initial.ring + (vision ? step % 5 : Math.floor(step / 24));
           if (occupied.some(other => {
             const delta = Math.abs(other.hueFraction - hueFraction);
             return other.ring === ring && Math.min(delta,1-delta) < separation;
