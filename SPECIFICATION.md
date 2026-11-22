@@ -314,6 +314,16 @@ M6 (cube-root LMS -> OKLab)
 [ 0.0259040424655478,  0.7827717124575296, -0.8086757549230774 ]
 ```
 
+## Default collection placement
+
+Normalize labels and deduplicate their UTF-8 identities. Reserve caller-pinned placements and fixed brand colors first. Process remaining identities in ascending lexicographic order of their SHA-256 digest bytes. Let `n` count the union of requested and pinned identities. For a nonempty collection, the required hue-fraction spacing within each ring is `clamp(1/n, 1/24, 1/12)`. Fractions wrap modulo one.
+
+Starting at ring zero, try the natural hash fraction, then offsets of −1, +1, −2, +2 and so on in units of one quarter of the spacing. Try 385 positions per ring. Take the first position whose circular distance from every occupied fraction on that ring is at least the spacing.
+
+Render the tentative placement. For each occupied identity, compute the Euclidean OKLab distance between the two rendered light fills and between the two rendered dark fills, using their sRGB bytes. The placement score is the minimum of all those distances, or positive infinity for an empty registry. Keep the tentative placement if its score is at least 0.04.
+
+Otherwise, for integer steps 1 through 119, try the tentative fraction plus `(step mod 24)/24` on the tentative ring plus `floor(step/24)`. Skip positions that violate the ring spacing. Keep a candidate only when its score strictly improves the best score so far. Stop at the first score of at least 0.04 or after exhausting the candidates. A replacement has `moved = true`. Preserve pinned and fixed placements throughout. This bounded search can return a smaller separation, particularly when supplied colors coincide.
+
 ## Sources and attribution
 
 - [CSS Color 4, dated 1 September 2026](https://www.w3.org/TR/2026/CRD-css-color-4-20260901/) supplies the color models, conversion equations, matrices, and sRGB transfer functions. The project uses its own fixed chroma-reduction and contrast-selection policy.
