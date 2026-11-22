@@ -685,11 +685,20 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
         results = {}
         for name, package in runners.items():
             command = list(package["conformanceRunner"])
+            env = {**os.environ, "DOTNET_NOLOGO": "1"}
             available = shutil.which(command[0])
             if name == "kotlin":
                 available = os.environ.get("JAVA_HOME") or shutil.which("java")
                 if os.name == "nt":
                     command[0] = str((ROOT / command[0]).with_suffix(".bat"))
+                    if not available:
+                        studio = (
+                            Path(env.get("ProgramFiles", "C:/Program Files"))
+                            / "Android/Android Studio"
+                        )
+                        if (studio / "jbr/bin/java.exe").is_file():
+                            env["JAVA_HOME"] = str(studio / "jbr")
+                            available = env["JAVA_HOME"]
             if package.get("optionalToolchain") and not available:
                 with self.subTest(runner=name):
                     self.skipTest(f"{name} toolchain unavailable")
@@ -706,7 +715,7 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
                     command,
                     cwd=ROOT,
                     input=json.dumps(inputs, ensure_ascii=True),
-                    env={**os.environ, "DOTNET_NOLOGO": "1"},
+                    env=env,
                     text=True,
                     encoding="utf-8",
                     capture_output=True,
