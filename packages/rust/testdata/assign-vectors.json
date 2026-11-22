@@ -1,0 +1,666 @@
+[
+  {
+    "texts": [
+      "0",
+      "1",
+      "2"
+    ],
+    "assignments": {
+      "0": {
+        "hueFraction": 0.6621575141325593,
+        "ring": 0,
+        "moved": false
+      },
+      "1": {
+        "hueFraction": 0.9424207601696253,
+        "ring": 0,
+        "moved": false
+      },
+      "2": {
+        "hueFraction": 0.03568592426987993,
+        "ring": 0,
+        "moved": true
+      }
+    },
+    "report": {
+      "minDistance": 0.06599095450708506,
+      "closestPairs": [
+        [
+          "1",
+          "2"
+        ]
+      ],
+      "withinRingCapacity": true,
+      "distinctFills": true
+    },
+    "lightFills": {
+      "0": "#7caeee",
+      "1": "#e599bd",
+      "2": "#ee968d"
+    }
+  },
+  {
+    "texts": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+    ],
+    "assignments": {
+      "0": {
+        "hueFraction": 0.7246575141325593,
+        "ring": 0,
+        "moved": true
+      },
+      "1": {
+        "hueFraction": 0.9424207601696253,
+        "ring": 0,
+        "moved": false
+      },
+      "2": {
+        "hueFraction": 0.03568592426987993,
+        "ring": 0,
+        "moved": true
+      },
+      "3": {
+        "hueFraction": 0.15491842664778233,
+        "ring": 0,
+        "moved": false
+      },
+      "4": {
+        "hueFraction": 0.4585337904281914,
+        "ring": 0,
+        "moved": false
+      },
+      "5": {
+        "hueFraction": 0.6376580582000315,
+        "ring": 0,
+        "moved": false
+      }
+    },
+    "report": {
+      "minDistance": 0.06599095450708506,
+      "closestPairs": [
+        [
+          "1",
+          "2"
+        ]
+      ],
+      "withinRingCapacity": true,
+      "distinctFills": true
+    },
+    "lightFills": {
+      "0": "#a8a3ef",
+      "1": "#e599bd",
+      "2": "#ee968d",
+      "3": "#d2a260",
+      "4": "#6dc6a5",
+      "5": "#8abae3"
+    }
+  },
+  {
+    "texts": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11"
+    ],
+    "assignments": {
+      "0": {
+        "hueFraction": 0.7246575141325593,
+        "ring": 0,
+        "moved": true
+      },
+      "1": {
+        "hueFraction": 0.546587426836292,
+        "ring": 0,
+        "moved": true
+      },
+      "2": {
+        "hueFraction": 0.9940192576032132,
+        "ring": 1,
+        "moved": true
+      },
+      "3": {
+        "hueFraction": 0.23825175998111564,
+        "ring": 0,
+        "moved": true
+      },
+      "4": {
+        "hueFraction": 0.4585337904281914,
+        "ring": 0,
+        "moved": false
+      },
+      "5": {
+        "hueFraction": 0.6376580582000315,
+        "ring": 0,
+        "moved": false
+      },
+      "6": {
+        "hueFraction": 0.1408545491285622,
+        "ring": 0,
+        "moved": false
+      },
+      "7": {
+        "hueFraction": 0.8703785685356706,
+        "ring": 1,
+        "moved": true
+      },
+      "8": {
+        "hueFraction": 0.02505275304429233,
+        "ring": 0,
+        "moved": false
+      },
+      "9": {
+        "hueFraction": 0.9253975958563387,
+        "ring": 0,
+        "moved": true
+      },
+      "10": {
+        "hueFraction": 0.33689172232213116,
+        "ring": 0,
+        "moved": true
+      },
+      "11": {
+        "hueFraction": 0.8231604964627574,
+        "ring": 0,
+        "moved": true
+      }
+    },
+    "report": {
+      "minDistance": 0.05427440957080404,
+      "closestPairs": [
+        [
+          "11",
+          "7"
+        ]
+      ],
+      "withinRingCapacity": true,
+      "distinctFills": true
+    },
+    "lightFills": {
+      "0": "#a8a3ef",
+      "1": "#6dbbc2",
+      "2": "#f3bac3",
+      "3": "#b0ae5f",
+      "4": "#6dc6a5",
+      "5": "#8abae3",
+      "6": "#e8a75b",
+      "7": "#f0b9ea",
+      "8": "#ea9e9b",
+      "9": "#e8a4cc",
+      "10": "#8cc86b",
+      "11": "#e5a7f3"
+    }
+  },
+  {
+    "texts": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20",
+      "21",
+      "22",
+      "23",
+      "24",
+      "25",
+      "26",
+      "27",
+      "28",
+      "29"
+    ],
+    "assignments": {
+      "0": {
+        "hueFraction": 0.8184075141325593,
+        "ring": 0,
+        "moved": true
+      },
+      "1": {
+        "hueFraction": 0.05700409350295854,
+        "ring": 1,
+        "moved": true
+      },
+      "2": {
+        "hueFraction": 0.10860259093654645,
+        "ring": 1,
+        "moved": true
+      },
+      "3": {
+        "hueFraction": 0.25908509331444896,
+        "ring": 0,
+        "moved": true
+      },
+      "4": {
+        "hueFraction": 0.4897837904281914,
+        "ring": 0,
+        "moved": true
+      },
+      "5": {
+        "hueFraction": 0.7730747248666981,
+        "ring": 0,
+        "moved": true
+      },
+      "6": {
+        "hueFraction": 0.21377121579522887,
+        "ring": 0,
+        "moved": true
+      },
+      "7": {
+        "hueFraction": 0.005795235202337379,
+        "ring": 1,
+        "moved": true
+      },
+      "8": {
+        "hueFraction": 0.02505275304429233,
+        "ring": 0,
+        "moved": false
+      },
+      "9": {
+        "hueFraction": 0.9045642625230054,
+        "ring": 1,
+        "moved": true
+      },
+      "10": {
+        "hueFraction": 0.30564172232213116,
+        "ring": 0,
+        "moved": true
+      },
+      "11": {
+        "hueFraction": 0.7189938297960907,
+        "ring": 1,
+        "moved": true
+      },
+      "12": {
+        "hueFraction": 0.9139307009366651,
+        "ring": 0,
+        "moved": true
+      },
+      "13": {
+        "hueFraction": 0.11605926346965134,
+        "ring": 0,
+        "moved": true
+      },
+      "14": {
+        "hueFraction": 0.81048897607252,
+        "ring": 1,
+        "moved": true
+      },
+      "15": {
+        "hueFraction": 0.7608765782788396,
+        "ring": 1,
+        "moved": true
+      },
+      "16": {
+        "hueFraction": 0.8576319731461505,
+        "ring": 1,
+        "moved": true
+      },
+      "17": {
+        "hueFraction": 0.5320268529467285,
+        "ring": 0,
+        "moved": true
+      },
+      "18": {
+        "hueFraction": 0.7251792907870064,
+        "ring": 0,
+        "moved": true
+      },
+      "19": {
+        "hueFraction": 0.4446856459447493,
+        "ring": 0,
+        "moved": true
+      },
+      "20": {
+        "hueFraction": 0.0687108316924423,
+        "ring": 0,
+        "moved": true
+      },
+      "21": {
+        "hueFraction": 0.9550201788855096,
+        "ring": 1,
+        "moved": true
+      },
+      "22": {
+        "hueFraction": 0.8691903640671322,
+        "ring": 0,
+        "moved": true
+      },
+      "23": {
+        "hueFraction": 0.5825478301849216,
+        "ring": 0,
+        "moved": true
+      },
+      "24": {
+        "hueFraction": 0.6252103894948959,
+        "ring": 0,
+        "moved": true
+      },
+      "25": {
+        "hueFraction": 0.9743908781868716,
+        "ring": 0,
+        "moved": true
+      },
+      "26": {
+        "hueFraction": 0.16744736853676537,
+        "ring": 0,
+        "moved": true
+      },
+      "27": {
+        "hueFraction": 0.34895636878597236,
+        "ring": 0,
+        "moved": true
+      },
+      "28": {
+        "hueFraction": 0.6770075401291251,
+        "ring": 0,
+        "moved": true
+      },
+      "29": {
+        "hueFraction": 0.3963551566315194,
+        "ring": 0,
+        "moved": true
+      }
+    },
+    "report": {
+      "minDistance": 0.015671035262535757,
+      "closestPairs": [
+        [
+          "13",
+          "2"
+        ]
+      ],
+      "withinRingCapacity": true,
+      "distinctFills": true
+    },
+    "lightFills": {
+      "0": "#da8def",
+      "1": "#ecc0b3",
+      "2": "#f3bd97",
+      "3": "#a7b05f",
+      "4": "#6dc5b2",
+      "5": "#c6abe5",
+      "6": "#c8b45a",
+      "7": "#f0bcc1",
+      "8": "#ea9e9b",
+      "9": "#f1c8e4",
+      "10": "#a0c36b",
+      "11": "#d4d5f7",
+      "12": "#eca2d4",
+      "13": "#eeb98e",
+      "14": "#e8c6f6",
+      "15": "#d3c0f1",
+      "16": "#f2b4f0",
+      "17": "#6cbebf",
+      "18": "#b9b6f2",
+      "19": "#71cca3",
+      "20": "#f0ad94",
+      "21": "#f1c8d7",
+      "22": "#efa5e7",
+      "23": "#68bbd5",
+      "24": "#7ebbe5",
+      "25": "#f084a6",
+      "26": "#d2a24f",
+      "27": "#89d271",
+      "28": "#8aa9e2",
+      "29": "#6cd183"
+    }
+  },
+  {
+    "texts": [
+      "__proto__",
+      "constructor",
+      "B",
+      "b",
+      "B"
+    ],
+    "options": {
+      "normalize": {
+        "case": "lower"
+      }
+    },
+    "assignments": {
+      "__proto__": {
+        "hueFraction": 0.4460100010037422,
+        "ring": 0,
+        "moved": false
+      },
+      "b": {
+        "hueFraction": 0.8171844421885908,
+        "ring": 0,
+        "moved": false
+      },
+      "constructor": {
+        "hueFraction": 0.9064403569015363,
+        "ring": 0,
+        "moved": true
+      }
+    },
+    "report": {
+      "minDistance": 0.05397194707193586,
+      "closestPairs": [
+        [
+          "b",
+          "constructor"
+        ]
+      ],
+      "withinRingCapacity": true,
+      "distinctFills": true
+    },
+    "lightFills": {
+      "__proto__": "#63d8a7",
+      "b": "#d99ceb",
+      "constructor": "#efa5d9"
+    }
+  },
+  {
+    "texts": [
+      "free",
+      "fixed",
+      "fixed-2"
+    ],
+    "options": {
+      "overrides": {
+        "fixed": "#123456",
+        "fixed-2": {
+          "light": "#777777",
+          "dark": "#333333"
+        }
+      }
+    },
+    "assignments": {
+      "fixed-2": {
+        "hueFraction": 0.9721623713205614,
+        "ring": 0,
+        "moved": false
+      },
+      "fixed": {
+        "hueFraction": 0.6529561057828069,
+        "ring": 0,
+        "moved": false
+      },
+      "free": {
+        "hueFraction": 0.5591660051140934,
+        "ring": 0,
+        "moved": false
+      }
+    },
+    "report": {
+      "minDistance": 0.1912860893704612,
+      "closestPairs": [
+        [
+          "fixed-2",
+          "free"
+        ]
+      ],
+      "withinRingCapacity": true,
+      "distinctFills": true
+    },
+    "lightFills": {
+      "fixed-2": "#777777",
+      "fixed": "#123456",
+      "free": "#5abac9"
+    }
+  },
+  {
+    "texts": [
+      "item:33",
+      "item:633"
+    ],
+    "assignments": {
+      "item:33": {
+        "hueFraction": 0.274969061370939,
+        "ring": 0,
+        "moved": false
+      },
+      "item:633": {
+        "hueFraction": 0.37700352709119517,
+        "ring": 0,
+        "moved": true
+      }
+    },
+    "report": {
+      "minDistance": 0.0735585981099187,
+      "closestPairs": [
+        [
+          "item:33",
+          "item:633"
+        ]
+      ],
+      "withinRingCapacity": true,
+      "distinctFills": true
+    },
+    "lightFills": {
+      "item:33": "#b4c860",
+      "item:633": "#6fd274"
+    }
+  },
+  {
+    "texts": [
+      "item:79",
+      "item:81"
+    ],
+    "assignments": {
+      "item:79": {
+        "hueFraction": 0.2846399883273989,
+        "ring": 0,
+        "moved": false
+      },
+      "item:81": {
+        "hueFraction": 0.8782229707576334,
+        "ring": 0,
+        "moved": false
+      }
+    },
+    "report": {
+      "minDistance": 0.26789150049245153,
+      "closestPairs": [
+        [
+          "item:79",
+          "item:81"
+        ]
+      ],
+      "withinRingCapacity": true,
+      "distinctFills": true
+    },
+    "lightFills": {
+      "item:79": "#b4ce66",
+      "item:81": "#e58fd9"
+    }
+  },
+  {
+    "texts": [
+      "four",
+      "five",
+      "two",
+      "one"
+    ],
+    "pinned": {
+      "two": {
+        "hueFraction": 0.2867273655720055,
+        "ring": 0,
+        "moved": false
+      },
+      "one": {
+        "hueFraction": 0.5448290228378028,
+        "ring": 0,
+        "moved": false
+      },
+      "three": {
+        "hueFraction": 0.8362284975592047,
+        "ring": 0,
+        "moved": false
+      }
+    },
+    "assignments": {
+      "two": {
+        "hueFraction": 0.2867273655720055,
+        "ring": 0,
+        "moved": false
+      },
+      "one": {
+        "hueFraction": 0.5448290228378028,
+        "ring": 0,
+        "moved": false
+      },
+      "three": {
+        "hueFraction": 0.8362284975592047,
+        "ring": 0,
+        "moved": false
+      },
+      "four": {
+        "hueFraction": 0.18539167870767415,
+        "ring": 0,
+        "moved": false
+      },
+      "five": {
+        "hueFraction": 0.3865848687322189,
+        "ring": 0,
+        "moved": true
+      }
+    },
+    "report": {
+      "minDistance": 0.07727635439073621,
+      "closestPairs": [
+        [
+          "two",
+          "five"
+        ]
+      ],
+      "withinRingCapacity": true,
+      "distinctFills": true
+    },
+    "lightFills": {
+      "four": "#e0bd6f",
+      "two": "#a3ba65",
+      "five": "#65cf75",
+      "one": "#5fd2db"
+    }
+  }
+]

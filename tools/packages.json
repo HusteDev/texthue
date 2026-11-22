@@ -163,6 +163,7 @@
         { "source": "root:conformance/composite-v1.json", "dest": "testdata/composite-v1.json" },
         { "source": "root:conformance/presets-v1.json", "dest": "testdata/presets-v1.json" },
         { "source": "root:conformance/tone-repair-v1.tsv", "dest": "testdata/tone-repair-v1.tsv" },
+        { "source": "root:conformance/assign-vectors.json", "dest": "testdata/assign-vectors.json" },
         { "source": "root:conformance/vectors.json", "dest": "testdata/vectors.json" }
       ],
       "verifyCommands": [["cargo", "test", "--locked"]],

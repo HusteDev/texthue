@@ -22,3 +22,10 @@ let batch = renderer.batch(["atlas", "nova", "atlas"]).unwrap();
 assert_eq!(single, *batch[0]);
 assert!(std::sync::Arc::ptr_eq(&batch[0], &batch[2]));
 ```
+
+For a fresh label set, call `compiled.assign(labels, &BTreeMap::new())` with
+`std::collections::BTreeMap` in scope. Pass the returned `assignments` map
+on the next call to retain prior placements. The result includes palettes
+for requested normalized labels and a report measuring distances between
+rendered light fills. Its ring-capacity flag describes placement capacity.
+The `distinct_fills` field reports whether those fills have unique RGB bytes.

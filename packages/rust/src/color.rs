@@ -35,6 +35,12 @@ pub struct Color {
     pub oklch: Oklch,
 }
 
+pub(crate) fn oklab(rgb: [u8; 3]) -> [f64; 3] {
+    let xyz = multiply(&RGBTOXYZ, rgb.map(|v| linear_channel(f64::from(v) / 255.0)));
+    let lms = multiply(&XYZTOLMS, xyz);
+    multiply(&LMSTOLAB, lms.map(f64::cbrt))
+}
+
 fn round6(x: f64) -> f64 {
     (x * 1e6 + 0.5).floor() / 1e6
 }
@@ -58,9 +64,7 @@ impl From<[u8; 3]> for Color {
             };
             (60.0 * hue, (hi - light) / light.min(1.0 - light))
         };
-        let xyz = multiply(&RGBTOXYZ, [r, g, b].map(linear_channel));
-        let lms = multiply(&XYZTOLMS, xyz);
-        let [l, a, lab_b] = multiply(&LMSTOLAB, lms.map(f64::cbrt));
+        let [l, a, lab_b] = oklab(rgb);
         let neutral = rgb[0] == rgb[1] && rgb[1] == rgb[2];
         let degrees = (lab_b.atan2(a) * 180.0 / std::f64::consts::PI + 360.0) % 360.0;
         Self {

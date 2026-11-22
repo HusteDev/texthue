@@ -9,8 +9,9 @@ mod tables;
 #[cfg(test)]
 mod work;
 pub use renderer::{
-    BrandColors, CompiledRenderer, ContrastRelationship, ContrastReport, ForegroundPolicy, Preset,
-    RenderedPalette, Renderer, RoleProfile, ThemeProfile,
+    Assignment, AssignmentReport, BrandColors, CompiledRenderer, ContrastRelationship,
+    ContrastReport, ForegroundPolicy, Placement, Preset, RenderedPalette, Renderer, RoleProfile,
+    ThemeProfile,
 };
 mod color;
 pub use color::{Color, Hsl, Oklch};

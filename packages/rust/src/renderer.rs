@@ -1,6 +1,8 @@
+mod assignment;
 use crate::hue::HueDomain;
 use crate::tables::{ANCHORS, BIASES};
 use crate::{identity_digest, identity_fractions, Color, ContrastModel, Gamut, Normalization};
+pub use assignment::{Assignment, AssignmentReport, Placement};
 use std::collections::{hash_map::Entry, BTreeMap, HashMap};
 use std::sync::Arc;
 
@@ -118,6 +120,7 @@ struct RawTheme {
 }
 
 struct Mapping {
+    ring: usize,
     source: &'static str,
     fraction: f64,
     hue: f64,
@@ -193,6 +196,13 @@ impl Default for Renderer {
 }
 
 impl CompiledRenderer<'_> {
+    fn mapped_hue(&self, u_h: f64) -> f64 {
+        let position = u_h * 12.0;
+        let i = position as usize;
+        let hue = (ANCHORS[i] + (ANCHORS[i + 1] - ANCHORS[i]) * (position - i as f64)) % 360.0;
+        self.domain.map(hue)
+    }
+
     pub fn resolve(&self, text: &str) -> Result<RenderedPalette, &'static str> {
         let normalized = self.renderer.normalization.apply(text);
         self.renderer.resolve_normalized(&normalized, self)
@@ -336,10 +346,13 @@ impl Renderer {
         text: &str,
         prepared: &CompiledRenderer<'_>,
     ) -> Result<RenderedPalette, &'static str> {
-        let m = self.mapping(text, prepared)?;
+        Ok(self.render_mapping(self.mapping(text, prepared)?))
+    }
+
+    fn render_mapping(&self, m: Mapping) -> RenderedPalette {
         let (light, light_contrast) = self.theme(false, &m);
         let (dark, dark_contrast) = self.theme(true, &m);
-        Ok(RenderedPalette {
+        RenderedPalette {
             version: "text-to-color-v1",
             source: m.source,
             hue_fraction: m.fraction,
@@ -348,7 +361,7 @@ impl Renderer {
             light_contrast,
             dark,
             dark_contrast,
-        })
+        }
     }
 
     fn mapping(
@@ -367,6 +380,7 @@ impl Renderer {
             let i = ANCHORS.partition_point(|&a| a <= angle) - 1;
             let fraction = (i as f64 + (angle - ANCHORS[i]) / (ANCHORS[i + 1] - ANCHORS[i])) / 12.0;
             Mapping {
+                ring: 0,
                 source,
                 fraction,
                 hue: light.hue,
@@ -396,11 +410,9 @@ impl Renderer {
             return Ok(fixed(colors, "palette"));
         }
         let [u_h, u_l, u_c] = identity_fractions(&digest);
-        let position = u_h * 12.0;
-        let i = position as usize;
-        let hue = (ANCHORS[i] + (ANCHORS[i + 1] - ANCHORS[i]) * (position - i as f64)) % 360.0;
-        let hue = prepared.domain.map(hue);
+        let hue = prepared.mapped_hue(u_h);
         Ok(Mapping {
+            ring: 0,
             source: "hash",
             fraction: u_h,
             hue,
@@ -453,7 +465,8 @@ impl Renderer {
             let sector = (hue / 30.0) as usize;
             let offset = bias[sector]
                 + (bias[(sector + 1) % 12] - bias[sector]) * (hue / 30.0 - sector as f64);
-            (low + (high - low) * u_l + offset).clamp(0.0, 1.0)
+            (low + (high - low) * u_l + offset + [0.0, 0.08, -0.08, 0.16, -0.16][mapped.ring % 5])
+                .clamp(0.0, 1.0)
         };
         let score = |a, b| self.contrast_model.measure(a, b, Gamut::Srgb).abs();
         let foreground = |rgb, target| {
@@ -487,7 +500,8 @@ impl Renderer {
             let l = value.clamp(0.0, 1.0);
             let role = profile(fill);
             let (low, high) = role.chroma_scale.unwrap_or(self.preset.chroma_scale());
-            let c = Gamut::Srgb.cusp(l, hue) * (low + (high - low) * u_c);
+            let c = Gamut::Srgb.cusp(l, hue)
+                * ((low + (high - low) * u_c) * if mapped.ring % 5 < 3 { 1.0 } else { 0.6 });
             let secondary = if second.is_some() {
                 required("textOnSubtle")
             } else {
