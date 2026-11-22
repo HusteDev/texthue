@@ -3,6 +3,14 @@ import test from 'node:test';
 import {createResolver} from '../packages/npm/dist/index.js';
 import {contrastWork,rendererWork} from '../tools/renderer-work.mjs';
 
+test('single-label assignment renders the selected palette once', async () => {
+  const resolver = createResolver();
+  const single = await rendererWork(() => resolver.resolve('item:0'));
+  const assigned = await rendererWork(() => resolver.assign(['item:0']));
+  assert.ok(single.fits > 0);
+  assert.equal(assigned.fits, single.fits);
+});
+
 test('renderer stays within measured work budgets across 100 two-theme identities', async () => {
   const limits = {default:1600, aaa:5732, maximum:12725, gray:2868, impossible:11452};
   const counts = await contrastWork();

@@ -84,7 +84,8 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
       const natural = digest.getUint32(0) / 4294967296;
       let p = place(natural,occupied,separation);
       {
-        let bestPoints = pointsFor(render(digest,p,name));
+        let bestColor = render(digest,p,name);
+        let bestPoints = pointsFor(bestColor);
         let best = worstDistance(bestPoints,projections);
         const initial = p;
         let positionsConsidered = 1;
@@ -100,16 +101,19 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
           })) continue;
           const candidate = {ring,hueFraction,moved:true};
           colorsEvaluated++;
-          const candidatePoints = pointsFor(render(digest,candidate,name));
+          const candidateColor = render(digest,candidate,name);
+          const candidatePoints = pointsFor(candidateColor);
           const score = worstDistance(candidatePoints,projections);
           if (score > best) {
             best = score;
             p = candidate;
+            bestColor = candidateColor;
             bestPoints = candidatePoints;
           }
         }
         if (vision) searches.push({label:name, positionsConsidered, colorsEvaluated, bestDistance:best === Infinity ? null : best});
         projections.push(bestPoints);
+        colors[name] = bestColor;
       }
       assignments[name] = p;
       occupied.push(p);
@@ -120,7 +124,7 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
       if (shape === undefined) throw new Error('Invalid marker index');
       markers[name] = shape;
     }
-    if (placement) colors[name] = render(digest,placement,name);
+    if (placement && !Object.hasOwn(colors,name)) colors[name] = render(digest,placement,name);
   }
   let minDistance: number | null = null;
   let closestPairs: [string,string][] = [];
