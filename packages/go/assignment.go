@@ -27,6 +27,25 @@ type Collection struct {
 	Report      AssignmentReport      `json:"report"`
 }
 
+func fillPair(color ColorSet) [2]triple {
+	var pair [2]triple
+	for i, rgb := range []RGB{color.Light.Fill.RGB, color.Dark.Fill.RGB} {
+		pair[i] = encodedOKLab(encodedRGB{float64(rgb.R), float64(rgb.G), float64(rgb.B)}, rgbToXYZ)
+	}
+	return pair
+}
+
+func separationScore(pair [2]triple, occupied [][2]triple) float64 {
+	best := math.Inf(1)
+	for _, previous := range occupied {
+		for i, a := range pair {
+			b := previous[i]
+			best = math.Min(best, math.Hypot(a[0]-b[0], math.Hypot(a[1]-b[1], a[2]-b[2])))
+		}
+	}
+	return best
+}
+
 func place(natural float64, occupied map[string]Assignment, separation float64) Assignment {
 	for ring := 0; ; ring++ {
 		for i := 0; i <= 384; i++ {
@@ -95,18 +114,48 @@ func (r *Resolver) Assign(texts []string, pinned map[string]Assignment) (Collect
 	unique := map[string]bool{}
 	report := AssignmentReport{ClosestPairs: [][2]string{}, WithinRingCapacity: size <= 5*int(math.Floor(1/sep))}
 	points := make([]triple, len(names))
+	var occupied [][2]triple
+	for name, p := range result.Assignments {
+		occupied = append(occupied, fillPair(r.render(r.digest(name), &p, name)))
+	}
 	for i, name := range names {
 		digest := digests[name]
 		p, ok := result.Assignments[name]
 		if !ok {
 			p = place(float64(binary.BigEndian.Uint32(digest))/4294967296, result.Assignments, sep)
-			result.Assignments[name] = p
 		}
 		color := r.render(digest, &p, name)
+		pair := fillPair(color)
+		if !ok {
+			initial := p
+			best := separationScore(pair, occupied)
+			for step := 1; step < 120 && best < 0.04; step++ {
+				hue := math.Mod(initial.HueFraction+float64(step%24)/24, 1)
+				ring := initial.Ring + step/24
+				free := true
+				for _, previous := range result.Assignments {
+					d := math.Abs(hue - previous.HueFraction)
+					if previous.Ring == ring && math.Min(d, 1-d) < sep {
+						free = false
+						break
+					}
+				}
+				if !free {
+					continue
+				}
+				candidate := Assignment{hue, ring, true}
+				rendered := r.render(digest, &candidate, name)
+				projected := fillPair(rendered)
+				if score := separationScore(projected, occupied); score > best {
+					p, color, pair, best = candidate, rendered, projected, score
+				}
+			}
+			result.Assignments[name] = p
+			occupied = append(occupied, pair)
+		}
 		result.Colors[name] = color
 		unique[color.Light.Fill.Hex] = true
-		rgb := color.Light.Fill.RGB
-		points[i] = encodedOKLab(encodedRGB{float64(rgb.R), float64(rgb.G), float64(rgb.B)}, rgbToXYZ)
+		points[i] = pair[0]
 	}
 	for i, a := range points {
 		for j := i + 1; j < len(points); j++ {

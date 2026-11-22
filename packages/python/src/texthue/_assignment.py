@@ -48,13 +48,53 @@ def assign_collection(texts, pinned, compiled):
     separation = min(1 / 12, max(1 / 24, 1 / max(size, 1)))
     colors = {}
     points = []
+
+    def render_pair(name, digest, placement):
+        palette = ColorSet.from_dict(_core.render(name, *compiled, placement, digest))
+        pair = []
+        for theme in (palette.light, palette.dark):
+            rgb = theme.fill.rgb
+            pair.append(_core._oklab((rgb.r, rgb.g, rgb.b), _core._RGB_TO_XYZ))
+        return palette, pair
+
+    occupied = [
+        render_pair(name, hashlib.sha256(prefix + name.encode()).digest(), placement)[1]
+        for name, placement in assignments.items()
+    ]
+
+    def score(pair):
+        return min(
+            (math.dist(a, b) for prior in occupied for a, b in zip(pair, prior)), default=math.inf
+        )
+
     for digest, name in entries:
         if name not in assignments:
             natural = int.from_bytes(digest[:4], "big") / 4294967296
-            assignments[name] = _place(natural, assignments.values(), separation)
-        colors[name] = ColorSet.from_dict(_core.render(name, *compiled, assignments[name], digest))
-        rgb = colors[name].light.fill.rgb
-        points.append((name, _core._oklab((rgb.r, rgb.g, rgb.b), _core._RGB_TO_XYZ)))
+            initial = _place(natural, assignments.values(), separation)
+            placement = initial
+            palette, pair = render_pair(name, digest, initial)
+            best = score(pair)
+            for step in range(1, 120):
+                if best >= 0.04:
+                    break
+                hue = (initial.hue_fraction + (step % 24) / 24) % 1
+                ring = initial.ring + step // 24
+                distances = (
+                    abs(p.hue_fraction - hue) for p in assignments.values() if p.ring == ring
+                )
+                if any(min(d, 1 - d) < separation for d in distances):
+                    continue
+                candidate = Assignment(hue, ring, True)
+                c, projected = render_pair(name, digest, candidate)
+                distance = score(projected)
+                if distance > best:
+                    placement, palette, pair, best = candidate, c, projected, distance
+            assignments[name] = placement
+            occupied.append(pair)
+        else:
+            palette, pair = render_pair(name, digest, assignments[name])
+        colors[name] = palette
+        points.append((name, pair[0]))
     minimum = None
     closest = []
     for (first, a), (second, b) in combinations(points, 2):

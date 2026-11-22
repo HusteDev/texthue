@@ -70,9 +70,9 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
   const markers: Record<string,Marker> | undefined = includeMarkers ? Object.create(null) : undefined;
   const projections: Triple[][] = [];
   const searches: {label:string; positionsConsidered:number; colorsEvaluated:number; bestDistance:number|null}[] = [];
-  const pointsFor = (set:ColorSet) => (vision ?? []).flatMap(profile =>
+  const pointsFor = (set:ColorSet) => (vision ?? ['normal'] as const).flatMap(profile =>
     [visionPoint(set.light.fill.hex,profile), visionPoint(set.dark.fill.hex,profile)]);
-  if (vision) {
+  {
     for (const [name,placement] of Object.entries(assignments)) {
       projections.push(pointsFor(render(hash(name),placement,name)));
     }
@@ -83,20 +83,22 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
     if (!Object.hasOwn(assignments,name)) {
       const natural = digest.getUint32(0) / 4294967296;
       let p = place(natural,occupied,separation);
-      if (vision) {
+      {
         let bestPoints = pointsFor(render(digest,p,name));
         let best = worstDistance(bestPoints,projections);
         const initial = p;
         let positionsConsidered = 1;
         let colorsEvaluated = 1;
-        for (let step = 1; step < 24 && best !== Infinity; step++) {
+        const positions = vision ? 24 : 120;
+        for (let step = 1; step < positions && (vision ? best !== Infinity : best < 0.04); step++) {
           positionsConsidered++;
-          const hueFraction = wrap(initial.hueFraction + step / 24);
+          const hueFraction = wrap(initial.hueFraction + (step % 24) / 24);
+          const ring = initial.ring + Math.floor(step / 24);
           if (occupied.some(other => {
             const delta = Math.abs(other.hueFraction - hueFraction);
-            return other.ring === initial.ring && Math.min(delta,1-delta) < separation;
+            return other.ring === ring && Math.min(delta,1-delta) < separation;
           })) continue;
-          const candidate = {...initial,hueFraction,moved:true};
+          const candidate = {ring,hueFraction,moved:true};
           colorsEvaluated++;
           const candidatePoints = pointsFor(render(digest,candidate,name));
           const score = worstDistance(candidatePoints,projections);
@@ -106,7 +108,7 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
             bestPoints = candidatePoints;
           }
         }
-        searches.push({label:name, positionsConsidered, colorsEvaluated, bestDistance:best === Infinity ? null : best});
+        if (vision) searches.push({label:name, positionsConsidered, colorsEvaluated, bestDistance:best === Infinity ? null : best});
         projections.push(bestPoints);
       }
       assignments[name] = p;
