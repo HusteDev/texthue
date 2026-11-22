@@ -22,6 +22,7 @@ from . import _core
 from ._assignment import assign_collection
 from ._core import VERSION, TextColorError
 from ._css import css_variables, to_css
+from ._migration import compare_assignments
 from ._models import (
     HSL,
     OKLCH,
@@ -113,6 +114,9 @@ class Resolver:
             "options": deepcopy(self._compiled[0]["exportOptions"]),
         }
         return {**payload, "fingerprint": fingerprint(payload)}
+
+    def identity(self, text: str) -> str:
+        return self._compiled[0]["normalize"](_core._text(text, "text", "INVALID_TEXT"))
 
     def export_registry(self, assignments):
         return {
@@ -228,6 +232,7 @@ def assign_text_colors(texts, options=_OMITTED_OPTIONS, *, pinned=None, **kwargs
 
 
 __all__ = [
+    "compare_assignments",
     "export_config",
     "import_config",
     "assign_text_colors",

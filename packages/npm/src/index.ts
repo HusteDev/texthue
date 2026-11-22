@@ -405,7 +405,8 @@ export function createResolver(options: TextColorOptions = {}) {
         saved.fingerprint !== exportConfig().fingerprint) fail('INVALID_OPTIONS','Incompatible assignment registry');
     return registryAssignments(saved.assignments);
   };
-  return {resolve,batch,color,hex,assign,project,exportConfig,exportRegistry,importRegistry};
+  const identity = (text:string) => settings.normalize(textValue(text,'text','INVALID_TEXT'));
+  return {resolve,batch,color,hex,assign,project,exportConfig,exportRegistry,importRegistry,identity};
 }
 
 export function exportConfig(resolver: ReturnType<typeof createResolver>) {
@@ -574,3 +575,5 @@ export function assignTextColors(texts: readonly string[], options: TextColorOpt
   return createResolver(options).assign(texts,{pinned});
 }
 export { cssVariables, toCss } from './css.js';
+
+export {compareAssignments} from './migration.js';

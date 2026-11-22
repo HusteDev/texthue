@@ -106,3 +106,17 @@ test('registry replay preserves absent labels and rejects incompatible configura
   delete saved.assignments.old.moved;
   assert.throws(()=>r.importRegistry(saved),{code:'INVALID_OPTIONS'});
 });
+
+test('migration compares both normalization policies without counting aliases as collisions', async () => {
+  const {compareAssignments} = await import('../packages/npm/dist/index.js');
+  const old = createResolver();
+  const next = createResolver({normalize:{case:'lower'}});
+  const registry = next.exportRegistry(next.assign(['a']).assignments);
+  const snapshot = JSON.stringify(registry);
+  const result = compareAssignments({resolver:old},{resolver:next,registry},['a','A','A']);
+  assert.ok(result.moved.includes('A'));
+  assert.deepEqual(result.collisions.after,[]);
+  assert.equal(JSON.stringify(registry),snapshot);
+  const same = compareAssignments({resolver:next,registry},{resolver:next,registry},['a','A']);
+  assert.deepEqual(same,{moved:[],colors:[],contrast:[],collisions:{before:[],after:[]}});
+});

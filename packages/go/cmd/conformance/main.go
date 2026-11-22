@@ -13,20 +13,47 @@ import (
 	"os"
 )
 
+type migrationInput struct {
+	Config   json.RawMessage `json:"config"`
+	Registry json.RawMessage `json:"registry"`
+}
+
+func (input migrationInput) side() (texthue.MigrationSide, error) {
+	resolver, err := texthue.ImportConfig(input.Config)
+	return texthue.MigrationSide{Resolver: resolver, Registry: input.Registry}, err
+}
+
 // run decodes the cases, resolves them in order, and encodes the results.
 func run() error {
 	var cases []struct {
-		Config  json.RawMessage               `json:"config"`
-		Texts   []string                      `json:"texts"`
-		Pinned  map[string]texthue.Assignment `json:"pinned"`
-		Text    string                        `json:"text"`
-		Options json.RawMessage               `json:"options"`
+		Migration *struct{ Old, Next migrationInput } `json:"migration"`
+		Config    json.RawMessage                     `json:"config"`
+		Texts     []string                            `json:"texts"`
+		Pinned    map[string]texthue.Assignment       `json:"pinned"`
+		Text      string                              `json:"text"`
+		Options   json.RawMessage                     `json:"options"`
 	}
 	if err := json.NewDecoder(os.Stdin).Decode(&cases); err != nil {
 		return err
 	}
 	results := make([]any, 0, len(cases))
 	for _, item := range cases {
+		if item.Migration != nil {
+			old, err := item.Migration.Old.side()
+			if err != nil {
+				return err
+			}
+			next, err := item.Migration.Next.side()
+			if err != nil {
+				return err
+			}
+			result, err := texthue.CompareAssignments(old, next, item.Texts)
+			if err != nil {
+				return err
+			}
+			results = append(results, result)
+			continue
+		}
 		if item.Config != nil {
 			resolver, err := texthue.ImportConfig(item.Config)
 			if err != nil {

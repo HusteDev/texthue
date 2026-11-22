@@ -24,6 +24,59 @@ FIXTURE = json.loads((ROOT / "conformance" / "vectors.json").read_text(encoding=
 class ConformanceTests(unittest.TestCase):
     """Frozen-vector, runtime-error, and cross-language checks for the Python package."""
 
+    def test_migration_preview(self):
+        from texthue import Resolver, compare_assignments
+
+        before = Resolver(seed=123)
+        registry = json.loads((ROOT / "conformance/registry-v1.json").read_text())
+        after = Resolver(overrides={"old": "#777777", "keep": "#777777"}, foregrounds=["#777777"])
+        texts = ["old", "keep", "old"]
+        report = compare_assignments(
+            {"resolver": before, "registry": registry}, {"resolver": after}, texts
+        )
+        self.assertEqual(report["moved"], ["keep", "old"])
+        self.assertEqual(report["collisions"]["before"], [])
+        self.assertEqual(
+            report["collisions"]["after"],
+            [
+                {"theme": theme, "hex": "#777777", "identities": ["keep", "old"]}
+                for theme in ("light", "dark")
+            ],
+        )
+        self.assertTrue(any(change["deltaE"] > 0 for change in report["colors"]))
+        self.assertTrue(
+            any(
+                change["passedBefore"] and not change["passedAfter"]
+                for change in report["contrast"]
+            )
+        )
+        sides = {
+            "old": {"config": before.export_config(), "registry": registry},
+            "next": {"config": after.export_config()},
+        }
+        cases = json.dumps([{"texts": texts, "migration": sides}])
+        script = """
+import {compareAssignments,importConfig} from './packages/npm/dist/index.js';
+import {readFileSync} from 'node:fs';
+const side = ({config,registry})=>({resolver:importConfig(config),registry});
+const [{texts,migration:{old,next}}] = JSON.parse(readFileSync(0,'utf8'));
+console.log(JSON.stringify([compareAssignments(side(old),side(next),texts)]));
+"""
+        for command in (
+            ["node", "--input-type=module", "-e", script],
+            ["go", "-C", "packages/go", "run", "./cmd/conformance"],
+        ):
+            result = subprocess.run(
+                command,
+                input=cases,
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=True,
+                timeout=60,
+            )
+            self.compare(json.loads(result.stdout)[0], report)
+
     def test_registry_replay(self):
         from texthue import Resolver
 

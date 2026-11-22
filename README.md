@@ -111,6 +111,16 @@ registry import method, and pass the returned pins to the next assignment call.
 A registry from a different configuration is rejected. Previously pinned labels
 retain their placements even when absent from the new batch.
 
+Preview a migration before saving the new registry. In JavaScript, use
+`compareAssignments({resolver: old, registry}, {resolver: next}, labels)`.
+Python exposes `compare_assignments` with dictionaries for the two sides. Go
+accepts two `MigrationSide` values and the label slice. Each side applies its
+own normalization and optional pins. The report lists changed placements,
+per-role rendered hex changes with Euclidean OKLab distance, contrast ratio
+and pass/fail changes, and exact fill collisions in both themes. Collision
+groups contain distinct normalized identities. The preview leaves caller-owned
+registries untouched.
+
 Use `overrides` to pin a label to a hex fill for both themes, or supply distinct light and dark fills. A palette entry has a stable `id` and at least one theme color. A single supplied theme color applies to both. The resolver prefers palette entries meeting the fill target in both themes, then ranks them by the SHA-256 digest of the identity digest followed by the UTF-8 entry ID. Reordering entries preserves assignments.
 
 ```typescript
