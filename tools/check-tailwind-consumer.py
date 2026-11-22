@@ -37,6 +37,22 @@ def main():
             check=True,
         )
         shutil.copy2(ROOT / "tests/tailwind-consumer.mjs", app)
+        shutil.copy2(ROOT / "tests/tailwind-consumer.ts", app)
+        subprocess.run(
+            [
+                "node",
+                str(ROOT / "node_modules/typescript/bin/tsc"),
+                "--strict",
+                "--noEmit",
+                "--module",
+                "NodeNext",
+                "--target",
+                "ES2022",
+                "tailwind-consumer.ts",
+            ],
+            cwd=app,
+            check=True,
+        )
         subprocess.run(["node", "tailwind-consumer.mjs"], cwd=app, check=True)
         print("PASS: packed Tailwind adapter compiled light and dark utilities")
 
