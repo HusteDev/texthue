@@ -7,15 +7,33 @@ import (
 	"time"
 )
 
+var contrastWorkScenarios = []struct {
+	name   string
+	target float64
+	light  string
+}{
+	{"default", 4.5, "#ffffff"}, {"aaa", 7, "#ffffff"}, {"maximum", 21, "#ffffff"},
+	{"gray", 4.5, "#777777"}, {"impossible", 21, "#777777"},
+}
+
+func TestContrastWorkCorpus(t *testing.T) {
+	for _, scenario := range contrastWorkScenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			resolver, err := NewResolver(WithContrastTarget(scenario.target), WithBackgrounds(scenario.light, "#121212"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			for index := 0; index < 100; index++ {
+				if _, err := resolver.Resolve("item:" + strconv.Itoa(index)); err != nil {
+					t.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
 func BenchmarkResolverContrast(b *testing.B) {
-	for _, scenario := range []struct {
-		name   string
-		target float64
-		light  string
-	}{
-		{"default", 4.5, "#ffffff"}, {"aaa", 7, "#ffffff"}, {"maximum", 21, "#ffffff"},
-		{"gray", 4.5, "#777777"}, {"impossible", 21, "#777777"},
-	} {
+	for _, scenario := range contrastWorkScenarios {
 		b.Run(scenario.name, func(b *testing.B) {
 			resolver, err := NewResolver(WithContrastTarget(scenario.target), WithBackgrounds(scenario.light, "#121212"))
 			if err != nil {

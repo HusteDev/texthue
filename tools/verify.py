@@ -152,6 +152,7 @@ def main():
         ["go", "-C", go_dir, "test", "-count=1", "./..."],
         env=env,
     )
+    run("Go renderer work budgets", [sys.executable, "tools/check-go-work.py"], env=env)
     run("Go static checks", ["go", "-C", go_dir, "vet", "./..."], env=env)
     formatted = run("Go formatting", ["gofmt", "-l", go_dir], env=env)
     if formatted.strip():
