@@ -1,3 +1,5 @@
+mod color;
+pub use color::{Color, Hsl, Oklch};
 mod repair;
 pub use repair::RepairedTone;
 mod gamut;
