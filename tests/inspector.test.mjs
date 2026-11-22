@@ -18,3 +18,13 @@ test('inspector compares placements and preserves a registry across label change
   }
   assert.throws(() => inspect({...input, registry:{...first.registry,fingerprint:'invalid'}}));
 });
+
+test('inspector replays exported configuration and registry JSON and rejects altered configuration', () => {
+  const input = {labels:['pear','apple'], options:{namespace:'orchard'}, theme:'dark', vision:'tritan'};
+  const original = inspect(input);
+  const options = JSON.parse(JSON.stringify(original.config));
+  const registry = JSON.parse(JSON.stringify(original.registry));
+  assert.deepEqual(inspect({...input, options, registry}), original);
+  options.options.namespace = 'different';
+  assert.throws(() => inspect({...input, options}), /fingerprint/i);
+});

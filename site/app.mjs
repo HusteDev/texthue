@@ -15,6 +15,18 @@ function details(parent, title, data) {
     if (group.open && !group.querySelector('pre')) append(group, 'pre', JSON.stringify(data, null, 2));
   });
 }
+function downloadJson(title, filename, value) {
+  const button = append(results, 'button', title);
+  button.type = 'button';
+  button.onclick = () => {
+    const blob = new Blob([JSON.stringify(value, null, 2)], {type:'application/json'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  };
+}
 function run() {
   worker?.terminate();
   worker = undefined;
@@ -31,7 +43,7 @@ function run() {
       if (worker !== active) return;
       active.terminate();
       if (data.error) { status.textContent = data.error; return; }
-      const {rows, diagnostics, registry} = data.result;
+      const {rows, diagnostics, config, registry} = data.result;
       status.textContent = rows.length + ' distinct labels';
       const table = append(results, 'table');
       const head = append(table, 'tr');
@@ -48,7 +60,8 @@ function run() {
       }
       details(results,'Registry palette distances (row indices start at zero)',diagnostics);
       for (const row of rows) details(results,row.label,{contrast:row.contrast,fill:row.fill,css:row.variables});
-      details(results,'Export registry JSON',registry);
+      downloadJson('Download configuration', 'texthue-config.json', config);
+      downloadJson('Download registry', 'texthue-registry.json', registry);
     };
     active.postMessage(input);
   } catch (error) { status.textContent = error.message; }

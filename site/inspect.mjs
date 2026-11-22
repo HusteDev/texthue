@@ -1,8 +1,8 @@
-import {createResolver, cssVariables} from '../packages/npm/dist/index.js';
+import {createResolver, cssVariables, importConfig} from '../packages/npm/dist/index.js';
 import {analyzePalette, simulateVision} from '../packages/npm/dist/diagnostics.js';
 
 export function inspect({labels, options, theme, vision, registry}) {
-  const resolver = createResolver(options);
+  const resolver = options && Object.hasOwn(options, 'schema') ? importConfig(options) : createResolver(options);
   const pinned = registry ? resolver.importRegistry(registry) : {};
   const fresh = resolver.assign(labels);
   const persistent = registry ? resolver.assign(labels, {pinned}) : fresh;
@@ -18,5 +18,5 @@ export function inspect({labels, options, theme, vision, registry}) {
       variables: cssVariables(saved, {theme, slug:label})};
   });
   const diagnostics = analyzePalette(rows.map(row => row.fill.hex), vision);
-  return {rows, diagnostics, registry:resolver.exportRegistry(persistent.assignments)};
+  return {rows, diagnostics, config:resolver.exportConfig(), registry:resolver.exportRegistry(persistent.assignments)};
 }
