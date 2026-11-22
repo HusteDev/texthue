@@ -32,6 +32,14 @@ def package_dir(language):
     raise SystemExit(f"No package with language {language!r} in tools/packages.json")
 
 
+def print_diagnostic(message, stream):
+    try:
+        print(message, file=stream)
+    except UnicodeEncodeError:
+        encoding = stream.encoding or "ascii"
+        print(message.encode(encoding, errors="backslashreplace").decode(encoding), file=stream)
+
+
 def run(label, command, *, cwd=ROOT, env=None, timeout=180):
     """Run a command, print PASS or FAIL with its label, and exit on failure.
 
@@ -50,8 +58,8 @@ def run(label, command, *, cwd=ROOT, env=None, timeout=180):
         timeout=timeout,
     )
     if result.returncode:
-        print(result.stdout)
-        print(result.stderr, file=sys.stderr)
+        print_diagnostic(result.stdout, sys.stdout)
+        print_diagnostic(result.stderr, sys.stderr)
         raise SystemExit(f"FAILED: {label} ({result.returncode})")
     print(f"PASS: {label}", flush=True)
     return result.stdout
