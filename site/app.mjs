@@ -1,3 +1,4 @@
+import {editOptions} from './editor.mjs';
 import {registryCss, swatchSheet} from './exports.mjs';
 
 const form = document.querySelector('form');
@@ -85,5 +86,26 @@ function run() {
     active.postMessage(input);
   } catch (error) { status.textContent = error.message; }
 }
+function applyEdit(change) {
+  const options = document.getElementById('options');
+  try {
+    options.value = JSON.stringify(editOptions(JSON.parse(options.value), change), null, 2);
+    run();
+  } catch (error) {
+    worker?.terminate();
+    worker = undefined;
+    status.textContent = error.message;
+  }
+}
+document.getElementById('apply-preset').onclick = () => applyEdit({preset:document.getElementById('preset').value});
+function editBrand(remove) {
+  applyEdit({remove, entry:{
+    id:document.getElementById('brand-id').value,
+    light:document.getElementById('brand-light').value,
+    dark:document.getElementById('brand-dark').value,
+  }});
+}
+document.getElementById('save-entry').onclick = () => editBrand(false);
+document.getElementById('remove-entry').onclick = () => editBrand(true);
 form.onsubmit = event => { event.preventDefault(); run(); };
 run();

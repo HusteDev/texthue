@@ -7,6 +7,11 @@
 <form><label>Labels, one per line<textarea id="labels" rows="5">research
 design
 engineering</textarea></label><label>Resolver options or exported configuration (JSON)<textarea id="options" rows="5">{}</textarea></label>
+<fieldset><legend>Preset</legend><label>Role defaults<select id="preset"><option>labels</option><option>controls</option><option>chart</option><option>subdued</option><option>mono</option></select></label>
+<button type="button" id="apply-preset">Apply preset</button></fieldset>
+<fieldset><legend>Brand palette</legend><label>Palette ID<input id="brand-id"></label>
+<label>Light fill<input type="color" id="brand-light" value="#387eb5"></label><label>Dark fill<input type="color" id="brand-dark" value="#6ca8d6"></label>
+<button type="button" id="save-entry">Add or update color</button> <button type="button" id="remove-entry">Remove color</button></fieldset>
 <label>Theme<select id="theme"><option>light</option><option>dark</option></select></label>
 <label>Vision profile<select id="vision"><option>normal</option><option>deutan</option><option>protan</option><option>tritan</option></select></label>
 <label>Saved registry (optional JSON)<textarea id="registry"></textarea></label><button type="submit">Inspect palette</button></form>
