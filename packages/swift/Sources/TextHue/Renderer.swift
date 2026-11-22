@@ -135,12 +135,65 @@ private struct ThemeBackground {
     }
 }
 
+public struct ContrastRelationship: Equatable, Codable {
+    public let ratio: Double
+    public let meetsTarget, lightnessAdjusted, chromaCapped, chromaReduced: Bool
+    public let fallback: String?
+    public let model: String?
+    public let value: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case ratio, meetsTarget, lightnessAdjusted, chromaCapped, chromaReduced, fallback, model, value
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var fields = encoder.container(keyedBy: CodingKeys.self)
+        try fields.encode(ratio, forKey: .ratio)
+        try fields.encode(meetsTarget, forKey: .meetsTarget)
+        try fields.encode(lightnessAdjusted, forKey: .lightnessAdjusted)
+        try fields.encode(chromaCapped, forKey: .chromaCapped)
+        try fields.encode(chromaReduced, forKey: .chromaReduced)
+        try fields.encode(fallback, forKey: .fallback)
+        try fields.encodeIfPresent(model, forKey: .model)
+        try fields.encodeIfPresent(value, forKey: .value)
+    }
+}
+
+public struct ContrastReport: Equatable, Encodable {
+    public let target: Double
+    public let relationships: [String: ContrastRelationship]
+    enum CodingKeys: String, CodingKey { case target }
+    public func encode(to encoder: Encoder) throws {
+        try relationships.encode(to: encoder)
+        var fields = encoder.container(keyedBy: CodingKeys.self)
+        try fields.encode(target, forKey: .target)
+    }
+}
+
+private struct ReportedTheme: Equatable, Encodable {
+    let colors: [String: Color]
+    let contrast: ContrastReport
+    enum CodingKeys: String, CodingKey { case contrast }
+    func encode(to encoder: Encoder) throws {
+        try colors.encode(to: encoder)
+        var fields = encoder.container(keyedBy: CodingKeys.self)
+        try fields.encode(contrast, forKey: .contrast)
+    }
+}
+
 public struct RenderedPalette: Equatable, Encodable {
     public let version: String
     public let source: String
     public let hueFraction: Double
     public let hue: Double
-    public let light, dark: [String: Color]
+    fileprivate let lightTheme, darkTheme: ReportedTheme
+    public var light: [String: Color] { lightTheme.colors }
+    public var dark: [String: Color] { darkTheme.colors }
+    public var lightContrast: ContrastReport { lightTheme.contrast }
+    public var darkContrast: ContrastReport { darkTheme.contrast }
+    enum CodingKeys: String, CodingKey {
+        case version, source, hueFraction, hue, lightTheme = "light", darkTheme = "dark"
+    }
 }
 
 public struct Renderer {
@@ -247,8 +300,8 @@ public struct Renderer {
     private func resolveNormalized(_ name: String) throws -> RenderedPalette {
         func fixed(_ light: FixedTone, _ dark: FixedTone, source: String) throws -> RenderedPalette {
             try RenderedPalette(version: "text-to-color-v1", source: source, hueFraction: light.fraction,
-                                hue: light.hue, light: theme("light", light.hue, 0.5, 0.5, light),
-                                dark: theme("dark", dark.hue, 0.5, 0.5, dark))
+                                hue: light.hue, lightTheme: theme("light", light.hue, 0.5, 0.5, light),
+                                darkTheme: theme("dark", dark.hue, 0.5, 0.5, dark))
         }
         if let (light, dark) = fixedColors[Data(name.utf8)] {
             return try fixed(light, dark, source: "override")
@@ -274,11 +327,11 @@ public struct Renderer {
             .truncatingRemainder(dividingBy: 360)
         let hue = hueDomain.map(naturalHue)
         return try RenderedPalette(version: "text-to-color-v1", source: "hash", hueFraction: hueFraction,
-                                   hue: hue, light: theme("light", hue, lightness, chroma),
-                                   dark: theme("dark", hue, lightness, chroma))
+                                   hue: hue, lightTheme: theme("light", hue, lightness, chroma),
+                                   darkTheme: theme("dark", hue, lightness, chroma))
     }
 
-    private func theme(_ name: String, _ hue: Double, _ uL: Double, _ uC: Double, _ fixed: FixedTone? = nil) throws -> [String: Color] {
+    private func theme(_ name: String, _ hue: Double, _ uL: Double, _ uC: Double, _ fixed: FixedTone? = nil) throws -> ReportedTheme {
         let dark = name == "dark", direction: Double = dark ? 1 : -1
         let base = dark ? darkBackground : lightBackground
         let bg = base.bytes, lb = base.lightness
@@ -317,32 +370,54 @@ public struct Renderer {
             }
             return best
         }
-        func tone(_ value: Double, _ profile: (l: Double, scale: Double, cap: Double),
+        var metadata: [String: (adjusted: Bool, capped: Bool, reduced: Bool, fallback: String?)] = [:]
+        func tone(_ role: String, _ value: Double, _ profile: (l: Double, scale: Double, cap: Double),
                   _ target: Double, _ back: [UInt8]? = nil, _ second: [UInt8]? = nil, surface: Bool = false) -> [UInt8] {
             let l = min(1, max(0, value))
-            let c = min(profile.cap, Gamut.sRGB.cusp(lightness: l, hue: hue) * profile.scale)
+            let requested = Gamut.sRGB.cusp(lightness: l, hue: hue) * profile.scale
+            let c = min(profile.cap, requested)
             let secondary = second == nil ? 0 : required("textOnSubtle")
             let threshold = target == 0 ? secondary : target
-            return Gamut.sRGB.repair(lightness: l, chroma: c, hue: hue, target: threshold) { bytes in
+            let result = Gamut.sRGB.repair(lightness: l, chroma: c, hue: hue, target: threshold) { bytes in
                 let primary: Double
                 if let back { primary = surface ? score(back, bytes) : score(bytes, back) }
                 else { primary = score(foreground(bytes, target: target), bytes) }
                 guard let second, secondary > 0 else { return primary }
                 let secondScore = score(bytes, second)
                 return target == 0 ? secondScore : min(primary, secondScore * (target / secondary))
-            }.color.bytes
+            }
+            metadata[role] = (result.color.lightness != l, requested > profile.cap, result.color.chroma < c, result.fallback)
+            return result.color.bytes
         }
-        let subtle = tone(lb + direction * 0.04, fillP, unconstrained)
-        let fill = fixed?.bytes ?? tone(fillP.l, fillP, required("fill")), onFill = foreground(fill, target: required("fill"))
+        let subtle = tone("subtle", lb + direction * 0.04, fillP, unconstrained)
+        let fill = fixed?.bytes ?? tone("fill", fillP.l, fillP, required("fill")), onFill = foreground(fill, target: required("fill"))
         let roles = [
-            "background": bg, "subtle": subtle, "muted": tone(lb + direction * 0.10, fillP, unconstrained),
+            "background": bg, "subtle": subtle, "muted": tone("muted", lb + direction * 0.10, fillP, unconstrained),
             "fill": fill, "onFill": onFill,
-            "fillHover": tone((fixed?.lightness ?? fillP.l) + direction * 0.025, fillP, required("fillHover"), onFill, surface: true),
-            "fillActive": tone((fixed?.lightness ?? fillP.l) + direction * 0.05, fillP, required("fillActive"), onFill, surface: true),
-            "border": tone(lb + direction * 0.39, fillP, required("border"), bg),
-            "text": tone(textP.l, textP, required("text"), bg, subtle),
-            "strong": tone(textP.l + direction * 0.10, textP, required("strong"), bg)
+            "fillHover": tone("fillHover", (fixed?.lightness ?? fillP.l) + direction * 0.025, fillP, required("fillHover"), onFill, surface: true),
+            "fillActive": tone("fillActive", (fixed?.lightness ?? fillP.l) + direction * 0.05, fillP, required("fillActive"), onFill, surface: true),
+            "border": tone("border", lb + direction * 0.39, fillP, required("border"), bg),
+            "text": tone("text", textP.l, textP, required("text"), bg, subtle),
+            "strong": tone("strong", textP.l + direction * 0.10, textP, required("strong"), bg)
         ]
-        return roles.mapValues { Color(rgb: RGB(r: $0[0], g: $0[1], b: $0[2])) }
+        var relationships: [String: ContrastRelationship] = [:]
+        for role in ["fill", "fillHover", "fillActive", "border", "text", "textOnSubtle", "strong"] {
+            let colorRole = role == "textOnSubtle" ? "text" : role
+            let surface = ["fill", "fillHover", "fillActive"].contains(role)
+            let color = roles[colorRole]!
+            let front = surface ? onFill : color
+            let back = surface ? color : role == "textOnSubtle" ? subtle : bg
+            let measured = model.measure(text: front, background: back, gamut: .sRGB)
+            let passes = abs(measured) >= required(role)
+            let flags = metadata[colorRole]
+            let fallback = role == "fill" && fixed != nil && !passes ? "palette-constraint" : flags?.fallback
+            relationships[role] = ContrastRelationship(
+                ratio: ContrastModel.wcag2.measure(text: front, background: back, gamut: .sRGB),
+                meetsTarget: passes, lightnessAdjusted: flags?.adjusted ?? false, chromaCapped: flags?.capped ?? false,
+                chromaReduced: flags?.reduced ?? false, fallback: fallback,
+                model: model == .apca ? "apca" : nil, value: model == .apca ? measured : nil)
+        }
+        return ReportedTheme(colors: roles.mapValues { Color(rgb: RGB(r: $0[0], g: $0[1], b: $0[2])) },
+                             contrast: ContrastReport(target: target, relationships: relationships))
     }
 }

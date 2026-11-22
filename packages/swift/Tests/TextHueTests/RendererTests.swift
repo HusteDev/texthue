@@ -2,6 +2,47 @@ import XCTest
 @testable import TextHue
 
 final class RendererTests: XCTestCase {
+    func testEncodedContrastReports() throws {
+        struct Vector: Decodable {
+            let text: String
+            let options: RenderOptions
+            let expected: [String: Theme]
+            struct Theme: Decodable { let contrast: ContrastReportFixture }
+            enum Keys: String, CodingKey { case text, options, expected, light, dark }
+            init(from decoder: Decoder) throws {
+                let fields = try decoder.container(keyedBy: Keys.self)
+                text = try fields.decode(String.self, forKey: .text)
+                options = try fields.decode(RenderOptions.self, forKey: .options)
+                let palette = try fields.nestedContainer(keyedBy: Keys.self, forKey: .expected)
+                expected = try ["light": palette.decode(Theme.self, forKey: .light),
+                                "dark": palette.decode(Theme.self, forKey: .dark)]
+            }
+        }
+        struct ContrastReportFixture: Decodable {
+            let target: Double
+            let fill, fillHover, fillActive, border, text, textOnSubtle, strong: ContrastRelationship
+        }
+        struct Corpus: Decodable { let vectors: [Vector] }
+        let corpus = try fixture("vectors.json", as: Corpus.self)
+        for row in corpus.vectors {
+            let result = try Renderer(options: row.options).resolve(row.text)
+            struct Encoded: Decodable { let light, dark: Vector.Theme }
+            let encoded = try JSONDecoder().decode(Encoded.self, from: JSONEncoder().encode(result))
+            for (name, theme) in [("light", encoded.light), ("dark", encoded.dark)] {
+                let a = theme.contrast, b = try XCTUnwrap(row.expected[name]).contrast
+                XCTAssertEqual(a.target, b.target)
+                for key in [\ContrastReportFixture.fill, \.fillHover, \.fillActive, \.border, \.text, \.textOnSubtle, \.strong] {
+                    let x = a[keyPath: key], y = b[keyPath: key]
+                    XCTAssertEqual(x.ratio, y.ratio, accuracy: 1e-12)
+                    XCTAssertEqual(x.meetsTarget, y.meetsTarget)
+                    XCTAssertEqual(x.lightnessAdjusted, y.lightnessAdjusted)
+                    XCTAssertEqual(x.chromaCapped, y.chromaCapped)
+                    XCTAssertEqual(x.chromaReduced, y.chromaReduced)
+                    XCTAssertEqual(x.fallback, y.fallback)
+                }
+            }
+        }
+    }
     func testFrozenTonesFromText() throws {
         struct Theme: Decodable {
             let background, subtle, muted, fill, onFill, fillHover, fillActive, border, text, strong: Color
