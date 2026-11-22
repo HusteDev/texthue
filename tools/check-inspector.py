@@ -53,6 +53,12 @@ def exercise(page, url, clipboard):
         page.locator("#theme").select_option(theme)
         page.get_by_role("button", name="Inspect palette").click()
         expect(page.get_by_role("cell", name=ratio, exact=True)).to_be_visible()
+    page.locator("#options").fill('{"gamut":"display-p3","overrides":{"badge":"#ff0000"}}')
+    page.get_by_role("button", name="Inspect palette").click()
+    chips = page.locator("#results td span[title^='color(display-p3']")
+    expect(chips).to_have_count(3)
+    for chip in chips.all():
+        assert chip.evaluate("(el) => getComputedStyle(el).color.startsWith('color(display-p3 ')")
     page.goto(url)
     expect(status).to_have_text("3 distinct labels")
     check_markers(page)

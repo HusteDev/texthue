@@ -27,14 +27,16 @@ export function swatchSheet(rows, theme, vision) {
   ['Label','Hash','Assigned','Registry'].forEach((title, i) => {
     lines.push(`<text x="${i ? labelWidth + (i-1)*120 : 12}" y="55">${title}</text>`);
   });
-  rows.forEach(({label, swatches, marker}, i) => {
+  rows.forEach(({label, swatches, nativeSwatches, marker}, i) => {
     const y = 86 + i * 32;
     if (marker) lines.push(`<text x="12" y="${y}"><title>${xmlText(marker)}</title>${markerGlyph(marker)}</text>`);
     lines.push(`<text x="${marker ? 36 : 12}" y="${y}">${xmlText(label)}</text>`);
     swatches.forEach((hex, column) => {
       if (!/^#[0-9a-f]{6}$/i.test(hex)) throw new Error('Invalid swatch');
+      const native = nativeSwatches?.[column];
+      if (native && !/^color\(display-p3(?: (?:0(?:\.\d{1,6})?|1)){3}\)$/.test(native)) throw new Error('Invalid Display-P3 swatch');
       const x = labelWidth + column * 120;
-      lines.push(`<rect x="${x}" y="${y-14}" width="18" height="18" fill="${hex}"/><text x="${x+24}" y="${y}">${hex}</text>`);
+      lines.push(`<rect x="${x}" y="${y-14}" width="18" height="18" fill="${hex}"${native ? ` style="fill:${native}"` : ''}/><text x="${x+24}" y="${y}">${hex}</text>`);
     });
   });
   return [...lines, '</g></svg>'].join('\n');

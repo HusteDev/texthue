@@ -62,10 +62,14 @@ function run() {
           labelCell.append(' ');
         }
         labelCell.append(row.label);
-        for (const hex of row.swatches) {
+        for (const [index,hex] of row.swatches.entries()) {
           const cell = append(line,'td');
           const chip = append(cell,'span','■ ');
           chip.style.color = hex;
+          if (row.nativeSwatches) {
+            chip.style.color = row.nativeSwatches[index];
+            chip.title = row.nativeSwatches[index];
+          }
           cell.append(hex);
         }
         append(line,'td',`${row.fillOnBackground.srgbRatio.toFixed(2)}:1`);

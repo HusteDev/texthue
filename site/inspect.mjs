@@ -32,13 +32,15 @@ export function inspect({labels, options, theme, vision, registry, optimizeVisio
     const hash = resolver.resolve(label);
     const assigned = fresh.colors[label];
     const saved = persistent.colors[label];
-    const swatches = [hash, assigned, saved].map(set => {
-      const color = set[theme].fill.hex;
+    const fills = [hash, assigned, saved].map(set => set[theme].fill);
+    const swatches = fills.map(fill => {
+      const color = fill.hex;
       return vision === 'normal' ? color : simulateVision(color, vision);
     });
+    const nativeSwatches = vision === 'normal' && saved[theme].fill.p3 ? fills.map(fill => fill.css) : undefined;
     const projection = resolver.project(label, {themes:[theme], roles:['fill'], formats:['hex','trace']},
       false, persistent.assignments[label]);
-    return {label, ...(markers && {marker:persistent.markers[label]}), swatches, registryFillTrace:projection[theme].fill, contrast: saved[theme].contrast, fill: saved[theme].fill,
+    return {label, ...(markers && {marker:persistent.markers[label]}), swatches, ...(nativeSwatches && {nativeSwatches}), registryFillTrace:projection[theme].fill, contrast: saved[theme].contrast, fill: saved[theme].fill,
       fillOnBackground:surfaceContrast(saved[theme]), variables: cssVariables(saved, {theme, slug:label})};
   });
   const diagnostics = analyzePalette(rows.map(row => row.fill.hex), vision);
