@@ -33,3 +33,13 @@ on the next call to retain prior placements. The result includes palettes
 for requested normalized labels and a report measuring distances between
 rendered light fills. Its ring-capacity flag describes placement capacity.
 The `distinct_fills` field reports whether those fills have unique RGB bytes.
+
+## Fuzz the option parser
+
+From the Rust package directory, install `cargo-fuzz` and use a nightly Rust toolchain. Create `fuzz/corpus/options` to hold generated inputs, then run:
+
+```sh
+cargo +nightly fuzz run options fuzz/corpus/options fuzz/seeds/options -- -runs=10000
+```
+
+The target parses the same JSON options as the conformance runner. Accepted configurations must compile or return a validation error. For each compiled configuration it compares the selective light-fill hex with the full palette. Run the instrumented target on Linux. Windows MSVC also builds the library as a DLL and can fail to link the coverage hooks for that DLL.
