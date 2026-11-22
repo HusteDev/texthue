@@ -16,6 +16,11 @@ The [package manifest](../tools/packages.json) lists each package directory, ver
 
 For Rust distribution testing, run `python tools/stage-rust.py .cache/rust-staging`. It tests the unpacked crate and executes its bundled consumer before copying the original Cargo archive into the destination. A conflicting archive at the same destination fails staging.
 
+Run `python tools/release.py crate-state --version <version> --archive <staged-crate>`
+to compare the archive with the crates.io sparse index. A matching version must
+have the staged SHA-256 and be available for new consumers. A yanked version
+or a checksum conflict stops recovery, as does an unreadable index.
+
 Select `wasm` to publish the staged `@texthue/wasm` tarball. Configure the npm
 environment for that scoped package. Its Node and browser checks run before
 draft staging. A retry compares the staged archive with the registry, independently

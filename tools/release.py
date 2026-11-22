@@ -192,6 +192,41 @@ def pypi_target_state(
     return TargetState(CONFLICTING)
 
 
+def crate_target_state(version: str, archive: Path, *, fetch=None) -> TargetState:
+    """Check the coordinated TextHue crate against its crates.io sparse-index entry."""
+    version = validate_version(version)
+    if archive.name != f"texthue-{version}.crate" or archive.is_symlink() or not archive.is_file():
+        raise ReleaseError("Missing or invalid staged Rust crate.")
+    digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+    try:
+        data = (fetch or _default_fetch)("https://index.crates.io/te/xt/texthue")
+    except _NotFound:
+        return TargetState(ABSENT)
+    except Exception as error:
+        return TargetState(LOOKUP_FAILED, str(error))
+    records = {}
+    try:
+        for line in data.splitlines():
+            row = json.loads(line)
+            name, ver, checksum, yanked = (row[key] for key in ("name", "vers", "cksum", "yanked"))
+            if (
+                name != "texthue"
+                or not isinstance(ver, str)
+                or ver in records
+                or not re.fullmatch("[0-9a-f]{64}", checksum)
+                or type(yanked) is not bool
+            ):
+                raise ValueError("Invalid crates.io index entry")
+            records[ver] = (checksum, yanked)
+        if not records:
+            raise ValueError("Empty crates.io index entry")
+    except (TypeError, ValueError, KeyError) as error:
+        return TargetState(LOOKUP_FAILED, str(error))
+    if version not in records:
+        return TargetState(ABSENT)
+    return TargetState(MATCHING if records[version] == (digest, False) else CONFLICTING)
+
+
 def go_target_state(
     module_path: str, version: str, expected_commit: str, *, run: Runner = _default_runner
 ) -> TargetState:
@@ -416,6 +451,13 @@ def main(argv: list[str] | None = None) -> int:
         "--tarball", required=True, help="Path to the locally built tarball"
     )
     npm_state_parser.set_defaults(func=_cmd_npm_state)
+
+    crate = subparsers.add_parser("crate-state", help="Compare the staged crate with crates.io")
+    crate.add_argument("--version", required=True)
+    crate.add_argument("--archive", type=Path, required=True)
+    crate.set_defaults(
+        func=lambda a: _print_state_and_exit_code(crate_target_state(a.version, a.archive))
+    )
 
     pypi_state_parser = subparsers.add_parser(
         "pypi-state", help="Print the PyPI registry state for package==version."

@@ -194,6 +194,55 @@ class PypiTargetStateTests(unittest.TestCase):
         self.assertEqual(state.state, release.CONFLICTING)
 
 
+class CrateTargetStateTests(unittest.TestCase):
+    def test_version_checksum_and_registry_failures(self):
+        import hashlib
+        import json
+
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory) / "texthue-1.0.0.crate"
+            archive.write_bytes(b"tested archive")
+            row = dict(
+                name="texthue",
+                vers="1.0.0",
+                cksum=hashlib.sha256(archive.read_bytes()).hexdigest(),
+                yanked=False,
+            )
+            for fields, expected in [
+                ({}, release.MATCHING),
+                ({"vers": "0.9.0"}, release.ABSENT),
+                ({"yanked": True}, release.CONFLICTING),
+                ({"cksum": "0" * 64}, release.CONFLICTING),
+                ({"name": "other"}, release.LOOKUP_FAILED),
+                ({"cksum": ""}, release.LOOKUP_FAILED),
+            ]:
+                data = json.dumps(row | fields).encode()
+                self.assertEqual(
+                    release.crate_target_state(
+                        "1.0.0", archive, fetch=lambda _, data=data: data
+                    ).state,
+                    expected,
+                )
+            for data in [b"", b"not JSON", b"{}", b"\n".join([json.dumps(row).encode()] * 2)]:
+                self.assertEqual(
+                    release.crate_target_state(
+                        "1.0.0", archive, fetch=lambda _, data=data: data
+                    ).state,
+                    release.LOOKUP_FAILED,
+                )
+            for error, expected in [
+                (release._NotFound(), release.ABSENT),
+                (TimeoutError(), release.LOOKUP_FAILED),
+            ]:
+
+                def fail(_, error=error):
+                    raise error
+
+                self.assertEqual(
+                    release.crate_target_state("1.0.0", archive, fetch=fail).state, expected
+                )
+
+
 class GoTargetStateTests(unittest.TestCase):
     def test_real_annotated_tag_matches_peeled_commit(self):
         with tempfile.TemporaryDirectory() as directory:
