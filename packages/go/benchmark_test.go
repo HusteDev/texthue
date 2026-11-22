@@ -74,20 +74,28 @@ func BenchmarkResolverContrast(b *testing.B) {
 			}
 			// Keep latency samples bounded even when Go calibrates a long benchmark.
 			samples := make([]time.Duration, 0, len(labels))
+			const resolvesPerSample = 100
+			var last ColorSet
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				start := time.Now()
 				// Amortize the Windows monotonic clock tick across 100 resolves.
-				for repeat := 0; repeat < 100; repeat++ {
-					if _, err := resolver.Resolve(labels[i%len(labels)]); err != nil {
+				for repeat := 0; repeat < resolvesPerSample; repeat++ {
+					last, err = resolver.Resolve(labels[i%len(labels)])
+					if err != nil {
 						b.Fatal(err)
 					}
 				}
 				if i < len(labels) {
-					samples = append(samples, time.Since(start)/100)
+					samples = append(samples, time.Since(start)/resolvesPerSample)
 				}
 			}
 			b.StopTimer()
+			if scenario.name == "p3" && (last.Light.Fill.P3 == nil || last.Dark.Fill.P3 == nil) {
+				b.Fatal("missing native Display-P3 fill")
+			}
+			b.ReportMetric(resolvesPerSample, "resolves/op")
+			b.ReportMetric(float64(b.Elapsed().Nanoseconds())/float64(b.N)/resolvesPerSample, "ns/resolve")
 			sort.Slice(samples, func(i, j int) bool { return samples[i] < samples[j] })
 			n := len(samples)
 			b.ReportMetric(float64(samples[(n-1)/2]+samples[n/2])/2000, "median-us")

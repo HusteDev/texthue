@@ -26,6 +26,8 @@ Reproduce with `npm run build`, `node tools/bench.mjs`, `python tools/bench.py`,
 
 ### APCA and Display P3 timing
 
+Go’s resolver benchmark repeats each label 100 times per timed operation to reduce clock granularity effects. Its standard `ns/op` covers all 100 resolves. Use `ns/resolve` for their mean cost. The reported median and p95 summarize the per-label averages across the corpus.
+
 The resolver benchmarks also exercise APCA at a target of 75 Lc on white and Display P3 at a WCAG target of 4.5 on white. The following Windows x64 observations use the same 100-label corpus and include both themes. Other verification processes shared the host during sampling.
 
 | Scenario | JavaScript median / p95 (µs) | Python | Go | Kotlin/JVM |
