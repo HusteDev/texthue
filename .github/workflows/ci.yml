@@ -284,6 +284,8 @@ jobs:
           python -m playwright install --with-deps firefox webkit
           python tools/check-inspector.py firefox
           python tools/check-inspector.py webkit
+          python tools/check-browser.py firefox --css-only
+          python tools/check-browser.py webkit --css-only
       - name: Exercise the packed React adapter on React 18 and 19
         if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
         run: python tools/check-react-consumers.py

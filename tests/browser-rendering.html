@@ -37,7 +37,13 @@ try {
   style.textContent += `@supports (color: ${fill.css}) { #probe {background-color: ${fill.css}} }`;
   const selected = getComputedStyle(probe).backgroundColor;
   check(selected.startsWith('color(display-p3 '), 'P3 selection: ' + selected);
-  // An sRGB canvas clips wide-gamut pixels. Compare native bytes on a P3 canvas instead.
+  if (!new URL(location.href).searchParams.has('css-only')) checkNativePixels(selected, fill);
+  output.textContent = 'PASS';
+} catch (error) {
+  output.textContent = String(error);
+}
+
+function checkNativePixels(selected, fill) {
   const wide = document.createElement('canvas').getContext('2d',{colorSpace:'display-p3'});
   wide.fillStyle = selected;
   wide.fillRect(0,0,1,1);
@@ -45,8 +51,5 @@ try {
   const expectedBytes = Object.values(fill.p3).map(v => Math.round(v*255));
   check(expectedBytes.every((v,i) => native[i] === v),
     `P3 raster bytes: expected ${expectedBytes}, observed ${Array.from(native)}, readback space ${wide.getImageData(0,0,1,1,{colorSpace:'display-p3'}).colorSpace}`);
-  output.textContent = 'PASS';
-} catch (error) {
-  output.textContent = String(error);
 }
 </script>

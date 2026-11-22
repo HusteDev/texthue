@@ -17,7 +17,13 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("browser", help="Chromium executable, or firefox/webkit via Playwright")
-    parser.add_argument(
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--css-only",
+        action="store_true",
+        help="Check sRGB pixels and CSS selection without native P3 readback",
+    )
+    mode.add_argument(
         "--wasm-package", type=Path, help="Test this npm tarball instead of the CSS renderer"
     )
     args = parser.parse_args()
@@ -39,6 +45,8 @@ def main():
             threading.Thread(target=server.serve_forever, daemon=True).start()
             try:
                 url = f"http://127.0.0.1:{server.server_port}/"
+                if args.css_only:
+                    url += "?css-only"
                 if args.browser in ("firefox", "webkit"):
                     from playwright.sync_api import sync_playwright
 
@@ -77,7 +85,10 @@ def main():
         if args.wasm_package:
             print("PASS: Chromium loaded the npm archive and matched 400 WebAssembly role colors")
             return
-        print("PASS: Chromium linear-sRGB composite pixels, CSS fallback and native P3 bytes")
+        print(
+            "PASS: Chromium linear-sRGB pixels and CSS selection"
+            + ("" if args.css_only else ", including native P3 bytes")
+        )
 
 
 if __name__ == "__main__":
