@@ -23,6 +23,105 @@ from texthue import TextColorError, resolve_text_colors  # noqa: E402 - path set
 FIXTURE = json.loads((ROOT / "conformance" / "vectors.json").read_text(encoding="utf-8"))
 
 
+NORMALIZED_NAMESPACES = [
+    ("  Ａ\u2003E\u0301 ", "a é"),
+    ("ΟΣ", "ος"),
+    ("İ", "i\u0307"),
+    ("\ufeffA\u001c", "\ufeffa\u001c"),
+    ("\u0085A\u0085", "a"),
+]
+NORMALIZATION_RULES = {"unicode": "NFKC", "case": "lower", "whitespace": "collapse"}
+
+
+def generated_cases():
+    rng = random.Random(4217)
+    alphabet = "abcdefghijklmnopqrstuvwxyz ABC0123456789\x00\n\u00e9\u0301\u7814\u7a76\U0001f308"
+    cases = [
+        {
+            "text": "".join(rng.choice(alphabet) for _ in range(rng.randrange(0, 80))),
+            "options": {},
+        }
+        for _ in range(128)
+    ]
+    for raw, _ in NORMALIZED_NAMESPACES:
+        cases.append({"text": raw, "options": {"namespace": raw, "normalize": NORMALIZATION_RULES}})
+    entries = [
+        {"id": "ocean", "light": "#147fad"},
+        {"id": "ruby", "dark": "#901641"},
+        {"id": "neutral", "light": "#777777", "dark": "#999999"},
+    ]
+    for name in ["brand", "other", "neutral"]:
+        for palette in [entries, entries[::-1]]:
+            cases.append(
+                {
+                    "text": name,
+                    "options": {
+                        "palette": palette,
+                        "overrides": {
+                            "brand": {"light": "#0077bb", "dark": "#cc8800"},
+                            "neutral": "#777777",
+                        },
+                        "foregrounds": ["#555555"],
+                        "contrastTarget": 7,
+                    },
+                }
+            )
+    for policy in ("best", "first-passing"):
+        for target in (1, 4.5, 21):
+            cases.append(
+                {
+                    "text": "foreground",
+                    "options": {
+                        "foregroundPolicy": policy,
+                        "foregrounds": ["#888888", "#555555"],
+                        "contrastTarget": target,
+                    },
+                }
+            )
+    for preset in ("labels", "controls", "chart", "subdued", "mono"):
+        cases.append({"text": "preset", "options": {"preset": preset}})
+    for i in range(16):
+        cases.append(
+            {
+                "text": f"hue:{i}",
+                "options": {"hueRange": [270, 120], "excludeHues": [[355, 20], [75, 90]]},
+            }
+        )
+    for lc in (0, 45, 60, 75, 90, 106):
+        for extra in (
+            {},
+            {"overrides": {"apca": "#777777"}, "foregrounds": ["#777777"]},
+            {"palette": [{"id": "a", "light": "#ffff00"}, {"id": "b", "light": "#cccccc"}]},
+            {"contrastTargets": {"text": 0, "textOnSubtle": 75}},
+            {"contrastTargets": {"text": 75, "textOnSubtle": 0}},
+        ):
+            cases.append(
+                {
+                    "text": "apca",
+                    "options": {"contrastModel": "apca", "contrastTarget": lc, **extra},
+                }
+            )
+    for i in range(32):
+        a, b = sorted((rng.random(), rng.random()))
+        cases.append(
+            {
+                "text": f"item:{i}",
+                "options": {
+                    "namespace": f"collection:{i % 4}",
+                    "backgrounds": {
+                        "light": f"#{rng.randrange(16777216):06x}",
+                        "dark": f"#{rng.randrange(16777216):06x}",
+                    },
+                    "contrastTarget": [1, 4.5, 7, 21][i % 4],
+                    "profiles": {
+                        "light": {"text": {"lightness": [a, b], "chromaScale": [0.3, 0.4]}}
+                    },
+                },
+            }
+        )
+    return cases
+
+
 class ConformanceTests(unittest.TestCase):
     """Frozen-vector, runtime-error, and cross-language checks for the Python package."""
 
@@ -474,107 +573,16 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
             self.compare(go["assignments"], case["assignments"])
             self.compare(go["report"], case["report"])
 
-    def test_cross_language_generated_cases(self):
-        """Seeded random cases produce identical results in Python, JavaScript, and Go."""
-        rng = random.Random(4217)
-        alphabet = (
-            "abcdefghijklmnopqrstuvwxyz ABC0123456789\x00\n\u00e9\u0301\u7814\u7a76\U0001f308"
-        )
-        cases = [
-            {
-                "text": "".join(rng.choice(alphabet) for _ in range(rng.randrange(0, 80))),
-                "options": {},
-            }
-            for _ in range(128)
-        ]
-        normalized = {"normalize": {"unicode": "NFKC", "case": "lower", "whitespace": "collapse"}}
-        for raw, expected in [
-            ("  Ａ\u2003E\u0301 ", "a é"),
-            ("ΟΣ", "ος"),
-            ("İ", "i\u0307"),
-            ("\ufeffA\u001c", "\ufeffa\u001c"),
-            ("\u0085A\u0085", "a"),
-        ]:
-            item = {"text": raw, "options": {"namespace": raw, **normalized}}
-            cases.append(item)
+    def test_normalized_namespaces(self):
+        for raw, expected in NORMALIZED_NAMESPACES:
             self.assertEqual(
-                resolve_text_colors(raw, item["options"]),
+                resolve_text_colors(raw, namespace=raw, normalize=NORMALIZATION_RULES),
                 resolve_text_colors(expected, namespace=expected),
             )
-        entries = [
-            {"id": "ocean", "light": "#147fad"},
-            {"id": "ruby", "dark": "#901641"},
-            {"id": "neutral", "light": "#777777", "dark": "#999999"},
-        ]
-        for name in ["brand", "other", "neutral"]:
-            for palette in [entries, entries[::-1]]:
-                cases.append(
-                    {
-                        "text": name,
-                        "options": {
-                            "palette": palette,
-                            "overrides": {
-                                "brand": {"light": "#0077bb", "dark": "#cc8800"},
-                                "neutral": "#777777",
-                            },
-                            "foregrounds": ["#555555"],
-                            "contrastTarget": 7,
-                        },
-                    }
-                )
-        for policy in ("best", "first-passing"):
-            for target in (1, 4.5, 21):
-                cases.append(
-                    {
-                        "text": "foreground",
-                        "options": {
-                            "foregroundPolicy": policy,
-                            "foregrounds": ["#888888", "#555555"],
-                            "contrastTarget": target,
-                        },
-                    }
-                )
-        for preset in ("labels", "controls", "chart", "subdued", "mono"):
-            cases.append({"text": "preset", "options": {"preset": preset}})
-        for i in range(16):
-            cases.append(
-                {
-                    "text": f"hue:{i}",
-                    "options": {"hueRange": [270, 120], "excludeHues": [[355, 20], [75, 90]]},
-                }
-            )
-        for lc in (0, 45, 60, 75, 90, 106):
-            for extra in (
-                {},
-                {"overrides": {"apca": "#777777"}, "foregrounds": ["#777777"]},
-                {"palette": [{"id": "a", "light": "#ffff00"}, {"id": "b", "light": "#cccccc"}]},
-                {"contrastTargets": {"text": 0, "textOnSubtle": 75}},
-                {"contrastTargets": {"text": 75, "textOnSubtle": 0}},
-            ):
-                cases.append(
-                    {
-                        "text": "apca",
-                        "options": {"contrastModel": "apca", "contrastTarget": lc, **extra},
-                    }
-                )
-        for i in range(32):
-            a, b = sorted((rng.random(), rng.random()))
-            cases.append(
-                {
-                    "text": f"item:{i}",
-                    "options": {
-                        "namespace": f"collection:{i % 4}",
-                        "backgrounds": {
-                            "light": f"#{rng.randrange(16777216):06x}",
-                            "dark": f"#{rng.randrange(16777216):06x}",
-                        },
-                        "contrastTarget": [1, 4.5, 7, 21][i % 4],
-                        "profiles": {
-                            "light": {"text": {"lightness": [a, b], "chromaScale": [0.3, 0.4]}}
-                        },
-                    },
-                }
-            )
+
+    def test_cross_language_generated_cases(self):
+        """Seeded random cases produce identical results in Python, JavaScript, and Go."""
+        cases = generated_cases()
         from texthue import Resolver
 
         replay = [
