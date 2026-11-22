@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'dart:math' as math;
 import 'color.dart';
 import 'contrast.dart';
@@ -27,6 +29,13 @@ List<int> _parseHex(String hex) {
 
 enum ForegroundPolicy { best, firstPassing }
 
+final class PaletteEntry {
+  final String id;
+  final String? light, dark;
+  const PaletteEntry(this.id, {this.light, this.dark});
+}
+
+typedef _RankedTone = ({List<int> id, (_FixedTone, _FixedTone) tones});
 typedef BrandColors = ({String light, String dark});
 
 final class _FixedTone {
@@ -104,6 +113,7 @@ final class Renderer {
   final Map<String, double> contrastTargets;
   final ForegroundPolicy foregroundPolicy;
   final HueDomain _hues;
+  final _palette = <_RankedTone>[];
   final _overrides = <String, (_FixedTone, _FixedTone)>{};
   final List<List<int>> _foregrounds;
   final _Background _light, _dark;
@@ -119,6 +129,7 @@ final class Renderer {
       List<HueArc> excludeHues = const [],
       List<String> foregrounds = const ["#000000", "#ffffff"],
       this.preset = Preset.labels,
+      List<PaletteEntry>? palette,
       Map<String, BrandColors> overrides = const {},
       double? contrastTarget,
       Map<String, double> contrastTargets = const {},
@@ -162,6 +173,30 @@ final class Renderer {
                 : x >= 1 && x <= 21)) {
       throw ArgumentError('Invalid contrast targets');
     }
+    if (palette != null) {
+      if (palette.isEmpty) throw ArgumentError('Empty palette');
+      final ids = <String>{};
+      final passing = <_RankedTone>[];
+      final target = contrastTargets['fill'] ?? this.contrastTarget;
+      bool passes(_FixedTone tone) => _foregrounds.any((color) =>
+          measureContrast(color, tone.bytes, model: contrastModel).abs() >=
+          target);
+      for (final entry in palette) {
+        validateUtf16(entry.id);
+        if (!ids.add(entry.id)) throw ArgumentError('Duplicate palette ID');
+        final light = entry.light ?? entry.dark;
+        if (light == null) throw ArgumentError('Missing palette color');
+        final tones = (_FixedTone(light), _FixedTone(entry.dark ?? light));
+        final ranked = (id: utf8.encode(entry.id), tones: tones);
+        _palette.add(ranked);
+        if (passes(tones.$1) && passes(tones.$2)) passing.add(ranked);
+      }
+      if (passing.isNotEmpty) {
+        _palette
+          ..clear()
+          ..addAll(passing);
+      }
+    }
   }
 
   /// Resolves labels in input order and shares duplicate results within this call.
@@ -176,21 +211,33 @@ final class Renderer {
   RenderedPalette resolve(String text) =>
       _resolveNormalized(normalization.apply(text));
 
+  RenderedPalette _fixedPalette((_FixedTone, _FixedTone) tones, String source) {
+    final (light, dark) = tones;
+    return (
+      version: 'text-to-color-v1',
+      source: source,
+      hue: light.hue,
+      hueFraction: light.fraction,
+      light: _theme(false, light.hue, 0.5, 0.5, light),
+      dark: _theme(true, dark.hue, 0.5, 0.5, dark)
+    );
+  }
+
   RenderedPalette _resolveNormalized(String text) {
     final fixed = _overrides[text];
-    if (fixed != null) {
-      final (light, dark) = fixed;
-      return (
-        version: 'text-to-color-v1',
-        source: 'override',
-        hue: light.hue,
-        hueFraction: light.fraction,
-        light: _theme(false, light.hue, 0.5, 0.5, light),
-        dark: _theme(true, dark.hue, 0.5, 0.5, dark)
-      );
+    if (fixed != null) return _fixedPalette(fixed, 'override');
+    final digest = identityDigest(text, namespace: _scope, seed: seed);
+    _RankedTone? winner;
+    var best = '';
+    for (final entry in _palette) {
+      final rank = sha256.convert([...digest, ...entry.id]).toString();
+      if (rank.compareTo(best) > 0) {
+        winner = entry;
+        best = rank;
+      }
     }
-    final f =
-        identityFractions(identityDigest(text, namespace: _scope, seed: seed));
+    if (winner != null) return _fixedPalette(winner.tones, 'palette');
+    final f = identityFractions(digest);
     final pos = f[0] * 12, i = pos.floor();
     final hue = _hues
         .map((anchors[i] + (anchors[i + 1] - anchors[i]) * (pos - i)) % 360);
