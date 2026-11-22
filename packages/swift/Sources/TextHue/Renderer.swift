@@ -40,6 +40,8 @@ public enum Preset: String, Decodable {
 }
 
 public struct RenderOptions: Decodable {
+    public var hueRange: [Double]?
+    public var excludeHues: [[Double]]?
     public var preset: Preset?
     public var normalize: Normalization?
     public var namespace: String?
@@ -87,12 +89,14 @@ public struct Renderer {
     let options: RenderOptions
 
     private let normalization: Normalization
+    private let hueDomain: HueDomain
     private let scope: String
 
     private let foregrounds: [[UInt8]]
     private let lightBackground, darkBackground: ThemeBackground
 
     public init(options: RenderOptions) throws {
+        hueDomain = try HueDomain(allowed: options.hueRange ?? [0, 360], excluded: options.excludeHues ?? [])
         let themes = ["light", "dark"]
         let roles = ["fill", "fillHover", "fillActive", "border", "text", "textOnSubtle", "strong"]
         let range: ClosedRange<Double> = options.contrastModel == .apca ? 0...106 : 1...21
@@ -155,8 +159,9 @@ public struct Renderer {
 
     private func render(hueFraction: Double, lightness: Double, chroma: Double) throws -> RenderedPalette {
         let position = hueFraction * 12, slot = Int(position)
-        let hue = (anchors[slot] + (anchors[slot + 1] - anchors[slot]) * (position - Double(slot)))
+        let naturalHue = (anchors[slot] + (anchors[slot + 1] - anchors[slot]) * (position - Double(slot)))
             .truncatingRemainder(dividingBy: 360)
+        let hue = hueDomain.map(naturalHue)
         return try RenderedPalette(hue: hue, light: theme("light", hue, lightness, chroma),
                                    dark: theme("dark", hue, lightness, chroma))
     }
