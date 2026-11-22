@@ -1,3 +1,10 @@
+const shapes = {circle:'●', square:'■', triangle:'▲', diamond:'◆', star:'★', cross:'✚', pentagon:'⬟', hexagon:'⬢'};
+
+export function markerGlyph(marker) {
+  if (!Object.hasOwn(shapes,marker)) throw new Error('Unknown marker');
+  return shapes[marker];
+}
+
 export function registryCss(rows) {
   const declarations = rows.flatMap(row => Object.entries(row.variables)
     .map(([name, value]) => `  ${name}: ${value};`));
@@ -11,7 +18,7 @@ function xmlText(value) {
 
 export function swatchSheet(rows, theme, vision) {
   const labelWidth = 180 + rows.reduce((extra, row) =>
-    Math.max(extra, Array.from(row.label).length * 14 - 150), 0);
+    Math.max(extra, Array.from(row.label).length * 14 + (row.marker ? 24 : 0) - 150), 0);
   const width = labelWidth + 360;
   const height = 80 + rows.length * 32;
   const lines = [`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
@@ -20,9 +27,10 @@ export function swatchSheet(rows, theme, vision) {
   ['Label','Hash','Assigned','Registry'].forEach((title, i) => {
     lines.push(`<text x="${i ? labelWidth + (i-1)*120 : 12}" y="55">${title}</text>`);
   });
-  rows.forEach(({label, swatches}, i) => {
+  rows.forEach(({label, swatches, marker}, i) => {
     const y = 86 + i * 32;
-    lines.push(`<text x="12" y="${y}">${xmlText(label)}</text>`);
+    if (marker) lines.push(`<text x="12" y="${y}"><title>${xmlText(marker)}</title>${markerGlyph(marker)}</text>`);
+    lines.push(`<text x="${marker ? 36 : 12}" y="${y}">${xmlText(label)}</text>`);
     swatches.forEach((hex, column) => {
       if (!/^#[0-9a-f]{6}$/i.test(hex)) throw new Error('Invalid swatch');
       const x = labelWidth + column * 120;

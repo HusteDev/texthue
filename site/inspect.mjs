@@ -1,11 +1,11 @@
 import {analyzePalette, simulateVision} from '../packages/npm/dist/diagnostics.js';
 import {createResolver, cssVariables, importConfig} from '../packages/npm/dist/index.js';
 
-export function inspect({labels, options, theme, vision, registry, optimizeVision = false}) {
+export function inspect({labels, options, theme, vision, registry, optimizeVision = false, markers = false}) {
   const resolver = options && Object.hasOwn(options, 'schema') ? importConfig(options) : createResolver(options);
   const pinned = registry ? resolver.importRegistry(registry) : {};
   const profiles = vision === 'normal' ? ['normal'] : ['normal',vision];
-  const assignment = optimizeVision ? {vision:profiles} : {};
+  const assignment = {markers, ...(optimizeVision && {vision:profiles})};
   const fresh = resolver.assign(labels,assignment);
   const persistent = registry ? resolver.assign(labels, {...assignment,pinned}) : fresh;
   const rows = Object.keys(fresh.colors).map(label => {
@@ -18,7 +18,7 @@ export function inspect({labels, options, theme, vision, registry, optimizeVisio
     });
     const projection = resolver.project(label, {themes:[theme], roles:['fill'], formats:['hex','trace']},
       false, persistent.assignments[label]);
-    return {label, swatches, registryFillTrace:projection[theme].fill, contrast: saved[theme].contrast, fill: saved[theme].fill,
+    return {label, ...(markers && {marker:persistent.markers[label]}), swatches, registryFillTrace:projection[theme].fill, contrast: saved[theme].contrast, fill: saved[theme].fill,
       variables: cssVariables(saved, {theme, slug:label})};
   });
   const diagnostics = analyzePalette(rows.map(row => row.fill.hex), vision);

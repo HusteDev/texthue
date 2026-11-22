@@ -1,5 +1,5 @@
 import {editOptions} from './editor.mjs';
-import {registryCss, swatchSheet} from './exports.mjs';
+import {markerGlyph, registryCss, swatchSheet} from './exports.mjs';
 
 const form = document.querySelector('form');
 const results = document.querySelector('#results');
@@ -38,7 +38,7 @@ function run() {
   try {
     const input = {labels:field('labels').split(/\r?\n/).filter(Boolean), options:JSON.parse(field('options')),
       theme:field('theme'), vision:field('vision'), optimizeVision:document.getElementById('optimize-vision').checked,
-      registry:field('registry') && JSON.parse(field('registry'))};
+      markers:document.getElementById('markers').checked, registry:field('registry') && JSON.parse(field('registry'))};
     const active = new Worker('./worker.mjs', {type:'module'});
     worker = active;
     status.textContent = 'Computing palette…';
@@ -54,7 +54,14 @@ function run() {
       for (const title of ['Label','Hash','Assigned','Registry']) append(head,'th',title);
       for (const row of rows) {
         const line = append(table, 'tr');
-        append(line,'th',row.label);
+        const labelCell = append(line,'th');
+        if (row.marker) {
+          const shape = append(labelCell,'span',markerGlyph(row.marker));
+          shape.setAttribute('role','img');
+          shape.setAttribute('aria-label',row.marker);
+          labelCell.append(' ');
+        }
+        labelCell.append(row.label);
         for (const hex of row.swatches) {
           const cell = append(line,'td');
           const chip = append(cell,'span','■ ');

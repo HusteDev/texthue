@@ -15,3 +15,14 @@ test('SVG reflects the preview and CSS preserves underlying registry colors', ()
   for (const [name,value] of Object.entries(rows[0].variables)) assert.ok(css.includes(name + ': ' + value + ';'));
   assert.equal(css.includes('<tag>'),false);
 });
+
+test('shape sheet preserves every assigned marker across vision changes', () => {
+  const input = {labels:Array.from({length:128}, (_,i) => String(i)),options:{},theme:'light',vision:'normal',markers:true};
+  const first = inspect(input);
+  const replay = inspect({...input,vision:'deutan',registry:first.registry});
+  assert.deepEqual(first.rows.map(row => row.marker),replay.rows.map(row => row.marker));
+  const shapes = new Set(first.rows.map(row => row.marker));
+  assert.equal(shapes.size,8);
+  const sheet = swatchSheet(replay.rows,'light','deutan');
+  for (const shape of shapes) assert.ok(sheet.includes(`<title>${shape}</title>`));
+});
