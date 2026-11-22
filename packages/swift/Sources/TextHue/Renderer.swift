@@ -7,6 +7,7 @@ struct RoleProfile: Decodable {
 }
 
 struct RenderOptions: Decodable {
+    var normalize: Normalization?
     var namespace: String?
     var seed: UInt32?
     var contrastTarget: Double?
@@ -27,13 +28,14 @@ public struct Renderer {
 
     init(options: RenderOptions) { self.options = options }
 
-    public init(namespace: String = "", seed: UInt32 = 0, contrastTarget: Double = 4.5) throws {
+    public init(namespace: String = "", seed: UInt32 = 0, contrastTarget: Double = 4.5, normalize: Normalization = Normalization()) throws {
         guard (1...21).contains(contrastTarget) else { throw RenderError.invalidOptions }
-        options = RenderOptions(namespace: namespace, seed: seed, contrastTarget: contrastTarget)
+        options = RenderOptions(normalize: normalize, namespace: namespace, seed: seed, contrastTarget: contrastTarget)
     }
 
     public func resolve(_ text: String) throws -> RenderedPalette {
-        let digest = try identityDigest(text, namespace: options.namespace ?? "", seed: options.seed ?? 0)
+        let normalize = options.normalize ?? Normalization()
+        let digest = try identityDigest(normalize.apply(text), namespace: normalize.apply(options.namespace ?? ""), seed: options.seed ?? 0)
         let fractions = identityFractions(digest)
         return try render(hueFraction: fractions[0], lightness: fractions[1], chroma: fractions[2])
     }
