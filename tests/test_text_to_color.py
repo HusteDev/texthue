@@ -53,7 +53,9 @@ class ConformanceTests(unittest.TestCase):
         """Every valid vector resolves to its expected result, and the recorded payload and digest are reproduced."""
         for item in FIXTURE["vectors"]:
             with self.subTest(item=item["id"]):
-                self.compare(resolve_text_colors(item["text"], item["options"]), item["expected"])
+                self.compare(
+                    resolve_text_colors(item["text"], item["options"]).to_dict(), item["expected"]
+                )
                 encoded = item["encoding"]
                 namespace = item["options"].get("namespace", "").encode("utf-8")
                 text = item["text"].encode("utf-8")
@@ -86,6 +88,49 @@ class ConformanceTests(unittest.TestCase):
         with self.assertRaises(TextColorError):
             resolve_text_colors("x", {"profiles": {"dark": {"fill": {"lightness": [0, math.nan]}}}})
 
+    def test_native_models_and_compiled_options(self):
+        from dataclasses import FrozenInstanceError
+
+        from texthue import ColorSet, Resolver
+
+        resolver = Resolver(
+            contrast_target=7, profiles={"light": {"fill": {"chroma_scale": (0, 0)}}}
+        )
+        first, second = resolver.batch(["tag", "tag"])
+        self.assertEqual(first, second)
+        self.assertEqual(ColorSet.from_dict(first.to_dict()), first)
+        self.assertEqual(first.light.fill.oklch.c, 0)
+        self.assertEqual(resolver.hex("tag", theme="light", role="fill"), first.light.fill.hex)
+        with self.assertRaises(FrozenInstanceError):
+            first.light.fill.rgb.r = 0
+
+    def test_assignment_vectors(self):
+        from texthue import Resolver
+
+        cases = json.loads((ROOT / "conformance/assign-vectors.json").read_text())
+        run = subprocess.run(
+            ["go", "-C", "packages/go", "run", "./cmd/conformance"],
+            input=json.dumps(cases),
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=60,
+        )
+        for case, go in zip(cases, json.loads(run.stdout), strict=True):
+            resolver = Resolver(case.get("options", {}))
+            for texts in (case["texts"], list(reversed(case["texts"]))):
+                result = resolver.assign(texts, pinned=case.get("pinned"))
+                self.compare(
+                    {k: v.to_dict() for k, v in result["assignments"].items()}, case["assignments"]
+                )
+                self.compare(result["report"], case["report"])
+                self.compare(
+                    {k: v.light.fill.hex for k, v in result["colors"].items()}, case["lightFills"]
+                )
+                self.compare({k: v.to_dict() for k, v in result["colors"].items()}, go["colors"])
+            self.compare(go["assignments"], case["assignments"])
+            self.compare(go["report"], case["report"])
+
     def test_cross_language_generated_cases(self):
         """Seeded random cases produce identical results in Python, JavaScript, and Go."""
         rng = random.Random(4217)
@@ -99,6 +144,29 @@ class ConformanceTests(unittest.TestCase):
             }
             for _ in range(128)
         ]
+        normalized = {"normalize": {"unicode": "NFKC", "case": "lower", "whitespace": "collapse"}}
+        for raw, expected in [
+            ("  Ａ\u2003E\u0301 ", "a é"),
+            ("ΟΣ", "ος"),
+            ("İ", "i\u0307"),
+            ("\ufeffA\u001c", "\ufeffa\u001c"),
+            ("\u0085A\u0085", "a"),
+        ]:
+            item = {"text": raw, "options": {"namespace": raw, **normalized}}
+            cases.append(item)
+            self.assertEqual(
+                resolve_text_colors(raw, item["options"]),
+                resolve_text_colors(expected, namespace=expected),
+            )
+        for preset in ("labels", "controls", "chart", "subdued", "mono"):
+            cases.append({"text": "preset", "options": {"preset": preset}})
+        for i in range(16):
+            cases.append(
+                {
+                    "text": f"hue:{i}",
+                    "options": {"hueRange": [270, 120], "excludeHues": [[355, 20], [75, 90]]},
+                }
+            )
         for i in range(32):
             a, b = sorted((rng.random(), rng.random()))
             cases.append(
@@ -149,7 +217,7 @@ process.stdout.write(JSON.stringify(output));
         self.assertEqual(len(go_results), len(cases))
         for index, (item, result) in enumerate(zip(cases, expected, strict=True)):
             with self.subTest(index=index):
-                self.compare(resolve_text_colors(item["text"], item["options"]), result)
+                self.compare(resolve_text_colors(item["text"], item["options"]).to_dict(), result)
                 self.compare(go_results[index], result)
 
 

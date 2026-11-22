@@ -90,7 +90,7 @@ func TestConformance(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			result, err := Resolve(text, options)
+			result, err := Resolve(text, options...)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -186,7 +186,7 @@ func TestJSONDuplicateObjectsReplaceRatherThanMerge(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := Resolve("research", options)
+	got, err := Resolve("research", options...)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -64,7 +64,17 @@ type Backgrounds struct {
 // distinguish an omitted value from a meaningful zero. Options are never
 // modified by this package, but callers must not mutate them concurrently
 // with a call.
+type NormalizeOptions struct {
+	Unicode    string `json:"unicode,omitempty"`
+	Case       string `json:"case,omitempty"`
+	Whitespace string `json:"whitespace,omitempty"`
+}
+
 type Options struct {
+	Preset          string             `json:"preset,omitempty"`
+	HueRange        *Range             `json:"hueRange,omitempty"`
+	ExcludeHues     []Range            `json:"excludeHues,omitempty"`
+	Normalize       *NormalizeOptions  `json:"normalize,omitempty"`
 	ContrastTargets map[string]float64 `json:"contrastTargets,omitempty"`
 	Seed            uint32             `json:"seed,omitempty"`
 	// Namespace is a domain separator mixed into the hash. It is exact

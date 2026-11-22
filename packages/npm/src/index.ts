@@ -8,6 +8,7 @@
  * @packageDocumentation
  */
 
+import { assignCollection, type Placement } from './assignment.js';
 import { chooseColor, contrast, cusp, foreground, formats } from './color-math.js';
 import { sha256 } from './sha256.js';
 import { anchors, biases } from './tables.js';
@@ -125,12 +126,56 @@ function range(value: unknown, maximum: number, path: string): Range {
  * @param options - Caller-supplied options; `undefined` is treated as `{}` by the caller.
  * @returns Resolved settings with every field present.
  */
+function compileHueDomain(allowed:unknown, excluded:unknown) {
+  const split = (arc:unknown):Range[] => {
+    if (!Array.isArray(arc) || arc.length !== 2 || !arc.every(x => finite(x) && x >= 0 && x <= 360)) {
+      fail('INVALID_OPTIONS','Hue intervals need two endpoints from 0 to 360');
+    }
+    const [a,b] = arc;
+    return a <= b ? [[a,b]] : [[0,b],[a,360]];
+  };
+  if (!Array.isArray(excluded) || excluded.length > 16) fail('INVALID_OPTIONS','Invalid excluded hues');
+  let segments = split(allowed);
+  for (const arc of excluded) for (const [a,b] of split(arc)) {
+    segments = segments.flatMap(([lo,hi]):Range[] => [[lo,Math.min(hi,a)],[Math.max(lo,b),hi]])
+      .filter(([lo,hi])=>lo<hi);
+  }
+  segments = segments.filter(([lo,hi])=>lo<hi);
+  const width = segments.reduce((sum,[lo,hi])=>sum+hi-lo,0);
+  if (!width) fail('INVALID_OPTIONS','Empty hue domain');
+  if (width === 360) return (h:number)=>h;
+  return (h:number) => {
+    let distance = h / 360 * width;
+    for (const [lo,hi] of segments) {
+      if (distance < hi-lo) return lo+distance;
+      distance -= hi-lo;
+    }
+    return segments[0]?.[0] ?? 0;
+  };
+}
+
 function optionsValue(options: unknown): ResolvedOptions {
-  const source = record(options, ['namespace', 'seed', 'backgrounds', 'contrastTarget', 'contrastTargets', 'profiles'], 'options');
+  const source = record(options, ['preset','hueRange','excludeHues','normalize','namespace', 'seed', 'backgrounds', 'contrastTarget', 'contrastTargets', 'profiles'], 'options');
+  const preset = own(source,'preset','labels');
+  if (typeof preset !== 'string' || !['labels','controls','chart','subdued','mono'].includes(preset)) fail('INVALID_OPTIONS','Unknown preset');
+  const scale = preset === 'mono' ? [0,0] : preset === 'subdued' ? [0.2,0.4] : preset === 'chart' ? [0.8,1] : [0.6,0.8];
   const seed = own(source, 'seed', 0);
   if (!finite(seed) || !Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) fail('INVALID_OPTIONS', 'seed must be uint32');
+  const hueDomain = compileHueDomain(own(source,'hueRange',[0,360]),own(source,'excludeHues',[]));
+  const rules = record(own(source,'normalize',{}), ['unicode','case','whitespace'], 'normalize');
+  const form = own(rules,'unicode','none'), casing = own(rules,'case','none'), space = own(rules,'whitespace','none');
+  if (form !== 'none' && form !== 'NFC' && form !== 'NFKC') fail('INVALID_OPTIONS','invalid normalize.unicode');
+  if (casing !== 'none' && casing !== 'lower') fail('INVALID_OPTIONS','invalid normalize.case');
+  if (space !== 'none' && space !== 'trim' && space !== 'collapse') fail('INVALID_OPTIONS','invalid normalize.whitespace');
+  const normalize = (input:string) => {
+    let value = form === 'none' ? input : input.normalize(form);
+    if (casing === 'lower') value = value.toLowerCase();
+    if (space !== 'none') value = value.replace(/^\p{White_Space}+|\p{White_Space}+$/gu,'');
+    if (space === 'collapse') value = value.replace(/\p{White_Space}+/gu,' ');
+    return value;
+  };
   const namespace = textValue(own(source, 'namespace', ''), 'namespace', 'INVALID_OPTIONS');
-  const contrastTarget = own(source, 'contrastTarget', 4.5);
+  const contrastTarget = own(source, 'contrastTarget', preset === 'controls' ? 7 : 4.5);
   if (!finite(contrastTarget) || contrastTarget < 1 || contrastTarget > 21) {
     fail('INVALID_OPTIONS', 'contrastTarget must be a finite number from 1 through 21');
   }
@@ -165,11 +210,11 @@ function optionsValue(options: unknown): ResolvedOptions {
       profiles[theme][role] = {
         lightness: range(own(profile, 'lightness', defaultLightness), 1, `${path}.lightness`),
         chromaCap: cap,
-        chromaScale: range(own(profile, 'chromaScale', [0.6, 0.8]), 1, `${path}.chromaScale`),
+        chromaScale: range(own(profile, 'chromaScale', scale), 1, `${path}.chromaScale`),
       };
     }
   }
-  return { targets, seed, namespace, backgrounds, contrastTarget, profiles };
+  return { hueDomain, normalize, targets, seed, namespace:normalize(namespace), backgrounds, contrastTarget, profiles };
 }
 
 /**
@@ -197,27 +242,63 @@ function optionsValue(options: unknown): ResolvedOptions {
  */
 export function resolveTextColors(text: string, options: TextColorOptions = {}): ColorSet {
   textValue(text, 'text', 'INVALID_TEXT');
+  return createResolver(options).resolve(text);
+}
+
+export type ColorRole = Exclude<keyof ThemeColors, 'contrast'>;
+export type Selection = {theme: 'light'|'dark'; role: ColorRole};
+
+export function createResolver(options: TextColorOptions = {}) {
   const settings = optionsValue(options);
   const encoder = new TextEncoder();
   const prefix = encoder.encode(`${VERSION}\0`);
   const namespace = encoder.encode(settings.namespace);
-  const input = encoder.encode(text);
   if (namespace.length > 0xffffffff) fail('INVALID_OPTIONS', 'namespace exceeds the v1 byte-length limit');
-  // Payload: VERSION, NUL, namespace byte length (uint32 big-endian), namespace, text.
   const header = new DataView(new ArrayBuffer(8));
   header.setUint32(0, settings.seed);
   header.setUint32(4, namespace.length);
-  const digest = sha256(prefix, new Uint8Array(header.buffer), namespace, input);
+  const bases = {light: formats(settings.backgrounds.light), dark: formats(settings.backgrounds.dark)};
+  const digestOf = (text: string) => {
+    const input = encoder.encode(settings.normalize(textValue(text, 'text', 'INVALID_TEXT')));
+    return sha256(prefix, new Uint8Array(header.buffer), namespace, input);
+  };
+  const resolve = (text:string) => render(settings,bases,digestOf(text));
+  const assign = (texts:readonly string[], {pinned = {}}: {pinned?: Record<string,Placement>} = {}) =>
+    assignCollection(texts, pinned, text => settings.normalize(textValue(text, 'text', 'INVALID_TEXT')),digestOf,
+      (digest,placement) => render(settings,bases,digest,placement));
+  const batch = (texts: readonly string[]) => {
+    const seen = new Map<string,ColorSet>();
+    return texts.map(text => {
+      const previous = seen.get(text);
+      if (previous) return structuredClone(previous);
+      const result = resolve(text);
+      seen.set(text,result);
+      return result;
+    });
+  };
+  const color = (text: string, select: Selection) => resolve(text)[select.theme][select.role];
+  const hex = (text: string, select: Selection) => color(text, select).hex;
+  return {resolve,batch,color,hex,assign};
+}
+
+export function resolveTextColor(text: string, select: Selection, options: TextColorOptions = {}) {
+  return createResolver(options).color(text,select);
+}
+
+function render(settings: ResolvedOptions, bases: Record<'light'|'dark',ThemeColors['background']>, digest: DataView, placement?: Placement): ColorSet {
   // The first three big-endian 32-bit digest words become fractions in [0, 1) for hue, lightness, and chroma.
   const fractions = [0, 4, 8].map(offset => digest.getUint32(offset, false) / 4294967296) as Triple;
-  const position = fractions[0] * 12;
+  const hueFraction = placement?.hueFraction ?? fractions[0];
+  const ring = (placement?.ring ?? 0) % 5;
+  const offset = [0,0.08,-0.08,0.16,-0.16][ring] ?? 0;
+  const position = hueFraction * 12;
   const index = Math.floor(position);
-  const hue = (Number(anchors[index]) + (Number(anchors[index+1]) - Number(anchors[index])) * (position-index)) % 360;
+  const hue = settings.hueDomain((Number(anchors[index]) + (Number(anchors[index+1]) - Number(anchors[index])) * (position-index)) % 360);
   const themes = {} as Record<'light' | 'dark', ThemeColors>;
   for (const theme of ['light', 'dark'] as const) {
     const direction = theme === 'light' ? -1 : 1;
     const background = settings.backgrounds[theme];
-    const base = formats(background);
+    const base = bases[theme];
     const lb = Math.round(base.oklch.l * 4096) / 4096;
     const sample = (role: 'fill' | 'text') => {
       const profile = settings.profiles[theme][role];
@@ -226,8 +307,8 @@ export function resolveTextColors(text: string, options: TextColorOptions = {}):
       if (!bias) throw new Error('Missing profile bias table');
       const segment = Math.floor(hue / 30);
       const correction = Number(bias[segment]) + (Number(bias[(segment+1)%12]) - Number(bias[segment])) * (hue/30-segment);
-      return { l: Math.max(0, Math.min(1, sampled + correction)),
-        scale: profile.chromaScale[0] + (profile.chromaScale[1]-profile.chromaScale[0])*fractions[2], cap: profile.chromaCap };
+      return { l: Math.max(0, Math.min(1, sampled + correction + offset)),
+        scale: (profile.chromaScale[0] + (profile.chromaScale[1]-profile.chromaScale[0])*fractions[2]) * (ring < 3 ? 1 : 0.6), cap: profile.chromaCap };
     };
     const fillProfile = sample('fill'), textProfile = sample('text');
     const tone = (l: number, profile: typeof fillProfile, backdrop: Triple | null, target: number, second?: Triple, secondTarget = target) => {
@@ -251,12 +332,18 @@ export function resolveTextColors(text: string, options: TextColorOptions = {}):
       const ratio = contrast(color.rgb, backdrop);
       return {...color.metadata, ratio, meetsTarget: ratio >= required};
     };
-    themes[theme] = {background: base, subtle: formats(subtle.rgb), muted: formats(muted.rgb),
+    themes[theme] = {background: structuredClone(base), subtle: formats(subtle.rgb), muted: formats(muted.rgb),
       fill: formats(fill.rgb), onFill: formats(onFill), fillHover: formats(hover.rgb), fillActive: formats(active.rgb),
       border: formats(border.rgb), text: formats(text.rgb), strong: formats(strong.rgb),
       contrast: {target, fill: fill.metadata, fillHover: hover.metadata, fillActive: active.metadata, border: border.metadata,
         text: relationship(text,background,targets.text), textOnSubtle: relationship(text,subtle.rgb,targets.textOnSubtle), strong: strong.metadata}};
 
   }
-  return { version: VERSION, hueFraction: fractions[0], hue, light: themes.light, dark: themes.dark };
+  return { version: VERSION, hueFraction, hue, light: themes.light, dark: themes.dark };
 }
+
+
+export function assignTextColors(texts: readonly string[], options: TextColorOptions = {}, pinned: Record<string,Placement> = {}) {
+  return createResolver(options).assign(texts,{pinned});
+}
+export { cssVariables, toCss } from './css.js';

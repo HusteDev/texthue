@@ -2,7 +2,7 @@
 
 Turn exact text into repeatable colors for labels, projects, categories, charts, avatars, and other application data. The same text and options produce the same colors in JavaScript, TypeScript, Python, and Go. Every result includes light and dark themes, readable fill/foreground pairs, an text color, and Hex, RGB, HSL, and OKLCH representations.
 
-TextHue is stateless and has no runtime dependencies. It does not store inputs, contact a service, or require a user account. Each application decides what its input means.
+TextHue is stateless. The JavaScript and Python packages have no runtime dependencies. Go uses golang.org/x/text for Unicode normalization and casing. It does not store inputs, contact a service, or require a user account. Each application decides what its input means.
 
 ## Libraries
 
@@ -40,8 +40,8 @@ console.log(colors.dark.fill.hex);  // #255464
 from texthue import resolve_text_colors
 
 colors = resolve_text_colors("research")
-print(colors["light"]["fill"]["hex"])  # #59b8d8
-print(colors["dark"]["fill"]["hex"])   # #255464
+print(colors.light.fill.hex)  # #59b8d8
+print(colors.dark.fill.hex)   # #255464
 ```
 
 ```go
@@ -78,6 +78,19 @@ Every color has the same shape. For the default light fill for `research`:
 RGB channels are integers from 0 through 255. HSL hue is in degrees and saturation/lightness are percentages. OKLCH lightness is a fraction from 0 through 1, chroma is numeric, and hue is in degrees. Hex is lowercase six-digit sRGB. HSL and OKLCH numbers are rounded to six decimal places and describe the final RGB color, not the originally requested OKLCH coordinates.
 
 The top-level result also has `version` (the algorithm identifier) and `hue` (the original hash-derived hue). Each theme has `contrast.target`, `contrast.fill`, and `contrast.text`. The latter two report `ratio`, `meetsTarget`, `lightnessAdjusted`, `chromaReduced`, and `fallback`. Check these when using custom backgrounds or high contrast targets. An unattainable text target returns the better black/white endpoint with `meetsTarget: false` and `fallback: "unattainable-contrast"`; it does not claim success or throw an input error.
+
+## Assigning a collection
+
+Use a configured resolver when the labels appear together. Assignment sorts normalized labels by digest, checks spacing around the hue circle, and uses additional lightness rings when the first ring fills. Persist the returned assignments to extend the collection later.
+
+```typescript
+const resolver = createResolver({ normalize: { unicode: 'NFC' }, namespace: 'issues' });
+const first = resolver.assign(['bug', 'question', 'feature']);
+const next = resolver.assign(['feature', 'question', 'bug', 'docs'], { pinned: first.assignments });
+console.log(next.colors.docs.light.fill.hex, next.report.minDistance);
+```
+
+Python provides `Resolver.assign(texts, pinned=...)`. Go provides `NewResolver(WithNamespace("issues"))` and `resolver.Assign(texts, pinned)`. The report measures distance between rendered light fills in OKLab. Ring capacity describes the search space. Consumers can inspect the closest pair before relying on color to distinguish labels.
 
 ## Algorithm
 

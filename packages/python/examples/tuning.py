@@ -19,7 +19,7 @@ options: TextColorOptions = {
         },
     },
 }
-print(json.dumps(resolve_text_colors("project:atlas", options), indent=2))
+print(json.dumps(resolve_text_colors("project:atlas", options).to_dict(), indent=2))
 
 gray = resolve_text_colors(
     "plain",
@@ -27,7 +27,7 @@ gray = resolve_text_colors(
         "profiles": {"light": {"fill": {"lightness": [0.75, 0.75], "chromaScale": [0, 0]}}},
     },
 )
-print("Fixed preferred lightness, grayscale:", gray["light"]["fill"])
+print("Fixed preferred lightness, grayscale:", gray.light.fill)
 
 impossible = resolve_text_colors(
     "project:atlas",
@@ -36,10 +36,10 @@ impossible = resolve_text_colors(
         "contrastTarget": 7,
     },
 )
-status = impossible["light"]["contrast"]["text"]
-if not status["meetsTarget"]:
+status = impossible.light.contrast.text
+if not status.meets_target:
     print(
         "Use the returned fallback or change the background/target:",
-        impossible["light"]["text"]["hex"],
+        impossible.light.text.hex,
         status,
     )

@@ -9,32 +9,31 @@ Example::
     from texthue import resolve_text_colors
 
     colors = resolve_text_colors("research")
-    colors["light"]["fill"]["hex"]  # '#59b8d8'
-    colors["dark"]["fill"]["hex"]   # '#255464'
+    colors.light.fill.hex  # '#59b8d8'
+    colors.dark.fill.hex   # '#255464'
 
 The package has no runtime dependencies and performs no I/O.
 """
 
+from collections.abc import Iterable
 from typing import cast
 
 from . import _core
+from ._assignment import assign_collection
 from ._core import VERSION, TextColorError
-from ._types import (
+from ._css import css_variables, to_css
+from ._models import (
     HSL,
     OKLCH,
     RGB,
-    Backgrounds,
+    Assignment,
     Color,
-    ColorProfile,
     ColorSet,
     ContrastResult,
-    Profiles,
-    Range,
-    TextColorOptions,
     ThemeColors,
     ThemeContrast,
-    ThemeProfiles,
 )
+from ._types import Backgrounds, ColorProfile, Profiles, Range, TextColorOptions, ThemeProfiles
 
 #: Package release version. Independent of :data:`VERSION`, the algorithm identifier.
 __version__ = "0.1.0"
@@ -44,39 +43,96 @@ _OMITTED = object()
 _OMITTED_OPTIONS = cast(TextColorOptions, _OMITTED)
 
 
-def resolve_text_colors(text: str, options: TextColorOptions = _OMITTED_OPTIONS) -> ColorSet:
-    """Resolve exact text to light and dark theme colors in every output format.
+_ALIASES = {
+    "hue_range": "hueRange",
+    "exclude_hues": "excludeHues",
+    "contrast_target": "contrastTarget",
+    "contrast_targets": "contrastTargets",
+    "fill_hover": "fillHover",
+    "fill_active": "fillActive",
+    "text_on_subtle": "textOnSubtle",
+    "chroma_scale": "chromaScale",
+    "chroma_cap": "chromaCap",
+}
 
-    The text is hashed with SHA-256 together with the algorithm identifier and
-    the namespace. The digest drives hue, lightness, and chroma sampling for
-    four OKLCH profiles. Each color is gamut-fitted to sRGB, checked against
-    the contrast target, and returned in Hex, RGB, HSL, and OKLCH.
 
-    Text is used exactly as given: no trimming, case folding, or Unicode
-    normalization is applied. No input is retained after the call.
+def _native_options(value):
+    if isinstance(value, dict):
+        output = {}
+        for key, item in value.items():
+            name = _ALIASES.get(key, key)
+            if name in output:
+                raise TextColorError("INVALID_OPTIONS", f"Duplicate option {name}")
+            output[name] = _native_options(item)
+        return output
+    if isinstance(value, tuple):
+        return list(value)
+    return value
 
-    Args:
-        text: Any well-formed Unicode string, including the empty string.
-            Strings containing surrogate code points are rejected.
-        options: A :class:`TextColorOptions` mapping with optional
-            ``namespace``, ``backgrounds``, ``contrastTarget``, and
-            ``profiles`` keys. Omit the argument, or pass ``{}``, for
-            defaults. ``None`` is invalid.
 
-    Returns:
-        A fresh :class:`ColorSet` dictionary that is JSON-serializable and uses
-        the same camelCase keys as the other TextHue libraries.
+class Resolver:
+    """Compile options once and reuse the resolver for a collection of labels."""
 
-    Raises:
-        TextColorError: With ``code`` ``"INVALID_TEXT"`` for malformed text or
-            ``"INVALID_OPTIONS"`` for any invalid option.
-    """
-    if options is _OMITTED:
-        return cast(ColorSet, _core.resolve_text_colors(text))
-    return cast(ColorSet, _core.resolve_text_colors(text, options))
+    def __init__(self, options: TextColorOptions = _OMITTED_OPTIONS, **kwargs):
+        if options is not _OMITTED and kwargs:
+            raise TextColorError("INVALID_OPTIONS", "Use an options mapping or keyword options")
+        source = kwargs if options is _OMITTED else options
+        self._compiled = _core.compile_settings(_native_options(source))
+
+    def resolve(self, text: str) -> ColorSet:
+        return ColorSet.from_dict(_core.render(text, *self._compiled))
+
+    def assign(self, texts: Iterable[str], *, pinned=None):
+        return assign_collection(texts, pinned or {}, self._compiled)
+
+    def batch(self, texts: Iterable[str]) -> list[ColorSet]:
+        cache = {}
+        result = []
+        for text in texts:
+            _core._text(text, "text", "INVALID_TEXT")
+            if text not in cache:
+                cache[text] = self.resolve(text)
+            result.append(cache[text])
+        return result
+
+    def color(self, text: str, *, theme: str, role: str) -> Color:
+        if theme not in ("light", "dark") or role not in {
+            "background",
+            "subtle",
+            "muted",
+            "fill",
+            "fill_hover",
+            "fill_active",
+            "on_fill",
+            "border",
+            "text",
+            "strong",
+        }:
+            raise TextColorError("INVALID_OPTIONS", "Unknown theme or role")
+        return getattr(getattr(self.resolve(text), theme), role)
+
+    def hex(self, text: str, *, theme: str, role: str) -> str:
+        return self.color(text, theme=theme, role=role).hex
+
+
+def resolve_text_colors(
+    text: str, options: TextColorOptions = _OMITTED_OPTIONS, **kwargs
+) -> ColorSet:
+    """Return immutable theme colors. Use to_dict() for the shared JSON shape."""
+    _core._text(text, "text", "INVALID_TEXT")
+    return Resolver(options, **kwargs).resolve(text)
+
+
+def assign_text_colors(texts, options=_OMITTED_OPTIONS, *, pinned=None, **kwargs):
+    return Resolver(options, **kwargs).assign(texts, pinned=pinned)
 
 
 __all__ = [
+    "assign_text_colors",
+    "Assignment",
+    "css_variables",
+    "to_css",
+    "Resolver",
     "VERSION",
     "TextColorError",
     "resolve_text_colors",

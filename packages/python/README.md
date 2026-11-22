@@ -1,36 +1,27 @@
 # TextHue for Python
 
-`texthue` maps exact text to repeatable light/dark colors with Hex, RGB, HSL, and OKLCH output. This is a synchronous native Python implementation with no runtime dependencies. It supports Python 3.11+ and includes TypedDict annotations and a `py.typed` marker. Its results match the JavaScript/TypeScript and Go libraries.
+`texthue` maps exact text to repeatable light/dark colors with Hex, RGB, HSL, and OKLCH output. This is a synchronous native Python implementation with no runtime dependencies. It supports Python 3.11+ and includes frozen dataclass results and typed option mappings and a `py.typed` marker. Its results match the JavaScript/TypeScript and Go libraries.
 
 ```bash
 python -m pip install texthue
 ```
 
-## Basic usage and every output format
+## Basic usage
 
 ```python
-from texthue import resolve_text_colors
+from texthue import Resolver
 
-colors = resolve_text_colors("research")
-theme = colors["light"]  # Your application can select colors["dark"].
-fill = theme["fill"]
-rgb, hsl, oklch = fill["rgb"], fill["hsl"], fill["oklch"]
-
-print(fill["hex"])  # #59b8d8
-print(f"rgb({rgb['r']} {rgb['g']} {rgb['b']})")
-print(f"hsl({hsl['h']} {hsl['s']}% {hsl['l']}%)")
-print(f"oklch({oklch['l']} {oklch['c']} {oklch['h']})")
-print(theme["onFill"]["hex"])      # Text on fill.
-print(theme["text"]["hex"])      # Text/marks on background.
-print(theme["background"]["hex"])
-print(theme["contrast"]["fill"]["ratio"])
+resolver = Resolver(namespace="projects", contrast_target=7)
+colors = resolver.resolve("research")
+print(colors.light.fill.hex, colors.light.on_fill.hex)
+print(colors.light.contrast.fill.meets_target)
+document = colors.to_dict()
+assert document["light"]["onFill"]["hex"] == colors.light.on_fill.hex
 ```
-
-RGB channels are integers 0–255. HSL uses hue in degrees and saturation/lightness in percentages. OKLCH uses fractional lightness 0–1, numeric chroma, and hue in degrees. Derived components are rounded to six decimal places. Hex uses lowercase six-digit sRGB. All formats describe the same canonical RGB color, including backgrounds and on-fill foregrounds.
 
 ## API, types, and serialization
 
-`resolve_text_colors(text: str, options: TextColorOptions)` returns a `ColorSet` dictionary. Omit `options` for defaults; an explicit empty dictionary also uses defaults. **`None` is invalid.** The function performs no I/O and needs no `await`. Inputs are not mutated and results are fresh dictionaries.
+`resolve_text_colors(text: str, options: TextColorOptions)` returns a frozen `ColorSet` dataclass. Omit `options` for defaults; an explicit empty dictionary also uses defaults. **`None` is invalid.** The function performs no I/O and needs no `await`. Inputs are not mutated and results are fresh dictionaries.
 
 ```python
 import json

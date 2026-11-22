@@ -77,9 +77,11 @@ var themeShape = &jsonShape{fields: map[string]*jsonShape{"fill": profileShape, 
 
 // optionsShape is the complete schema for the language-neutral options document.
 var optionsShape = &jsonShape{fields: map[string]*jsonShape{
-	"namespace":       stringShape,
-	"seed":            numberShape,
-	"contrastTarget":  numberShape,
+	"namespace":      stringShape,
+	"seed":           numberShape,
+	"contrastTarget": numberShape,
+	"preset":         stringShape, "hueRange": rangeShape, "excludeHues": {kind: "ranges"},
+	"normalize":       {fields: map[string]*jsonShape{"unicode": stringShape, "case": stringShape, "whitespace": stringShape}},
 	"contrastTargets": {fields: map[string]*jsonShape{"fill": numberShape, "fillHover": numberShape, "fillActive": numberShape, "border": numberShape, "text": numberShape, "textOnSubtle": numberShape, "strong": numberShape}},
 	"backgrounds":     {fields: map[string]*jsonShape{"light": stringShape, "dark": stringShape}},
 	"profiles":        {fields: map[string]*jsonShape{"light": themeShape, "dark": themeShape}},
@@ -97,6 +99,16 @@ func checkShape(value any, shape *jsonShape, path string) error {
 	case "number":
 		if _, ok := value.(float64); !ok {
 			return invalid(path)
+		}
+	case "ranges":
+		values, ok := value.([]any)
+		if !ok {
+			return invalid(path)
+		}
+		for _, v := range values {
+			if err := checkShape(v, rangeShape, path); err != nil {
+				return err
+			}
 		}
 	case "range":
 		values, ok := value.([]any)
@@ -138,7 +150,7 @@ func checkShape(value any, shape *jsonShape, path string) error {
 // Prefer ParseOptions over json.Unmarshal into Options when settings come from
 // files, configuration, or another process, because encoding/json ignores
 // unknown keys and replaces malformed Unicode rather than rejecting it.
-func ParseOptions(data []byte) (*Options, error) {
+func ParseOptions(data []byte) ([]Option, error) {
 	if !validJSONUnicode(data) {
 		return nil, invalid("JSON Unicode")
 	}
@@ -163,5 +175,8 @@ func ParseOptions(data []byte) (*Options, error) {
 	if _, _, _, err := resolveOptions(&options); err != nil {
 		return nil, err
 	}
-	return &options, nil
+	if _, err := compileHueDomain(options.HueRange, options.ExcludeHues); err != nil {
+		return nil, err
+	}
+	return []Option{&options}, nil
 }

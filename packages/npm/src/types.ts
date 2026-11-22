@@ -40,7 +40,16 @@ export interface ThemeProfiles {
  * `null` and unknown keys are invalid at every level. Options are never mutated.
  */
 export type ContrastRole = 'fill' | 'fillHover' | 'fillActive' | 'border' | 'text' | 'textOnSubtle' | 'strong';
+export interface NormalizeOptions {
+  unicode?: 'none'|'NFC'|'NFKC';
+  case?: 'none'|'lower';
+  whitespace?: 'none'|'trim'|'collapse';
+}
 export interface TextColorOptions {
+  preset?: 'labels'|'controls'|'chart'|'subdued'|'mono';
+  hueRange?: Range;
+  excludeHues?: readonly Range[];
+  normalize?: NormalizeOptions;
   contrastTargets?: Partial<Record<ContrastRole,number>>;
   /**
    * Domain separator mixed into the hash. Default `''`.
@@ -148,6 +157,8 @@ export interface ResolvedProfile { lightness: Range; chromaCap: number; chromaSc
 
 /** Options after validation, with defaults applied and backgrounds parsed to RGB bytes. */
 export interface ResolvedOptions {
+  hueDomain: (hue:number)=>number;
+  normalize: (text:string)=>string;
   targets: Record<ContrastRole,number>;
   namespace: string;
   seed: number;

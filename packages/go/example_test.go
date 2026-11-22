@@ -97,7 +97,7 @@ func ExampleParseOptions() {
 	if err != nil {
 		panic(err)
 	}
-	colors, err := texthue.Resolve("research", options)
+	colors, err := texthue.Resolve("research", options...)
 	if err != nil {
 		panic(err)
 	}

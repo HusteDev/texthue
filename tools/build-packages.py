@@ -206,7 +206,7 @@ from texthue import resolve_text_colors, TextColorError
 assert Path(texthue.__file__).resolve().is_relative_to(Path('python-installed').resolve())
 fixture = json.loads(Path('vectors.json').read_text(encoding='utf-8'))
 for item in fixture['vectors']:
-    actual = resolve_text_colors(item['text'], item['options'])
+    actual = resolve_text_colors(item['text'], item['options']).to_dict()
     for theme in ('light', 'dark'):
         for role in ('background', 'fill', 'onFill', 'text'):
             assert actual[theme][role]['hex'] == item['expected'][theme][role]['hex']
@@ -259,6 +259,7 @@ func main() {{
 }}
 """,
         )
+        run("resolve consumer dependencies", ["go", "mod", "tidy"], cwd=consumer, env=env)
         run("isolated Go module consumer", ["go", "run", "."], cwd=consumer, env=env)
     checksums = {
         path.name: hashlib.sha256(path.read_bytes()).hexdigest()

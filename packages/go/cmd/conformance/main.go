@@ -16,19 +16,36 @@ import (
 // run decodes the cases, resolves them in order, and encodes the results.
 func run() error {
 	var cases []struct {
-		Text    string          `json:"text"`
-		Options json.RawMessage `json:"options"`
+		Texts   []string                      `json:"texts"`
+		Pinned  map[string]texthue.Assignment `json:"pinned"`
+		Text    string                        `json:"text"`
+		Options json.RawMessage               `json:"options"`
 	}
 	if err := json.NewDecoder(os.Stdin).Decode(&cases); err != nil {
 		return err
 	}
-	results := make([]texthue.ColorSet, 0, len(cases))
+	results := make([]any, 0, len(cases))
 	for _, item := range cases {
+		if item.Options == nil {
+			item.Options = json.RawMessage("{}")
+		}
 		options, err := texthue.ParseOptions(item.Options)
 		if err != nil {
 			return err
 		}
-		result, err := texthue.Resolve(item.Text, options)
+		if item.Texts != nil {
+			resolver, err := texthue.NewResolver(options...)
+			if err != nil {
+				return err
+			}
+			result, err := resolver.Assign(item.Texts, item.Pinned)
+			if err != nil {
+				return err
+			}
+			results = append(results, result)
+			continue
+		}
+		result, err := texthue.Resolve(item.Text, options...)
 		if err != nil {
 			return err
 		}

@@ -9,6 +9,8 @@ This module is private. Use :func:`texthue.resolve_text_colors`.
 
 import hashlib
 import math
+import re
+import unicodedata
 
 from ._tables import ANCHORS, BIASES
 
@@ -329,6 +331,77 @@ def _range(value, maximum, path):
     return [float(item) for item in value]
 
 
+_SPACE = (
+    "\u0009\u000a\u000b\u000c\u000d \u0085\u00a0\u1680"
+    + "".join(chr(i) for i in range(0x2000, 0x200B))
+    + "\u2028\u2029\u202f\u205f\u3000"
+)
+_SPACE_RUN = re.compile(f"[{_SPACE}]+")
+
+
+def _normalizer(rules):
+    rules = _record(rules, ("unicode", "case", "whitespace"), "normalize")
+    form, casing, space = (rules.get(key, "none") for key in ("unicode", "case", "whitespace"))
+    if (
+        form not in ("none", "NFC", "NFKC")
+        or casing not in ("none", "lower")
+        or space not in ("none", "trim", "collapse")
+    ):
+        raise TextColorError("INVALID_OPTIONS", "invalid normalization rule")
+
+    def normalize(text):
+        if form != "none":
+            text = unicodedata.normalize(form, text)
+        if casing == "lower":
+            text = text.lower()
+        if space != "none":
+            text = text.strip(_SPACE)
+        if space == "collapse":
+            text = _SPACE_RUN.sub(" ", text)
+        return text
+
+    return normalize
+
+
+def _hue_domain(allowed, excluded):
+    def split(arc):
+        if (
+            not isinstance(arc, list)
+            or len(arc) != 2
+            or not all(_number(x) and 0 <= x <= 360 for x in arc)
+        ):
+            raise TextColorError("INVALID_OPTIONS", "invalid hue interval")
+        a, b = arc
+        return [(a, b)] if a <= b else [(0, b), (a, 360)]
+
+    if not isinstance(excluded, list) or len(excluded) > 16:
+        raise TextColorError("INVALID_OPTIONS", "invalid excluded hues")
+    segments = split(allowed)
+    for interval in excluded:
+        for a, b in split(interval):
+            segments = [
+                part
+                for lo, hi in segments
+                for part in ((lo, min(hi, a)), (max(lo, b), hi))
+                if part[0] < part[1]
+            ]
+    total = sum(hi - lo for lo, hi in segments)
+    if not total:
+        raise TextColorError("INVALID_OPTIONS", "empty hue domain")
+
+    def remap(hue):
+        if total == 360:
+            return hue
+        distance = hue / 360 * total
+        for lo, hi in segments:
+            if distance < hi - lo:
+                return lo + distance
+            distance -= hi - lo
+        return segments[0][0]
+
+    return remap
+
+
 def _options(options):
     """Validate caller options and fill in defaults.
 
@@ -337,14 +410,30 @@ def _options(options):
     """
     source = _record(
         options,
-        ("namespace", "seed", "contrastTargets", "backgrounds", "contrastTarget", "profiles"),
+        (
+            "preset",
+            "hueRange",
+            "excludeHues",
+            "normalize",
+            "namespace",
+            "seed",
+            "contrastTargets",
+            "backgrounds",
+            "contrastTarget",
+            "profiles",
+        ),
         "options",
     )
+    normalize = _normalizer(source.get("normalize", {}))
     namespace = _text(source.get("namespace", ""), "namespace", "INVALID_OPTIONS")
+    preset = source.get("preset", "labels")
+    if preset not in ("labels", "controls", "chart", "subdued", "mono"):
+        raise TextColorError("INVALID_OPTIONS", "Unknown preset")
+    scale = {"mono": [0, 0], "subdued": [0.2, 0.4], "chart": [0.8, 1]}.get(preset, [0.6, 0.8])
     seed = source.get("seed", 0)
     if not _number(seed) or not 0 <= seed <= 0xFFFFFFFF or int(seed) != seed:
         raise TextColorError("INVALID_OPTIONS", "seed must be uint32")
-    target = source.get("contrastTarget", 4.5)
+    target = source.get("contrastTarget", 7 if preset == "controls" else 4.5)
     if not _number(target) or not 1 <= target <= 21:
         raise TextColorError(
             "INVALID_OPTIONS", "contrastTarget must be a finite number from 1 through 21"
@@ -387,13 +476,13 @@ def _options(options):
                 "lightness": _range(
                     profile.get("lightness", default_lightness), 1, f"{path}.lightness"
                 ),
-                "chromaScale": _range(
-                    profile.get("chromaScale", [0.6, 0.8]), 1, f"{path}.chromaScale"
-                ),
+                "chromaScale": _range(profile.get("chromaScale", scale), 1, f"{path}.chromaScale"),
                 "chromaCap": cap,
             }
     return {
-        "namespace": namespace,
+        "namespace": normalize(namespace),
+        "hueDomain": _hue_domain(source.get("hueRange", [0, 360]), source.get("excludeHues", [])),
+        "normalize": normalize,
         "seed": int(seed),
         "targets": targets,
         "backgrounds": backgrounds,
@@ -402,41 +491,42 @@ def _options(options):
     }
 
 
-_OMITTED = object()
-
-
-def resolve_text_colors(text, options=_OMITTED):
-    """Resolve exact text to both themes in every output format.
-
-    This is the untyped implementation behind :func:`texthue.resolve_text_colors`,
-    which documents the arguments, return value, and errors.
-    """
-    _text(text, "text", "INVALID_TEXT")
-    settings = _options({} if options is _OMITTED else options)
+def compile_settings(options):
+    settings = _options(options)
     namespace_bytes = settings["namespace"].encode("utf-8")
     if len(namespace_bytes) > 0xFFFFFFFF:
         raise TextColorError("INVALID_OPTIONS", "namespace exceeds the v1 byte-length limit")
     # Payload: VERSION, NUL, namespace byte length (uint32 big-endian), namespace, text.
-    payload = (
+    prefix = (
         VERSION.encode("ascii")
         + b"\x00"
         + settings["seed"].to_bytes(4, "big")
         + len(namespace_bytes).to_bytes(4, "big")
         + namespace_bytes
-        + text.encode("utf-8")
     )
-    digest = hashlib.sha256(payload).digest()
+    bases = {theme: _formats(rgb) for theme, rgb in settings["backgrounds"].items()}
+    return settings, prefix, bases
+
+
+def render(text, settings, prefix, bases, placement=None, digest=None):
+    _text(text, "text", "INVALID_TEXT")
+    if digest is None:
+        digest = hashlib.sha256(prefix + settings["normalize"](text).encode("utf-8")).digest()
     # The first three big-endian 32-bit digest words become fractions in [0, 1) for hue, lightness, and chroma.
     fractions = [
         int.from_bytes(digest[index : index + 4], "big") / 4294967296 for index in (0, 4, 8)
     ]
-    position = fractions[0] * 12
+    ring = placement.ring % 5 if placement else 0
+    offset = (0, 0.08, -0.08, 0.16, -0.16)[ring]
+    hue_fraction = placement.hue_fraction if placement else fractions[0]
+    position = hue_fraction * 12
     index = int(position)
     hue = (ANCHORS[index] + (ANCHORS[index + 1] - ANCHORS[index]) * (position - index)) % 360
-    result = {"version": VERSION, "hue": hue, "hueFraction": fractions[0]}
+    hue = settings["hueDomain"](hue)
+    result = {"version": VERSION, "hue": hue, "hueFraction": hue_fraction}
     for theme in ("light", "dark"):
         background = settings["backgrounds"][theme]
-        base = _formats(background)
+        base = bases[theme]
         lb = math.floor(base["oklch"]["l"] * 4096 + 0.5) / 4096
         direction = -1 if theme == "light" else 1
 
@@ -448,9 +538,13 @@ def resolve_text_colors(text, options=_OMITTED):
             correction = bias[segment] + (bias[(segment + 1) % 12] - bias[segment]) * (
                 hue / 30 - segment
             )
-            lightness = max(0, min(1, (low + (high - low) * fractions[1]) + correction))
+            lightness = max(0, min(1, (low + (high - low) * fractions[1]) + correction + offset))
             low, high = profile["chromaScale"]
-            return lightness, low + (high - low) * fractions[2], profile["chromaCap"]
+            return (
+                lightness,
+                (low + (high - low) * fractions[2]) * (1 if ring < 3 else 0.6),
+                profile["chromaCap"],
+            )
 
         def tone(lightness, profile, backdrop, target, second=None, second_target=None):
             lightness = max(0, min(1, lightness))
