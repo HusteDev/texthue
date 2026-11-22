@@ -239,3 +239,21 @@ test('P3 APCA keeps the supplied brand color and measures foreground polarity', 
   assert.equal(t.contrast.fill.value,p3ApcaContrast(native(t.onFill.rgb),native(t.fill.rgb)));
   assert.equal(t.contrast.fill.meetsTarget,Math.abs(t.contrast.fill.value)>=60);
 });
+
+test('opt-in fitted coordinates reproduce emitted bytes in both gamuts', async () => {
+  const { fitColor, XYZ_TO_P3 } = await import('../packages/npm/dist/color-math.js');
+  for (const gamut of ['srgb', 'display-p3']) {
+    const resolver = createResolver({ gamut, contrastTarget: 7 });
+    const ordinary = resolver.resolve('repair').light.text;
+    assert.equal(Object.hasOwn(ordinary, 'trace'), false);
+    const { light } = resolver.project('repair', {
+      themes: ['light'], roles: ['text', 'background'], formats: ['hex', 'trace'],
+    });
+    assert.deepEqual(light.background.trace, { source: 'supplied', hex: light.background.hex });
+    const { l, c, h } = light.text.trace.fitted;
+    const wide = gamut === 'display-p3';
+    const bytes = fitColor(l, c, h, wide ? XYZ_TO_P3 : undefined).rgb;
+    const emitted = wide ? Object.values(ordinary.p3).map(v => Math.round(v * 255)) : Object.values(ordinary.rgb);
+    assert.deepEqual(bytes, emitted);
+  }
+});

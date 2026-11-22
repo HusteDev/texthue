@@ -173,6 +173,44 @@ class Resolver:
     def resolve(self, text: str) -> ColorSet:
         return ColorSet.from_dict(_core.render(text, *self._compiled))
 
+    def project(self, text: str, *, themes=None, roles=None, formats=None):
+        """Select wire-format theme, role and format fields, optionally including a precision trace."""
+        role_names = (
+            "background",
+            "subtle",
+            "muted",
+            "fill",
+            "onFill",
+            "fillHover",
+            "fillActive",
+            "border",
+            "text",
+            "strong",
+        )
+        standard = ("hex", "rgb", "hsl", "oklch")
+        if self._compiled[0]["wide"]:
+            standard += ("p3", "css", "srgbClipped")
+
+        def select(values, allowed, defaults):
+            if values is None:
+                return defaults
+            if (
+                not isinstance(values, (list, tuple))
+                or not values
+                or any(v not in allowed for v in values)
+            ):
+                raise TextColorError("INVALID_OPTIONS", "Invalid output selection")
+            return values
+
+        themes = select(themes, ("light", "dark"), ("light", "dark"))
+        roles = select(roles, role_names, role_names)
+        formats = select(formats, (*standard, "trace"), standard)
+        result = _core.render(text, *self._compiled, trace="trace" in formats, themes=themes)
+        return {
+            theme: {role: {fmt: result[theme][role][fmt] for fmt in formats} for role in roles}
+            for theme in themes
+        }
+
     def assign(self, texts: Iterable[str], *, pinned=None):
         return assign_collection(texts, pinned or {}, self._compiled)
 

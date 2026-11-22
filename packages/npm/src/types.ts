@@ -87,7 +87,12 @@ export interface OKLCH { l: number; c: number; h: number }
  *
  * The RGB bytes are canonical; `hex`, `hsl`, and `oklch` are derived from them.
  */
+export type ToneTrace =
+  | {source:'generated';requested:OKLCH;biased:OKLCH;repaired:OKLCH;fitted:OKLCH}
+  | {source:'supplied';hex:string};
+
 export interface Color {
+  trace?: ToneTrace;
   p3?: RGB;
   css?: string;
   srgbClipped?: boolean;
@@ -163,7 +168,7 @@ export type Matrix = [Triple, Triple, Triple];
 export interface FittedColor { rgb: Triple; chroma: number; lightness: number }
 
 /** The selected color for a role and its contrast metadata. */
-export interface ChosenColor { rgb: Triple; metadata: ContrastResult }
+export interface ChosenColor { rgb: Triple; metadata: ContrastResult; fitted:FittedColor; trace?:ToneTrace }
 
 /** A profile with both ranges present. */
 export interface ResolvedProfile { lightness: Range; chromaCap: number; chromaScale: Range }

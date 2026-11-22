@@ -15,7 +15,7 @@ import { sha256 } from './sha256.js';
 import { anchors, biases } from './tables.js';
 import type { ChosenColor, Color, ColorSet, Range, ResolvedOptions, TextColorErrorCode, TextColorOptions, ThemeColors, Triple } from './types.js';
 
-export type { Color, ColorProfile, ColorSet, ContrastResult, HSL, OKLCH, Range, RGB, TextColorErrorCode, TextColorOptions, ThemeColors, ThemeProfiles } from './types.js';
+export type { Color, ColorProfile, ColorSet, ContrastResult, HSL, OKLCH, Range, RGB, TextColorErrorCode, TextColorOptions, ThemeColors, ThemeProfiles, ToneTrace } from './types.js';
 
 /**
  * Algorithm identifier for the color mapping.
@@ -488,7 +488,7 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
   const formatNames = ['hex','rgb','hsl','oklch',...(wide ? ['p3','css','srgbClipped'] as const : [])] as const;
   if (only) {
     record(only,['themes','roles','formats'],'only');
-    for (const [key,allowed] of [['themes',['light','dark']],['roles',roleNames],['formats',formatNames]] as const) {
+    for (const [key,allowed] of [['themes',['light','dark']],['roles',roleNames],['formats',[...formatNames,'trace']]] as const) {
       const values = only[key];
       if (Object.hasOwn(only,key) && (!Array.isArray(values) || !values.length || !values.every(v=>(allowed as readonly string[]).includes(v)))) fail('INVALID_OPTIONS','Invalid selection');
     }
@@ -519,16 +519,17 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
       if (!bias) throw new Error('Missing profile bias table');
       const segment = Math.floor(hue / 30);
       const correction = Number(bias[segment]) + (Number(bias[(segment+1)%12]) - Number(bias[segment])) * (hue/30-segment);
-      return { l: Math.max(0, Math.min(1, sampled + correction + offset)),
+      return { sampled, l: Math.max(0, Math.min(1, sampled + correction + offset)),
         scale: (profile.chromaScale[0] + (profile.chromaScale[1]-profile.chromaScale[0])*fractions[2]) * (ring < 3 ? 1 : 0.6), cap: profile.chromaCap };
     };
     const fillProfile = sample('fill'), textProfile = sample('text');
     if (brand) {
       const fixed = formats(brand[theme]);
       fillProfile.l = Math.round(fixed.oklch.l * 4096) / 4096;
+      fillProfile.sampled = fillProfile.l;
       if (fixed.oklch.c === 0) {fillProfile.cap = 0; textProfile.cap = 0;}
     }
-    const tone = (l: number, profile: typeof fillProfile, backdrop: Triple | null, target: number, second?: Triple, secondTarget = target, surface = false) => {
+    const tone = (l: number, profile: typeof fillProfile, backdrop: Triple | null, target: number, second?: Triple, secondTarget = target, surface = false, requestedL = l) => {
       const lightness = Math.max(0, Math.min(1, l));
       const chroma = cusp(lightness, hue,matrix) * profile.scale;
       // Each active relationship must pass. Scale the second score to the first
@@ -543,14 +544,26 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
       };
       const result = chooseColor(lightness, Math.min(chroma, profile.cap), hue, backdrop, threshold, second, secondTarget, settings.selectForeground,
         settings.contrastModel === 'apca' || wide ? gamutScore : undefined,matrix);
+      if (only?.formats?.includes('trace')) {
+        const rawL = Math.max(0,Math.min(1,requestedL));
+        const capped = Math.min(chroma,profile.cap);
+        result.trace = {
+          source:'generated',
+          requested:{l:rawL,c:cusp(rawL,hue,matrix)*profile.scale,h:hue},
+          biased:{l:lightness,c:capped,h:hue},
+          repaired:{l:result.fitted.lightness,c:capped,h:hue},
+          fitted:{l:result.fitted.lightness,c:result.fitted.chroma,h:hue}
+        };
+      }
       result.metadata.chromaCapped = chroma > profile.cap;
       return result;
     };
     const target = settings.contrastTarget, targets = settings.targets;
     const fill = once(() => {
-      const chosen = tone(fillProfile.l, fillProfile, null, targets.fill);
+      const chosen = tone(fillProfile.l, fillProfile, null, targets.fill, undefined, targets.fill, false, fillProfile.sampled);
       if (brand) {
         chosen.rgb = settings.canonical(brand[theme]);
+        if (chosen.trace) chosen.trace = {source:'supplied',hex:hexFormat(brand[theme])};
         const foreground = settings.selectForeground(chosen.rgb,targets.fill);
         const meetsTarget = Math.abs(settings.measure(foreground,chosen.rgb)) >= targets.fill;
         chosen.metadata = {ratio:contrast(foreground,chosen.rgb),meetsTarget,lightnessAdjusted:false,
@@ -561,11 +574,11 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
     const onFill = once(() => settings.selectForeground(fill().rgb, targets.fill));
     const subtle = once(() => tone(lb + direction*0.04, fillProfile, null, settings.contrastModel === 'apca' ? 0 : 1));
     const muted = once(() => tone(lb + direction*0.10, fillProfile, null, settings.contrastModel === 'apca' ? 0 : 1));
-    const fillHover = once(() => tone(fillProfile.l + direction*0.025, fillProfile, onFill(), targets.fillHover, undefined, targets.fillHover, true));
-    const fillActive = once(() => tone(fillProfile.l + direction*0.05, fillProfile, onFill(), targets.fillActive, undefined, targets.fillActive, true));
+    const fillHover = once(() => tone(fillProfile.l + direction*0.025, fillProfile, onFill(), targets.fillHover, undefined, targets.fillHover, true, fillProfile.sampled + direction*0.025));
+    const fillActive = once(() => tone(fillProfile.l + direction*0.05, fillProfile, onFill(), targets.fillActive, undefined, targets.fillActive, true, fillProfile.sampled + direction*0.05));
     const border = once(() => tone(lb + direction*0.39, fillProfile, background, targets.border));
-    const text = once(() => tone(textProfile.l, textProfile, background, targets.text, subtle().rgb, targets.textOnSubtle));
-    const strong = once(() => tone(textProfile.l + direction*0.10, textProfile, background, targets.strong));
+    const text = once(() => tone(textProfile.l, textProfile, background, targets.text, subtle().rgb, targets.textOnSubtle, false, textProfile.sampled));
+    const strong = once(() => tone(textProfile.l + direction*0.10, textProfile, background, targets.strong, undefined, targets.strong, false,textProfile.sampled + direction*0.10));
     const relationship = (color: ChosenColor, backdrop: Triple, required: number, surface = false) => {
       const ratio = wide ? p3Contrast(color.rgb,backdrop) : contrast(color.rgb, backdrop);
       if (settings.contrastModel === 'apca') {
@@ -596,18 +609,24 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
           }
         }
         const value:Partial<ThemeColors['background']> = {};
-        if (wide) {
-          const rendered = display(raw[role]());
-          for (const format of only.formats ?? formatNames) Object.assign(value,{[format]:rendered[format]});
-          selected[role]=value;
-          continue;
-        }
+        const rendered = once(()=>display(raw[role]()));
         for (const format of only.formats ?? formatNames) {
-          switch(format) {
-            case 'hex': value.hex=hexFormat(raw[role]()); break;
-            case 'rgb': value.rgb=rgbFormat(raw[role]()); break;
-            case 'hsl': value.hsl=hslFormat(raw[role]()); break;
-            case 'oklch': value.oklch=oklchFormat(raw[role]()); break;
+          if (format === 'trace') {
+            if (role === 'background' || role === 'onFill') {
+              value.trace = {source:'supplied',hex:rendered().hex};
+            } else {
+              const traced = {subtle,muted,fill,fillHover,fillActive,border,text,strong}[role]().trace;
+              if (traced) value.trace = traced;
+            }
+          } else if (wide) {
+            Object.assign(value,{[format]:rendered()[format]});
+          } else {
+            switch(format) {
+              case 'hex': value.hex=hexFormat(raw[role]()); break;
+              case 'rgb': value.rgb=rgbFormat(raw[role]()); break;
+              case 'hsl': value.hsl=hslFormat(raw[role]()); break;
+              case 'oklch': value.oklch=oklchFormat(raw[role]()); break;
+            }
           }
         }
         selected[role]=value;

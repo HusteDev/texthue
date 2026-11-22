@@ -307,6 +307,7 @@ def _choose(
                 raise RuntimeError("Contrast search invariant failed")
     return {
         "rgb": chosen["rgb"],
+        "fitted": chosen,
         "metadata": {
             "ratio": ratio,
             "meetsTarget": ratio >= target,
@@ -688,7 +689,17 @@ def fixed_fraction(rgb):
     return (i + (angle - ANCHORS[i]) / (ANCHORS[i + 1] - ANCHORS[i])) / 12
 
 
-def render(text, settings, prefix, bases, placement=None, digest=None):
+def render(
+    text,
+    settings,
+    prefix,
+    bases,
+    placement=None,
+    digest=None,
+    *,
+    trace=False,
+    themes=("light", "dark"),
+):
     _text(text, "text", "INVALID_TEXT")
     if digest is None:
         digest = hashlib.sha256(prefix + settings["normalize"](text).encode("utf-8")).digest()
@@ -718,7 +729,7 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
         "hue": snapped(brand["light"]) if brand else hue,
         "hueFraction": fixed_fraction(brand["light"]) if brand else hue_fraction,
     }
-    for theme in ("light", "dark"):
+    for theme in themes:
         background = settings["backgrounds"][theme]
         base = bases[theme]
         lb = math.floor(base["oklch"]["l"] * 4096 + 0.5) / 4096
@@ -733,12 +744,14 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
             correction = bias[segment] + (bias[(segment + 1) % 12] - bias[segment]) * (
                 hue / 30 - segment
             )
-            lightness = max(0, min(1, (low + (high - low) * fractions[1]) + correction + offset))
+            sampled = low + (high - low) * fractions[1]
+            lightness = max(0, min(1, sampled + correction + offset))
             low, high = profile["chromaScale"]
             return (
                 lightness,
                 (low + (high - low) * fractions[2]) * (1 if ring < 3 else 0.6),
                 profile["chromaCap"],
+                sampled,
             )
 
         def tone(
@@ -749,6 +762,7 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
             second=None,
             second_target=None,
             surface=False,
+            requested=None,
             hue=hue,
         ):
             lightness = max(0, min(1, lightness))
@@ -768,20 +782,37 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
                 surface,
                 settings["wide"],
             )
+            if trace:
+                raw = lightness if requested is None else max(0, min(1, requested))
+                capped = min(chroma, profile[2])
+                fitted = value["fitted"]
+                value["trace"] = {
+                    "source": "generated",
+                    "requested": {
+                        "l": raw,
+                        "c": _cusp(raw, hue, _XYZ_TO_P3 if settings["wide"] else _XYZ_TO_RGB)
+                        * profile[1],
+                        "h": hue,
+                    },
+                    "biased": {"l": lightness, "c": capped, "h": hue},
+                    "repaired": {"l": fitted["lightness"], "c": capped, "h": hue},
+                    "fitted": {"l": fitted["lightness"], "c": fitted["chroma"], "h": hue},
+                }
             value["metadata"]["chromaCapped"] = chroma > profile[2]
             return value
 
         fp, tp = sample("fill"), sample("text")
         if brand:
             fixed = _formats(brand[theme])["oklch"]
-            fp = (math.floor(fixed["l"] * 4096 + 0.5) / 4096, fp[1], fp[2] if fixed["c"] else 0)
+            fixed_l = math.floor(fixed["l"] * 4096 + 0.5) / 4096
+            fp = (fixed_l, fp[1], fp[2] if fixed["c"] else 0, fixed_l)
             if not fixed["c"]:
-                tp = (tp[0], tp[1], 0)
+                tp = (tp[0], tp[1], 0, tp[3])
         target = settings["contrastTarget"]
         targets = settings["targets"]
         subtle = tone(lb + direction * 0.04, fp, None, 0 if settings["apca"] else 1)
         muted = tone(lb + direction * 0.10, fp, None, 0 if settings["apca"] else 1)
-        fill = tone(fp[0], fp, None, targets["fill"])
+        fill = tone(fp[0], fp, None, targets["fill"], requested=fp[3])
         if brand:
             fill["rgb"] = settings["canonical"](brand[theme])
         on_fill = settings["selectForeground"](fill["rgb"], targets["fill"])
@@ -800,16 +831,38 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
             "muted": muted,
             "fill": fill,
             "fillHover": tone(
-                fp[0] + direction * 0.025, fp, on_fill, targets["fillHover"], surface=True
+                fp[0] + direction * 0.025,
+                fp,
+                on_fill,
+                targets["fillHover"],
+                surface=True,
+                requested=fp[3] + direction * 0.025,
             ),
             "fillActive": tone(
-                fp[0] + direction * 0.05, fp, on_fill, targets["fillActive"], surface=True
+                fp[0] + direction * 0.05,
+                fp,
+                on_fill,
+                targets["fillActive"],
+                surface=True,
+                requested=fp[3] + direction * 0.05,
             ),
             "border": tone(lb + direction * 0.39, fp, background, targets["border"]),
             "text": tone(
-                tp[0], tp, background, targets["text"], subtle["rgb"], targets["textOnSubtle"]
+                tp[0],
+                tp,
+                background,
+                targets["text"],
+                subtle["rgb"],
+                targets["textOnSubtle"],
+                requested=tp[3],
             ),
-            "strong": tone(tp[0] + direction * 0.10, tp, background, targets["strong"]),
+            "strong": tone(
+                tp[0] + direction * 0.10,
+                tp,
+                background,
+                targets["strong"],
+                requested=tp[3] + direction * 0.10,
+            ),
         }
         meta = {k: v["metadata"] for k, v in colors.items() if k not in ("subtle", "muted")}
         for name, backdrop in (("text", background), ("textOnSubtle", subtle["rgb"])):
@@ -840,6 +893,15 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
             "onFill": settings["formats"](on_fill),
             "contrast": {"target": target, **meta},
         }
+        if trace:
+            result[theme]["background"] = dict(base)
+            for role in (*colors, "background", "onFill"):
+                fixed_input = role in ("background", "onFill") or (brand and role == "fill")
+                result[theme][role]["trace"] = (
+                    {"source": "supplied", "hex": result[theme][role]["hex"]}
+                    if fixed_input
+                    else colors[role]["trace"]
+                )
     return result
 
 

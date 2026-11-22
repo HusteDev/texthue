@@ -282,6 +282,7 @@ export function chooseColor(lightness: number, chroma: number, hue: number, back
   }
   return {
     rgb: chosen.rgb,
+    fitted: chosen,
     metadata: {
       ratio,
       meetsTarget: ratio >= target,

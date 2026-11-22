@@ -24,6 +24,25 @@ FIXTURE = json.loads((ROOT / "conformance" / "vectors.json").read_text(encoding=
 class ConformanceTests(unittest.TestCase):
     """Frozen-vector, runtime-error, and cross-language checks for the Python package."""
 
+    def test_precision_trace(self):
+        from texthue import Resolver
+
+        resolver = Resolver({"contrastTarget": 7})
+        selection = {"themes": ["light"], "roles": ["text", "background"]}
+        ordinary = resolver.project("repair", **selection)["light"]
+        self.assertNotIn("trace", ordinary["text"])
+        projected = resolver.project("repair", formats=["trace", "hex"], **selection)["light"]
+        self.assertEqual(projected["text"]["hex"], ordinary["text"]["hex"])
+        trace = projected["text"]["trace"]
+        self.assertEqual(trace["source"], "generated")
+        self.assertNotEqual(trace["requested"]["l"], trace["biased"]["l"])
+        self.assertNotEqual(trace["biased"]["l"], trace["repaired"]["l"])
+        self.assertEqual(trace["repaired"]["l"], trace["fitted"]["l"])
+        self.assertEqual(
+            projected["background"]["trace"],
+            {"source": "supplied", "hex": ordinary["background"]["hex"]},
+        )
+
     def test_migration_preview(self):
         from texthue import Resolver, compare_assignments
 
