@@ -170,6 +170,33 @@ public sealed partial class Renderer
     public string Hex(string text, bool dark = false, string role = "fill") =>
         Color.FormatHex(SelectedBytes(text, dark, role));
 
+    private double Target(string role) => targets.GetValueOrDefault(role, role == "border" && contrastModel == ContrastModel.Wcag2 ? Math.Min(3, contrastTarget) : contrastTarget);
+
+    public string HexStrict(string text, bool dark = false, string role = "fill")
+    {
+        var render = RoleRenderer(Map(normalization.Apply(text)), dark);
+        var value = render(role);
+        void Require(string relationship, Rgb front, Rgb back)
+        {
+            if (Math.Abs(Contrast.Measure(front, back, contrastModel)) < Target(relationship))
+                throw new InvalidOperationException($"Contrast target for {relationship} was not met.");
+        }
+        switch (role)
+        {
+            case "onFill": Require("fill", value, render("fill")); break;
+            case "fill":
+            case "fillHover":
+            case "fillActive": Require(role, render("onFill"), value); break;
+            case "text":
+                Require("text", value, render("background"));
+                Require("textOnSubtle", value, render("subtle"));
+                break;
+            case "strong":
+            case "border": Require(role, value, render("background")); break;
+        }
+        return Color.FormatHex(value);
+    }
+
     private Rgb SelectedBytes(string text, bool dark, string role) =>
         RoleRenderer(Map(normalization.Apply(text)), dark)(role);
 
@@ -218,7 +245,6 @@ public sealed partial class Renderer
         var background = dark ? darkBackground : lightBackground;
         double lb = Math.Floor(background.Oklch.L * 4096 + 0.5) / 4096;
         var profile = dark ? darkProfile : lightProfile;
-        double Target(string role) => targets.GetValueOrDefault(role, role == "border" && contrastModel == ContrastModel.Wcag2 ? Math.Min(3, contrastTarget) : contrastTarget);
         int direction = dark ? 1 : -1;
         double Sample(bool fill)
         {

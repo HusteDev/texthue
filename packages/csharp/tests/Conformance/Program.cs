@@ -372,3 +372,20 @@ foreach (var row in collections.RootElement.EnumerateArray())
         throw new InvalidDataException("Assignment report mismatch");
 }
 Console.WriteLine($"Passed {collections.RootElement.GetArrayLength()} collection assignment vectors.");
+
+var gray = new Rgb(119, 119, 119);
+foreach (var model in new[] { ContrastModel.Wcag2, ContrastModel.Apca })
+{
+    var strictRenderer = new Renderer(contrastModel: model, foregrounds: [gray],
+        overrides: new Dictionary<string, BrandColors> { ["fixed"] = new(gray, gray) });
+    foreach (var role in new[] { "fill", "onFill" })
+    {
+        if (strictRenderer.Hex("fixed", role: role) != "#777777") throw new InvalidDataException("Fallback changed");
+        try { strictRenderer.HexStrict("fixed", role: role); }
+        catch (InvalidOperationException) { continue; }
+        throw new InvalidDataException($"Expected strict contrast failure for {model} {role}");
+    }
+    if (strictRenderer.HexStrict("fixed", role: "background") != "#ffffff")
+        throw new InvalidDataException("Unconstrained background changed");
+}
+Console.WriteLine("Passed strict WCAG and APCA role selection.");
