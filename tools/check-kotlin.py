@@ -4,6 +4,7 @@ import argparse
 import contextlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -57,10 +58,23 @@ def run_suites(runner):
         subprocess.run([*runner, f"com.hustedev.texthue.{entry}"], input=rows, check=True)
 
 
+def toolchain_defaults():
+    if os.name != "nt":
+        return "kotlinc", "java"
+    studio = Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Android/Android Studio"
+    compiler = studio / "plugins/Kotlin/kotlinc/bin/kotlinc.bat"
+    java = studio / "jbr/bin/java.exe"
+    return (
+        shutil.which("kotlinc.bat") or (str(compiler) if compiler.is_file() else "kotlinc.bat"),
+        shutil.which("java") or (str(java) if java.is_file() else "java"),
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--kotlinc", default="kotlinc.bat" if os.name == "nt" else "kotlinc")
-    parser.add_argument("--java", default="java")
+    compiler, java = toolchain_defaults()
+    parser.add_argument("--kotlinc", default=compiler)
+    parser.add_argument("--java", default=java)
     parser.add_argument("--android-serial", help="Run the suite on this API 34+ adb device")
     parser.add_argument("--adb", default="adb")
     parser.add_argument("--d8", default="d8")
@@ -79,7 +93,11 @@ def main():
     cache.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(dir=cache) as directory:
         jar = Path(directory) / "conformance.jar"
-        subprocess.run([args.kotlinc, *sources, "-include-runtime", "-d", jar], check=True)
+        env = os.environ.copy()
+        java_path = shutil.which(args.java)
+        if os.name == "nt" and java_path and not env.get("JAVA_HOME"):
+            env["JAVA_HOME"] = str(Path(java_path).resolve().parent.parent)
+        subprocess.run([args.kotlinc, *sources, "-include-runtime", "-d", jar], check=True, env=env)
         with runtime(args, jar) as runner:
             run_suites(runner)
 
