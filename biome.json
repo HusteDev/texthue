@@ -11,7 +11,9 @@
       "!coverage",
       "!package-lock.json",
       "!conformance/vectors.json",
-      "!packages/go/testdata/vectors.json"
+      "!packages/go/testdata/vectors.json",
+      "!packages/rust/testdata/vectors.json",
+      "!packages/swift/Tests/TextHueTests/Fixtures/vectors.json"
     ]
   },
   "formatter": { "enabled": false },

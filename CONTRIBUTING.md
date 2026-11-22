@@ -89,3 +89,5 @@ in the corresponding port jobs.
 ## Reporting a security issue
 
 See [SECURITY.md](SECURITY.md).
+
+After changing package paths, version files, or shared fixtures in `tools/packages.json`, run `python tools/render-config.py` and commit the generated configuration. The primary verifier checks for drift.

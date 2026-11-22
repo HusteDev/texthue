@@ -122,6 +122,11 @@ def main():
         [sys.executable, "tools/sync-shared.py", "--check"],
         env=env,
     )
+    run(
+        "manifest-generated tooling configuration",
+        [sys.executable, "tools/render-config.py", "--check"],
+        env=env,
+    )
     run("TypeScript compilation", [npm, "run", "build"], env=env)
     run("swatch gallery", ["node", "tools/render-gallery.mjs", "--check"], env=env)
     run("assignment vectors", ["node", "tools/build-assign-vectors.mjs", "--check"], env=env)

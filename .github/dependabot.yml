@@ -24,3 +24,39 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+  - package-ecosystem: gradle
+    directory: /packages/kotlin
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: swift
+    directory: /packages/swift
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: pub
+    directory: /packages/dart
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: nuget
+    directory: /packages/csharp
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: cargo
+    directory: /packages/rust
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: swift
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
