@@ -53,6 +53,7 @@ class Resolver(
     hueRange: HueArc = HueArc(0.0, 360.0),
     excludeHues: List<HueArc> = emptyList(),
     backgrounds: Backgrounds = Backgrounds(),
+    private val profiles: Profiles = Profiles(),
 ) {
     private val apca = contrastModel == ContrastModel.APCA
     private val target = contrastTarget ?: if (apca) 60.0 else preset.target
@@ -85,15 +86,18 @@ class Resolver(
         val background = base.bytes
         val direction = if (dark) 1 else -1
         val lb = base.lightness
-        val scale = preset.minScale + (preset.maxScale - preset.minScale) * uC
+        val profile = if (dark) profiles.dark else profiles.light
+        val defaultScale = preset.minScale + (preset.maxScale - preset.minScale) * uC
         fun sample(low: Double, high: Double, role: Int): Double {
             val bias = biases[(if (dark) 2 else 0) + role]
             val segment = (hue / 30).toInt()
             val correction = bias[segment] + (bias[(segment + 1) % 12] - bias[segment]) * (hue / 30 - segment)
             return (low + (high - low) * uL + correction).coerceIn(0.0, 1.0)
         }
-        val fillL = if (dark) sample(0.4, 0.5, 0) else sample(0.72, 0.82, 0)
-        val textL = if (dark) sample(0.72, 0.82, 1) else sample(0.43, 0.53, 1)
+        val fillRange = profile.fill.lightness ?: if (dark) UnitRange(0.4, 0.5) else UnitRange(0.72, 0.82)
+        val fillL = sample(fillRange.low, fillRange.high, 0)
+        val textRange = profile.text.lightness ?: if (dark) UnitRange(0.72, 0.82) else UnitRange(0.43, 0.53)
+        val textL = sample(textRange.low, textRange.high, 1)
         fun contrast(a: IntArray, b: IntArray) = abs(Contrast.measure(a, b, contrastModel, Gamut.SRGB))
         fun foreground(rgb: IntArray, required: Double): IntArray {
             var best = candidates.first()
@@ -108,9 +112,10 @@ class Resolver(
             }
             return best
         }
-        fun tone(l: Double, cap: Double, target: Double, backdrop: IntArray? = null, second: IntArray? = null, secondTarget: Double = target, surface: Boolean = false): IntArray {
+        fun tone(l: Double, role: RoleProfile, defaultCap: Double, target: Double, backdrop: IntArray? = null, second: IntArray? = null, secondTarget: Double = target, surface: Boolean = false): IntArray {
             val lightness = l.coerceIn(0.0, 1.0)
-            val chroma = minOf(cap, ColorMath.cusp(lightness, hue, Gamut.SRGB) * scale)
+            val scale = role.chromaScale?.sample(uC) ?: defaultScale
+            val chroma = minOf(role.chromaCap ?: defaultCap, ColorMath.cusp(lightness, hue, Gamut.SRGB) * scale)
             val threshold = if (target == 0.0 && second != null) secondTarget else target
             return repairTone(lightness, chroma, hue, Gamut.SRGB, threshold) { rgb ->
                 val primary = if (backdrop == null || surface) contrast(backdrop ?: foreground(rgb, target), rgb)
@@ -124,20 +129,20 @@ class Resolver(
         }
         val unconstrained = if (apca) 0.0 else 1.0
         val borderTarget = contrastTargets.border ?: if (apca) target else minOf(3.0, target)
-        val subtle = tone(lb + direction * 0.04, 0.16, unconstrained)
-        val fill = tone(fillL, 0.16, contrastTargets.fill ?: target)
+        val subtle = tone(lb + direction * 0.04, profile.fill, 0.16, unconstrained)
+        val fill = tone(fillL, profile.fill, 0.16, contrastTargets.fill ?: target)
         val onFill = foreground(fill, contrastTargets.fill ?: target)
         val colors = mapOf(
             "background" to background,
             "subtle" to subtle,
-            "muted" to tone(lb + direction * 0.10, 0.16, unconstrained),
+            "muted" to tone(lb + direction * 0.10, profile.fill, 0.16, unconstrained),
             "fill" to fill,
             "onFill" to onFill,
-            "fillHover" to tone(fillL + direction * 0.025, 0.16, contrastTargets.fillHover ?: target, onFill, surface = true),
-            "fillActive" to tone(fillL + direction * 0.05, 0.16, contrastTargets.fillActive ?: target, onFill, surface = true),
-            "border" to tone(lb + direction * 0.39, 0.16, borderTarget, background),
-            "text" to tone(textL, 0.19, contrastTargets.text ?: target, background, subtle, contrastTargets.textOnSubtle ?: target),
-            "strong" to tone(textL + direction * 0.10, 0.19, contrastTargets.strong ?: target, background),
+            "fillHover" to tone(fillL + direction * 0.025, profile.fill, 0.16, contrastTargets.fillHover ?: target, onFill, surface = true),
+            "fillActive" to tone(fillL + direction * 0.05, profile.fill, 0.16, contrastTargets.fillActive ?: target, onFill, surface = true),
+            "border" to tone(lb + direction * 0.39, profile.fill, 0.16, borderTarget, background),
+            "text" to tone(textL, profile.text, 0.19, contrastTargets.text ?: target, background, subtle, contrastTargets.textOnSubtle ?: target),
+            "strong" to tone(textL + direction * 0.10, profile.text, 0.19, contrastTargets.strong ?: target, background),
         )
         return ThemePalette(colors.mapValues { (_, rgb) -> rgb.joinToString("", prefix = "#") { it.toString(16).padStart(2, '0') } })
     }
