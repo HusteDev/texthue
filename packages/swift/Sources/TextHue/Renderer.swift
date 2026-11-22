@@ -39,6 +39,17 @@ public enum Preset: String, Decodable {
     }
 }
 
+public struct PaletteEntry: Decodable {
+    public let id: String
+    public let light, dark: String?
+
+    public init(id: String, light: String? = nil, dark: String? = nil) {
+        self.id = id
+        self.light = light
+        self.dark = dark
+    }
+}
+
 public struct BrandColors: Decodable {
     public let light, dark: String
 
@@ -63,6 +74,7 @@ public struct BrandColors: Decodable {
 public struct RenderOptions: Decodable {
     public var hueRange: [Double]?
     public var excludeHues: [[Double]]?
+    public var palette: [PaletteEntry]?
     public var overrides: [String: BrandColors]?
     public var preset: Preset?
     public var normalize: Normalization?
@@ -136,6 +148,11 @@ public struct Renderer {
 
     private let normalization: Normalization
     private let hueDomain: HueDomain
+    private struct RankedEntry {
+        let id: Data
+        let light, dark: FixedTone
+    }
+    private let rankedEntries: [RankedEntry]
     private let fixedColors: [Data: (FixedTone, FixedTone)]
     private let scope: String
 
@@ -159,10 +176,32 @@ public struct Renderer {
         }
         let candidates = options.foregrounds ?? ["#000000", "#ffffff"]
         guard !candidates.isEmpty else { throw RenderError.invalidOptions }
-        foregrounds = try candidates.map {
+        let parsedForegrounds = try candidates.map {
             let rgb = try RGB(hex: $0)
             return [rgb.r, rgb.g, rgb.b]
         }
+        foregrounds = parsedForegrounds
+        var compiled: [RankedEntry] = []
+        var passing: [RankedEntry] = []
+        var ids = Set<Data>()
+        let model = options.contrastModel ?? .wcag2
+        let target = options.contrastTargets?["fill"] ?? options.contrastTarget
+            ?? (model == .apca ? 60 : options.preset == .controls ? 7 : 4.5)
+        func passes(_ tone: FixedTone) -> Bool {
+            parsedForegrounds.contains { abs(model.measure(text: $0, background: tone.bytes, gamut: .sRGB)) >= target }
+        }
+        if let palette = options.palette {
+            guard !palette.isEmpty else { throw RenderError.invalidOptions }
+            for entry in palette {
+                let key = Data(entry.id.utf8)
+                guard ids.insert(key).inserted, let light = entry.light ?? entry.dark,
+                      let dark = entry.dark ?? entry.light else { throw RenderError.invalidOptions }
+                let item = try RankedEntry(id: key, light: FixedTone(light), dark: FixedTone(dark))
+                compiled.append(item)
+                if passes(item.light) && passes(item.dark) { passing.append(item) }
+            }
+        }
+        rankedEntries = passing.isEmpty ? compiled : passing
         lightBackground = try ThemeBackground(options.backgrounds?["light"] ?? "#ffffff")
         darkBackground = try ThemeBackground(options.backgrounds?["dark"] ?? "#121212")
         self.options = options
@@ -206,12 +245,25 @@ public struct Renderer {
     }
 
     private func resolveNormalized(_ name: String) throws -> RenderedPalette {
+        func fixed(_ light: FixedTone, _ dark: FixedTone, source: String) throws -> RenderedPalette {
+            try RenderedPalette(version: "text-to-color-v1", source: source, hueFraction: light.fraction,
+                                hue: light.hue, light: theme("light", light.hue, 0.5, 0.5, light),
+                                dark: theme("dark", dark.hue, 0.5, 0.5, dark))
+        }
         if let (light, dark) = fixedColors[Data(name.utf8)] {
-            return try RenderedPalette(version: "text-to-color-v1", source: "override", hueFraction: light.fraction,
-                                       hue: light.hue, light: theme("light", light.hue, 0.5, 0.5, light),
-                                       dark: theme("dark", dark.hue, 0.5, 0.5, dark))
+            return try fixed(light, dark, source: "override")
         }
         let digest = try identityDigest(name, namespace: scope, seed: options.seed ?? 0)
+        var bestRank: [UInt8] = []
+        var winner: RankedEntry?
+        for entry in rankedEntries {
+            let rank = paletteRank(digest, entry.id)
+            if bestRank.lexicographicallyPrecedes(rank) {
+                bestRank = rank
+                winner = entry
+            }
+        }
+        if let winner { return try fixed(winner.light, winner.dark, source: "palette") }
         let fractions = identityFractions(digest)
         return try render(hueFraction: fractions[0], lightness: fractions[1], chroma: fractions[2])
     }

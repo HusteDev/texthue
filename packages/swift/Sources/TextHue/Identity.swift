@@ -24,3 +24,10 @@ func identityFractions(_ digest: [UInt8]) -> [Double] {
         return Double(word) / 4294967296
     }
 }
+
+func paletteRank(_ digest: [UInt8], _ id: Data) -> [UInt8] {
+    var hash = SHA256()
+    hash.update(data: Data(digest))
+    hash.update(data: id)
+    return Array(hash.finalize())
+}
