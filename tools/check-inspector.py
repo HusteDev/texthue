@@ -58,7 +58,14 @@ def exercise(page, url, clipboard):
     chips = page.locator("#results td span[title^='color(display-p3']")
     expect(chips).to_have_count(3)
     for chip in chips.all():
-        assert chip.evaluate("(el) => getComputedStyle(el).color.startsWith('color(display-p3 ')")
+        assert chip.evaluate("""el => {
+            const probe = document.createElement('span');
+            probe.style.color = el.title;
+            document.body.append(probe);
+            const expected = getComputedStyle(probe).color;
+            probe.remove();
+            return expected.startsWith('color(display-p3 ') && getComputedStyle(el).color === expected;
+        }""")
     page.goto(url)
     expect(status).to_have_text("3 distinct labels")
     check_markers(page)
@@ -154,8 +161,9 @@ def main():
                     browser.close()
             finally:
                 server.shutdown()
+    copy_method = "clipboard readback" if clipboard else "manual CSS copy"
     print(
-        f"PASS: {args.browser} staged inspector worker replacement, keyboard replay, downloads and CSS copy"
+        f"PASS: {args.browser} native P3 styles, worker replacement, keyboard replay, downloads and {copy_method}"
     )
 
 
