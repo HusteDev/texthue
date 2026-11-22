@@ -74,3 +74,20 @@ palettes. These measurements cover the Windows .NET 9 Release build.
 | White, 21 | 1,155 | 1,594 |
 | #777777, 4.5 | 247 | 329 |
 | #777777, 21 | 561 | 1,174 |
+
+### Kotlin/JVM renderer
+
+Build the JAR with `packages/kotlin/gradlew -p packages/kotlin jar`, then run
+`kotlinc -classpath packages/kotlin/build/libs/texthue-0.1.0.jar -script tools/bench-kotlin.kts`.
+The Windows run used Android Studio's Kotlin compiler and bundled JVM.
+Each row times both theme palettes for the same 100 labels after 20 warm-up
+labels. Scenarios share a JVM and execute in table order. JIT compilation can
+affect comparisons between rows. Android device timing requires a separate run.
+
+| Light background and target | Median (µs) | p95 (µs) |
+| --- | ---: | ---: |
+| White, 4.5 | 186 | 416 |
+| White, 7 | 144 | 255 |
+| White, 21 | 296 | 425 |
+| #777777, 4.5 | 97 | 153 |
+| #777777, 21 | 274 | 359 |
