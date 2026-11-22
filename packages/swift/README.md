@@ -4,6 +4,12 @@ Resolve a label into ten sRGB roles for each of two themes. Each role includes h
 
 ## Use from a local Swift package
 
+The repository root exports the `TextHue` SwiftPM library. A sibling checkout
+can depend on `.package(path: "../texthue")` and add
+`.product(name: "TextHue", package: "texthue")` to its target. Version-based
+resolution uses the repository URL and requires a published version tag
+whose commit includes the root manifest.
+
 The checkout contains a SwiftPM library in `packages/swift`. In the consuming package manifest, add `.package(path: "../texthue/packages/swift")` to the dependencies, adjusting the path for your checkout. Add `.product(name: "TextHue", package: "swift")` to the consuming target's dependencies.
 
 ```swift

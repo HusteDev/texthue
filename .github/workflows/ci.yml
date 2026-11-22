@@ -170,6 +170,7 @@ jobs:
         working-directory: packages/swift
         run: |
           swift --version
+          swift test --package-path ../.. --force-resolved-versions
           python3 ../../tools/verify.py --port swift
       - run: python tools/verify.py
       - name: Verify CSS fallback and rendered pixels in Chrome
