@@ -80,6 +80,26 @@ def generated_cases():
             )
     for preset in ("labels", "controls", "chart", "subdued", "mono"):
         cases.append({"text": "preset", "options": {"preset": preset}})
+    for seed in (1, 0x7FFFFFFF, 0x80000000, 0xFFFFFFFF):
+        for model, target in (("wcag2", 7), ("apca", 75)):
+            cases.append(
+                {
+                    "text": "  Ａ\u0301🌈  ",
+                    "options": {
+                        "seed": seed,
+                        "namespace": "scope\x00研究",
+                        "normalize": NORMALIZATION_RULES,
+                        "preset": "chart",
+                        "contrastModel": model,
+                        "contrastTarget": target,
+                        "contrastTargets": {"fillHover": target, "strong": target},
+                        "hueRange": [300, 45],
+                        "excludeHues": [[350, 10]],
+                        "profiles": {"dark": {"fill": {"chromaCap": 0.02}}},
+                        "backgrounds": {"dark": "#3467af"},
+                    },
+                }
+            )
     for i in range(16):
         cases.append(
             {
@@ -581,7 +601,7 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
             )
 
     def test_cross_language_generated_cases(self):
-        """Seeded random cases produce identical results in Python, JavaScript, and Go."""
+        """Compare complete palettes across the installed registered runners."""
         cases = generated_cases()
         from texthue import Resolver
 

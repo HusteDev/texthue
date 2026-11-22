@@ -31,7 +31,13 @@ public struct Normalization: Decodable {
         case .NFC: value = value.precomposedStringWithCanonicalMapping
         case .NFKC: value = value.precomposedStringWithCompatibilityMapping
         }
-        if casing == .lower { value = value.lowercased(with: Locale(identifier: "en_US_POSIX")) }
+        if casing == .lower {
+            let locale = Locale(identifier: "en_US_POSIX")
+            // Foundation's locale-aware mapping can truncate at NUL on Linux.
+            // NUL breaks casing context, so map each run and preserve every separator.
+            value = value.components(separatedBy: "\0")
+                .map { $0.lowercased(with: locale) }.joined(separator: "\0")
+        }
         guard whitespace != .none else { return value }
         let scalars = value.unicodeScalars
         guard let first = scalars.firstIndex(where: { !$0.properties.isWhitespace }),
