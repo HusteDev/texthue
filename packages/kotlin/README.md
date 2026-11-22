@@ -40,7 +40,7 @@ dependencies {
 
 ## Run the conformance suite
 
-After building the JavaScript reference, run `packages/kotlin/gradlew -p packages/kotlin check` (use `gradlew.bat` on Windows). This compiles with the pinned Kotlin plugin and runs all seven suites on the JVM.
+After building the JavaScript reference, run `packages/kotlin/gradlew -p packages/kotlin check` (use `gradlew.bat` on Windows). This compiles with the pinned Kotlin plugin and runs all eight suites on the JVM.
 
 From the repository root, install the locked JavaScript development dependencies and build the reference implementation. The runner requires Python, Node, a Kotlin compiler, and a JDK.
 
@@ -67,7 +67,7 @@ $adb = "$sdk/platform-tools/adb.exe"
 python tools/check-kotlin.py --kotlinc $compiler --android-serial $serial --adb $adb --d8 "$sdk/build-tools/37.0.0/d8.bat" --android-jar "$sdk/platforms/android-34/android.jar"
 ```
 
-The runner compiles production and test sources, converts the test JAR to DEX, executes the seven suites through ART, and removes the temporary device file. Tests cover linear-light sRGB compositing, identity framing, gamut fitting, contrast, rendered formats, contrast repair, and resolver and batch behavior. APK packaging and application lifecycle behavior require separate tests.
+The runner compiles production and test sources, converts the test JAR to DEX, executes the eight suites through ART, and removes the temporary device file. Tests cover linear-light sRGB compositing, identity framing, gamut fitting, contrast, rendered formats, contrast repair, and resolver and batch behavior. APK packaging and application lifecycle behavior require separate tests.
 
 On 2026-11-22 the seven suites passed on Android API 34 ART with the x86_64 Google emulator image on a Windows host. Android Studio's Kotlin compiler and Build Tools 37.0.0 produced the DEX. The run covered 6 composites, 32 identity vectors, 112 gamut fits, 1,583 contrast measurements, 640 role formats, 192 contrast repairs, and 1,060 two-theme resolver vectors, including the associated invalid-input, tie, and batch checks. This run used a read-only emulator instance and exercised the library directly through `app_process`. Physical-device and APK integration coverage remain separate.
 
@@ -76,3 +76,5 @@ using the Google API 34 x86-64 emulator image (build 10921827). The 1,060
 resolver vectors compared individual hex and color selections with full
 palettes for all ten roles in each theme. The Android run used D8 37.0.0
 and the API 34 platform library.
+
+Use `resolver.assign(labels)` to assign a collection. Pass `pinned = previous.assignments` to retain prior placements. The report measures closest pairs by rendered light-fill OKLab distance.

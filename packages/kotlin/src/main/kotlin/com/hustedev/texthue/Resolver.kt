@@ -124,25 +124,6 @@ class Resolver(
         compiled.filter { passes(it.colors.first) && passes(it.colors.second) }.ifEmpty { compiled }
     }.orEmpty()
 
-    private fun selectEntry(digest: ByteArray): Pair<FixedTone, FixedTone>? {
-        if (rankedEntries.isEmpty()) return null
-        val hash = MessageDigest.getInstance("SHA-256")
-        var best: ByteArray? = null
-        var winner: RankedEntry? = null
-        for (entry in rankedEntries) {
-            hash.update(digest)
-            val rank = hash.digest(entry.id)
-            val previous = best
-            if (previous != null) {
-                val index = rank.indices.firstOrNull { rank[it] != previous[it] } ?: continue
-                if (rank[index].toUByte() < previous[index].toUByte()) continue
-            }
-            best = rank
-            winner = entry
-        }
-        return winner?.colors
-    }
-
     private fun contrast(a: IntArray, b: IntArray) = abs(Contrast.measure(a, b, contrastModel, Gamut.SRGB))
     private fun foreground(rgb: IntArray, required: Double): IntArray {
         var best = candidates.first()
@@ -158,37 +139,54 @@ class Resolver(
         return best
     }
 
-    fun resolve(text: String): Palette = resolveNormalized(normalization.apply(text))
+    fun resolve(text: String): Palette = render(mapping(normalization.apply(text)))
 
     /** Preserve input order and reuse identical normalized identities within this call. */
     fun batch(texts: Iterable<String>): List<Palette> {
         val cache = mutableMapOf<String, Palette>()
         return texts.map { text ->
             val name = normalization.apply(text)
-            cache.getOrPut(name) { resolveNormalized(name) }
+            cache.getOrPut(name) { render(mapping(name)) }
         }
     }
 
     private data class Mapping(val hue: Double, val uL: Double, val uC: Double, val fraction: Double,
-                               val source: String, val fixed: Pair<FixedTone, FixedTone>? = null)
+                               val source: String, val fixed: Pair<FixedTone, FixedTone>? = null, val ring: Int = 0)
 
-    private fun mapping(name: String): Mapping {
-        val digest = Identity.digest(name, scope, seed)
+    private fun mapping(name: String, digest: ByteArray = Identity.digest(name, scope, seed)): Mapping {
         val (uH, uL, uC) = Identity.fractions(digest)
         val override = fixedColors[name]
-        (override ?: selectEntry(digest))?.let { pair ->
+        (override ?: rankedEntries.selectEntry(digest))?.let { pair ->
             return Mapping(pair.first.hue, 0.5, 0.5, pair.first.fraction(),
                 if (override != null) "override" else "palette", pair)
         }
-        val position = uH * 12
-        val slot = position.toInt()
-        val naturalHue = (anchors[slot] + (anchors[slot + 1] - anchors[slot]) * (position - slot)) % 360
-        return Mapping(hueDomain.map(naturalHue), uL, uC, uH, "hash")
+        return Mapping(hueDomain.mappedHue(uH), uL, uC, uH, "hash")
     }
 
-    private fun resolveNormalized(name: String): Palette {
-        val mapped = mapping(name)
+    private fun render(mapped: Mapping): Palette {
         return Palette(mapped.hue, theme(false, mapped), theme(true, mapped), mapped.source, mapped.fraction)
+    }
+
+    fun assign(texts: Iterable<String>, pinned: Map<String, Placement> = emptyMap()): Assignment {
+        val names = texts.map(normalization::apply).toSet()
+        val placements = normalizePins(pinned, normalization::apply)
+        val size = (names + placements.keys).size
+        val separation = separationFor(size)
+        val entries = names.map { it to Identity.digest(it, scope, seed) }
+            .sortedWith { a, b -> digestOrder(a.second, b.second) }
+        val mappings = entries.associate { (name, digest) -> name to mapping(name, digest) }
+        for ((name, mapped) in mappings) {
+            if (mapped.fixed != null) placements.putIfAbsent(name, Placement(mapped.fraction, 0, false))
+        }
+        val colors = mappings.mapValues { (name, mapped) ->
+            val p = placements.getOrPut(name) { place(mapped.fraction, placements.values, separation) }
+            val ring = (p.ring % ringOffsets.size).toInt()
+            val selected = if (mapped.fixed != null) mapped.copy(ring = ring) else
+                mapped.copy(hue = hueDomain.mappedHue(p.hueFraction), fraction = p.hueFraction,
+                    source = "assigned", ring = ring)
+            render(selected)
+        }
+        return Assignment(placements.toMap(), colors, assignmentReport(colors, size, separation))
     }
 
     fun hex(text: String, dark: Boolean = false, role: String = "fill"): String =
@@ -212,7 +210,7 @@ class Resolver(
             val bias = biases[(if (dark) 2 else 0) + role]
             val segment = (hue / 30).toInt()
             val correction = bias[segment] + (bias[(segment + 1) % 12] - bias[segment]) * (hue / 30 - segment)
-            return (low + (high - low) * uL + correction).coerceIn(0.0, 1.0)
+            return (low + (high - low) * uL + correction + ringOffsets[mapped.ring]).coerceIn(0.0, 1.0)
         }
         val fillRange = profile.fill.lightness ?: if (dark) UnitRange(0.4, 0.5) else UnitRange(0.72, 0.82)
         val fillL = fixed?.lightness ?: sample(fillRange.low, fillRange.high, 0)
@@ -220,7 +218,7 @@ class Resolver(
         val textL = sample(textRange.low, textRange.high, 1)
         fun tone(l: Double, role: RoleProfile, defaultCap: Double, target: Double, backdrop: IntArray? = null, second: IntArray? = null, secondTarget: Double = target, surface: Boolean = false): IntArray {
             val lightness = l.coerceIn(0.0, 1.0)
-            val scale = role.chromaScale?.sample(uC) ?: defaultScale
+            val scale = (role.chromaScale?.sample(uC) ?: defaultScale) * ringScale(mapped.ring)
             val cap = if (fixed?.neutral == true) 0.0 else role.chromaCap ?: defaultCap
             val chroma = minOf(cap, ColorMath.cusp(lightness, hue, Gamut.SRGB) * scale)
             val threshold = if (target == 0.0 && second != null) secondTarget else target
@@ -261,4 +259,20 @@ class Resolver(
         val colors = roles.associateWith(::bytes)
         return ThemePalette(java.util.Collections.unmodifiableMap(colors.mapValues { (_, rgb) -> rgb.joinToString("", prefix = "#") { it.toString(16).padStart(2, '0') } }))
     }
+}
+
+private fun List<RankedEntry>.selectEntry(digest: ByteArray): Pair<FixedTone, FixedTone>? {
+    if (isEmpty()) return null
+    val hash = MessageDigest.getInstance("SHA-256")
+    var best: ByteArray? = null
+    var winner: RankedEntry? = null
+    for (entry in this) {
+        hash.update(digest)
+        val rank = hash.digest(entry.id)
+        if (best == null || digestOrder(rank, best) > 0) {
+            best = rank
+            winner = entry
+        }
+    }
+    return winner?.colors
 }

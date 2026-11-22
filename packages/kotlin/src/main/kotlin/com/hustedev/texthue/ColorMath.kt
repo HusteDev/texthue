@@ -62,11 +62,15 @@ internal object ColorMath {
         return floor(encoded * 255 + 0.5).toInt()
     }
 
-    fun oklch(rgb: IntArray): Oklch {
+    fun oklab(rgb: IntArray): DoubleArray {
         val linear = DoubleArray(3) { i -> linearChannel(rgb[i]) }
         val lms = multiply(xyzToLms, multiply(rgbToXyz, linear))
         for (i in lms.indices) lms[i] = Math.cbrt(lms[i])
-        val (l, a, b) = multiply(lmsToLab, lms)
+        return multiply(lmsToLab, lms)
+    }
+
+    fun oklch(rgb: IntArray): Oklch {
+        val (l, a, b) = oklab(rgb)
         if (rgb[0] == rgb[1] && rgb[1] == rgb[2]) return Oklch(round6(l), 0.0, 0.0)
         val hue = ((Math.atan2(b, a) * 180 / PI) % 360 + 360) % 360
         return Oklch(round6(l), round6(Math.sqrt(a * a + b * b)), round6(hue) % 360)

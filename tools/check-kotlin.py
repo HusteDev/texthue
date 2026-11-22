@@ -1,6 +1,7 @@
 """Compile Kotlin production and test sources, then execute all shared JVM checks."""
 
 import argparse
+import base64
 import contextlib
 import json
 import os
@@ -33,7 +34,44 @@ def runtime(args, jar):
         subprocess.run([*adb, "shell", "rm", "-f", remote], check=True)
 
 
+def assignment_rows():
+    def name(text):
+        return base64.b64encode(text.encode()).decode()
+
+    for row in json.loads((ROOT / "conformance/assign-vectors.json").read_text(encoding="utf-8")):
+        options = row.get("options", {})
+        yield options.get("normalize", {}).get("case", "none").upper()
+        for text in row["texts"]:
+            yield f"label\t{name(text)}"
+        for text, color in options.get("overrides", {}).items():
+            light, dark = (
+                (color, color) if isinstance(color, str) else (color["light"], color["dark"])
+            )
+            yield f"override\t{name(text)}\t{light}\t{dark}"
+        for tag, key in [("pin", "pinned"), ("placement", "assignments")]:
+            for text, p in row.get(key, {}).items():
+                yield f"{tag}\t{name(text)}\t{p['hueFraction']}\t{p['ring']}\t{str(p['moved']).lower()}"
+        for text, fill in row["lightFills"].items():
+            yield f"fill\t{name(text)}\t{fill}"
+        report = row["report"]
+        for first, second in report["closestPairs"]:
+            yield f"pair\t{name(first)}\t{name(second)}"
+        yield "\t".join(
+            [
+                "report",
+                str(report["minDistance"]),
+                str(report["withinRingCapacity"]).lower(),
+                str(report["distinctFills"]).lower(),
+            ]
+        )
+
+
 def run_suites(runner):
+    subprocess.run(
+        [*runner, "com.hustedev.texthue.AssignmentTestKt"],
+        input=("\n".join(assignment_rows()) + "\n").encode(),
+        check=True,
+    )
     composites = json.loads((ROOT / "conformance/composite-v1.json").read_text(encoding="utf-8"))
     rows = "".join(
         "{source}\t{alpha}\t{backdrop}\t{expected}\n".format(**row) for row in composites
