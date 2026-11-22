@@ -381,10 +381,10 @@ export function createResolver(options: TextColorOptions = {}) {
     const name = settings.normalize(textValue(text,'text','INVALID_TEXT'));
     return render(settings,bases,digestOf(name),name);
   };
-  const assign = (texts:readonly string[], {pinned = {}}: {pinned?: Record<string,Placement>} = {}) =>
+  const assign = (texts:readonly string[], {pinned = {}, markers = false}: {pinned?: Record<string,Placement>; markers?: boolean} = {}) =>
     assignCollection(texts, pinned, text => settings.normalize(textValue(text, 'text', 'INVALID_TEXT')),digestOf,
       (digest,placement,name) => render(settings,bases,digest,name,placement),
-      (name,digest) => {const entry = settings.brand(name,digest); return entry ? fixedIdentity(entry.light).fraction : undefined;});
+      (name,digest) => {const entry = settings.brand(name,digest); return entry ? fixedIdentity(entry.light).fraction : undefined;}, markers);
   const batch = (texts: readonly string[]) => {
     const seen = new Map<string,ColorSet>();
     return texts.map(text => {
@@ -646,8 +646,8 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
 }
 
 
-export function assignTextColors(texts: readonly string[], options: TextColorOptions = {}, pinned: Record<string,Placement> = {}) {
-  return createResolver(options).assign(texts,{pinned});
+export function assignTextColors(texts: readonly string[], options: TextColorOptions = {}, pinned: Record<string,Placement> = {}, presentation: {markers?: boolean} = {}) {
+  return createResolver(options).assign(texts,{...presentation,pinned});
 }
 export { cssVariables, toCss } from './css.js';
 

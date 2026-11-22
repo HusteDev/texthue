@@ -2,6 +2,9 @@ import type { ColorSet } from './types.js';
 
 export interface Placement { hueFraction: number; ring: number; moved: boolean }
 
+const shapes = ['circle', 'square', 'triangle', 'diamond', 'star', 'cross', 'pentagon', 'hexagon'] as const;
+export type Marker = (typeof shapes)[number];
+
 const wrap = (x: number) => x - Math.floor(x);
 
 function place(natural: number, occupied: Placement[], separation: number): Placement {
@@ -20,7 +23,8 @@ function place(natural: number, occupied: Placement[], separation: number): Plac
 
 export function assignCollection(texts: readonly string[], pinned: Record<string,Placement>,
   normalize: (text:string) => string, hash: (text:string) => DataView,
-  render: (digest:DataView, placement:Placement, name:string) => ColorSet, fixed: (name:string,digest:DataView)=>number|undefined) {
+  render: (digest:DataView, placement:Placement, name:string) => ColorSet, fixed: (name:string,digest:DataView)=>number|undefined, includeMarkers = false) {
+  if (typeof includeMarkers !== 'boolean') throw new TypeError('markers must be a boolean');
   const names = new Set(texts.map(normalize));
   const entries = Array.from(names, name => ({name, digest: hash(name)}));
   entries.sort((a,b) => {
@@ -45,6 +49,7 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
     const fraction = fixed(name,digest);
     if (fraction !== undefined && !Object.hasOwn(assignments,name)) assignments[name] = {hueFraction:fraction,ring:0,moved:false};
   }
+  const markers: Record<string,Marker> | undefined = includeMarkers ? Object.create(null) : undefined;
   const occupied = Object.values(assignments);
   const separation = Math.min(1/12, Math.max(1/24, 1/names.size));
   for (const {name,digest} of entries) {
@@ -54,6 +59,11 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
       occupied.push(p);
     }
     const placement = assignments[name];
+    if (markers) {
+      const shape = shapes[digest.getUint8(31) % shapes.length];
+      if (shape === undefined) throw new Error('Invalid marker index');
+      markers[name] = shape;
+    }
     if (placement) colors[name] = render(digest,placement,name);
   }
   let minDistance: number | null = null;
@@ -74,7 +84,7 @@ export function assignCollection(texts: readonly string[], pinned: Record<string
       if (distance === minDistance) closestPairs.push([first.name,second.name]);
     }
   }
-  return {colors,assignments,report:{minDistance,closestPairs,
+  return {colors,assignments,...(markers && {markers}),report:{minDistance,closestPairs,
     withinRingCapacity:names.size <= 5*Math.floor(1/separation),
     distinctFills:new Set(Object.values(colors).map(c => c.light.fill.hex)).size === entries.length}};
 }
