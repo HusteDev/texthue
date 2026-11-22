@@ -76,6 +76,7 @@ jobs:
           dotnet-version: '9.0.x'
       - run: python tools/verify.py --port csharp
       - run: dotnet pack packages/csharp/src/TextHue --configuration Release --no-build --output artifacts/nuget
+      - run: python tools/check-nuget.py artifacts/nuget
 
   dart:
     name: Dart conformance
