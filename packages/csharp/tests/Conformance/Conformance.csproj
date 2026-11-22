@@ -7,6 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/TextHue/TextHue.csproj" />
-    <None Include="../../../../conformance/vectors.json;../../../../conformance/apca-srgb-v1.json;../../../../conformance/p3-contrast-v1.json;../../../../conformance/p3-fit-v1.json" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../../../conformance/vectors.json;../../../../conformance/apca-srgb-v1.json;../../../../conformance/p3-contrast-v1.json;../../../../conformance/p3-fit-v1.json;../../../../conformance/tone-repair-v1.tsv" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

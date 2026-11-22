@@ -89,3 +89,29 @@ foreach (var row in fits.RootElement.EnumerateArray())
 }
 if (fits.RootElement.GetArrayLength() != 108) throw new InvalidDataException("Unexpected fit corpus size.");
 Console.WriteLine("Passed 108 Display-P3 fits and sRGB fallbacks.");
+
+int repairs = 0;
+foreach (var line in File.ReadLines(Path.Combine(AppContext.BaseDirectory, "tone-repair-v1.tsv")))
+{
+    var fields = line.Split('\t');
+    var gamut = fields[0] switch { "SRGB" => Gamut.SRgb, "DISPLAY_P3" => Gamut.DisplayP3, _ => throw new InvalidDataException(line) };
+    var model = Enum.Parse<ContrastModel>(fields[1], ignoreCase: true);
+    double Number(int i) => double.Parse(fields[i], System.Globalization.CultureInfo.InvariantCulture);
+    Rgb Triplet(int i)
+    {
+        var bytes = fields[i].Split(',');
+        return new(byte.Parse(bytes[0]), byte.Parse(bytes[1]), byte.Parse(bytes[2]));
+    }
+    var background = Triplet(5);
+    var tone = gamut.Repair(Number(2), Number(3), Number(4), Number(6),
+        rgb => Math.Abs(Contrast.Measure(rgb, background, model, gamut)));
+    if (tone.Color.Bytes != Triplet(7) || tone.Color.Lightness != Number(8) ||
+        !(Math.Abs(tone.Color.Chroma - Number(9)) <= 1e-12 && Math.Abs(tone.Score - Number(10)) <= 1e-12) ||
+        (tone.Fallback ?? "-") != fields[11])
+        throw new InvalidDataException($"Repair mismatch for {line}");
+    repairs++;
+}
+var tie = Gamut.SRgb.Repair(0.5, 0, 0, 1, _ => 0);
+if (repairs != 192 || tie.Color.Bytes != new Rgb(0, 0, 0) || tie.Fallback != "unattainable-contrast")
+    throw new InvalidDataException("Repair corpus size or fallback tie mismatch.");
+Console.WriteLine($"Passed {repairs} shared repairs and the tied fallback check.");
