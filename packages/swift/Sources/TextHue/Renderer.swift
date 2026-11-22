@@ -21,10 +21,17 @@ public struct RoleProfile: Decodable {
     }
 }
 
+public enum ForegroundPolicy: String, Decodable {
+    case best
+    case firstPassing = "first-passing"
+}
+
 public struct RenderOptions: Decodable {
     public var normalize: Normalization?
     public var namespace: String?
     public var seed: UInt32?
+    public var foregrounds: [String]?
+    public var foregroundPolicy: ForegroundPolicy?
     public var contrastModel: ContrastModel?
     public var contrastTarget: Double?
     public var contrastTargets: [String: Double]?
@@ -36,16 +43,22 @@ public struct RenderOptions: Decodable {
 
 public enum RenderError: Error { case invalidOptions }
 
+private extension RGB {
+    init(hex raw: String) throws {
+        let digits = raw.utf8.dropFirst()
+        guard raw.first == "#", digits.count == 6,
+              digits.allSatisfy({ (48...57).contains($0) || (65...70).contains($0) || (97...102).contains($0) }),
+              let n = UInt32(raw.dropFirst(), radix: 16) else { throw RenderError.invalidOptions }
+        self.init(r: UInt8(n >> 16), g: UInt8((n >> 8) & 255), b: UInt8(n & 255))
+    }
+}
+
 private struct ThemeBackground {
     let bytes: [UInt8]
     let lightness: Double
 
     init(_ raw: String) throws {
-        let digits = raw.utf8.dropFirst()
-        guard raw.first == "#", digits.count == 6,
-              digits.allSatisfy({ (48...57).contains($0) || (65...70).contains($0) || (97...102).contains($0) }),
-              let n = UInt32(raw.dropFirst(), radix: 16) else { throw RenderError.invalidOptions }
-        let rgb = RGB(r: UInt8(n >> 16), g: UInt8((n >> 8) & 255), b: UInt8(n & 255))
+        let rgb = try RGB(hex: raw)
         bytes = [rgb.r, rgb.g, rgb.b]
         lightness = floor(Color(rgb: rgb).oklch.l * 4096 + 0.5) / 4096
     }
@@ -62,6 +75,7 @@ public struct Renderer {
     private let normalization: Normalization
     private let scope: String
 
+    private let foregrounds: [[UInt8]]
     private let lightBackground, darkBackground: ThemeBackground
 
     public init(options: RenderOptions) throws {
@@ -77,6 +91,12 @@ public struct Renderer {
                 guard role == "fill" || role == "text" else { throw RenderError.invalidOptions }
                 try profile.validate()
             }
+        }
+        let candidates = options.foregrounds ?? ["#000000", "#ffffff"]
+        guard !candidates.isEmpty else { throw RenderError.invalidOptions }
+        foregrounds = try candidates.map {
+            let rgb = try RGB(hex: $0)
+            return [rgb.r, rgb.g, rgb.b]
         }
         lightBackground = try ThemeBackground(options.backgrounds?["light"] ?? "#ffffff")
         darkBackground = try ThemeBackground(options.backgrounds?["dark"] ?? "#121212")
@@ -153,9 +173,17 @@ public struct Renderer {
         func score(_ a: [UInt8], _ b: [UInt8]) -> Double {
             abs(model.measure(text: a, background: b, gamut: .sRGB))
         }
-        func foreground(_ bytes: [UInt8]) -> [UInt8] {
-            let black: [UInt8] = [0,0,0], white: [UInt8] = [255,255,255]
-            return score(black, bytes) >= score(white, bytes) ? black : white
+        func foreground(_ bytes: [UInt8], target: Double) -> [UInt8] {
+            var best = foregrounds[0], bestScore = -1.0
+            for candidate in foregrounds {
+                let value = score(candidate, bytes)
+                if options.foregroundPolicy == .firstPassing && value >= target { return candidate }
+                if value > bestScore {
+                    best = candidate
+                    bestScore = value
+                }
+            }
+            return best
         }
         func tone(_ value: Double, _ profile: (l: Double, scale: Double, cap: Double),
                   _ target: Double, _ back: [UInt8]? = nil, _ second: [UInt8]? = nil, surface: Bool = false) -> [UInt8] {
@@ -166,14 +194,14 @@ public struct Renderer {
             return Gamut.sRGB.repair(lightness: l, chroma: c, hue: hue, target: threshold) { bytes in
                 let primary: Double
                 if let back { primary = surface ? score(back, bytes) : score(bytes, back) }
-                else { primary = score(foreground(bytes), bytes) }
+                else { primary = score(foreground(bytes, target: target), bytes) }
                 guard let second, secondary > 0 else { return primary }
                 let secondScore = score(bytes, second)
                 return target == 0 ? secondScore : min(primary, secondScore * (target / secondary))
             }.color.bytes
         }
         let subtle = tone(lb + direction * 0.04, fillP, unconstrained)
-        let fill = tone(fillP.l, fillP, required("fill")), onFill = foreground(fill)
+        let fill = tone(fillP.l, fillP, required("fill")), onFill = foreground(fill, target: required("fill"))
         let roles = [
             "background": bg, "subtle": subtle, "muted": tone(lb + direction * 0.10, fillP, unconstrained),
             "fill": fill, "onFill": onFill,
