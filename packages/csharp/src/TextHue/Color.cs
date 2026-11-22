@@ -12,6 +12,18 @@ public sealed class Color
 
     private static double Round6(double value) => Math.Floor(value * 1e6 + 0.5) / 1e6;
 
+    /// <summary>Composite this sRGB color over an opaque backdrop in linear light.</summary>
+    public Color CompositeOver(double alpha, Rgb backdrop)
+    {
+        if (!(alpha >= 0 && alpha <= 1))
+            throw new ArgumentOutOfRangeException(nameof(alpha), "Alpha must be between zero and one.");
+
+        byte Blend(byte front, byte back) => GamutFit.ChannelByte(
+            alpha * Contrast.LinearChannel(front / 255.0) + (1 - alpha) * Contrast.LinearChannel(back / 255.0));
+
+        return new Color(new Rgb(Blend(Rgb.R, backdrop.R), Blend(Rgb.G, backdrop.G), Blend(Rgb.B, backdrop.B)));
+    }
+
     public Color(Rgb rgb)
     {
         Rgb = rgb;

@@ -32,6 +32,29 @@ Console.WriteLine($"Passed {vectors.GetArrayLength()} shared identity vectors an
 static Rgb ReadRgb(JsonElement values, int i = 0) =>
     new(values[i].GetByte(), values[i + 1].GetByte(), values[i + 2].GetByte());
 
+static Rgb FixtureRgb(JsonElement row, string field)
+{
+    var bytes = Convert.FromHexString(row.GetProperty(field).GetString()![1..]);
+    return new Rgb(bytes[0], bytes[1], bytes[2]);
+}
+
+using var composites = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "composite-v1.json")));
+if (composites.RootElement.GetArrayLength() != 6) throw new InvalidDataException("Unexpected composite corpus size.");
+foreach (var row in composites.RootElement.EnumerateArray())
+{
+    var source = new Color(FixtureRgb(row, "source"));
+    var blended = source.CompositeOver(row.GetProperty("alpha").GetDouble(), FixtureRgb(row, "backdrop"));
+    if (blended.Hex != row.GetProperty("expected").GetString())
+        throw new InvalidDataException($"Composite mismatch: {row} yielded {blended.Hex}");
+}
+foreach (var invalid in new[] { -0.1, 1.1, double.NaN, double.PositiveInfinity, double.NegativeInfinity })
+{
+    try { new Color(default).CompositeOver(invalid, default); }
+    catch (ArgumentOutOfRangeException) { continue; }
+    throw new InvalidDataException($"Accepted invalid alpha {invalid}");
+}
+Console.WriteLine("Passed six linear-light sRGB composites and invalid alpha checks.");
+
 int measurements = 0;
 void Check(Rgb text, Rgb bg, ContrastModel model, Gamut gamut, double expected)
 {
