@@ -3,6 +3,7 @@ import 'color.dart';
 import 'contrast.dart';
 import 'gamut_fit.dart';
 import 'identity.dart';
+import 'hue_domain.dart';
 import 'tables.dart';
 import 'tone_repair.dart';
 
@@ -78,6 +79,7 @@ final class Renderer {
   final double contrastTarget;
   final Map<String, double> contrastTargets;
   final ForegroundPolicy foregroundPolicy;
+  final HueDomain _hues;
   final List<List<int>> _foregrounds;
   final _Background _light, _dark;
   Renderer(
@@ -87,6 +89,8 @@ final class Renderer {
       this.darkProfile = const ThemeProfile(),
       this.contrastModel = ContrastModel.wcag2,
       this.foregroundPolicy = ForegroundPolicy.best,
+      HueArc hueRange = const (0, 360),
+      List<HueArc> excludeHues = const [],
       List<String> foregrounds = const ["#000000", "#ffffff"],
       this.preset = Preset.labels,
       double? contrastTarget,
@@ -100,6 +104,7 @@ final class Renderer {
                     ? 7
                     : 4.5),
         contrastTargets = Map.unmodifiable(contrastTargets),
+        _hues = HueDomain(hueRange, excludeHues),
         _foregrounds = foregrounds.map(_parseHex).toList(growable: false),
         _light = _Background(lightBackground),
         _dark = _Background(darkBackground) {
@@ -128,7 +133,8 @@ final class Renderer {
     final f = identityFractions(
         identityDigest(text, namespace: namespace, seed: seed));
     final pos = f[0] * 12, i = pos.floor();
-    final hue = (anchors[i] + (anchors[i + 1] - anchors[i]) * (pos - i)) % 360;
+    final hue = _hues
+        .map((anchors[i] + (anchors[i + 1] - anchors[i]) * (pos - i)) % 360);
     return (
       version: 'text-to-color-v1',
       source: 'hash',
