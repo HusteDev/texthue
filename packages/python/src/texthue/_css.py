@@ -1,4 +1,4 @@
-"""CSS serialization for canonical sRGB results."""
+"""CSS serialization for sRGB and Display-P3 results."""
 
 import hashlib
 import re
@@ -32,7 +32,7 @@ def to_css(color: Color, format: str = "hex") -> str:
 
 
 def css_variables(
-    colors: ColorSet, *, theme: str, slug: str, prefix: str = "texthue"
+    colors: ColorSet, *, theme: str, slug: str, prefix: str = "texthue", format: str = "hex"
 ) -> dict[str, str]:
     if not re.fullmatch(r"[a-z][a-z0-9-]*", prefix) or theme not in ("light", "dark"):
         raise ValueError("Invalid CSS prefix or theme")
@@ -40,9 +40,9 @@ def css_variables(
     stem = re.sub(r"[^a-z0-9]+", "-", slug.lower()).strip("-") or "label"
     palette = getattr(colors, theme)
     return {
-        f"--{prefix}-{stem}-{suffix}-{field.name.replace('_', '-')}": getattr(
-            palette, field.name
-        ).hex
+        f"--{prefix}-{stem}-{suffix}-{field.name.replace('_', '-')}": to_css(
+            getattr(palette, field.name), format
+        )
         for field in fields(palette)
         if field.name != "contrast"
     }

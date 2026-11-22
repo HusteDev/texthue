@@ -15,7 +15,7 @@ export function toCss(color: Color, format: 'hex'|'rgb'|'hsl'|'oklch'|'p3' = 'he
 }
 
 export function cssVariables(colors:ColorSet, {prefix='texthue',theme,slug,format='hex'}:{
-  prefix?:string;theme:'light'|'dark';slug:string;format?:'hex'|'p3'
+  prefix?:string;theme:'light'|'dark';slug:string;format?:Parameters<typeof toCss>[1]
 }):Record<string,string> {
   if (!/^[a-z][a-z0-9-]*$/.test(prefix)) throw new TypeError('Invalid CSS variable prefix');
   const suffix = sha256(new TextEncoder().encode(slug)).getUint32(0).toString(16).padStart(8,'0').slice(0,6);

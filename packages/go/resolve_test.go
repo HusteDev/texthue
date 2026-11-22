@@ -13,6 +13,29 @@ import (
 	"testing"
 )
 
+func TestDisplayP3CSSVariables(t *testing.T) {
+	colors, err := Resolve("badge", WithGamut("display-p3"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fallback, err := CSSVariables(colors, "dark", "badge", "brand")
+	if err != nil {
+		t.Fatal(err)
+	}
+	native, err := CSSVariablesFormat(colors, "dark", "badge", "brand", "p3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(native) != 10 || len(fallback) != 10 {
+		t.Fatal("missing role variables")
+	}
+	for key, value := range native {
+		if !strings.HasPrefix(value, "color(display-p3 ") || !strings.HasPrefix(fallback[key], "#") {
+			t.Fatalf("invalid renditions for %s: %s / %s", key, value, fallback[key])
+		}
+	}
+}
+
 // vector is one entry from testdata/vectors.json. Valid entries carry Expected;
 // invalid entries carry Code. Text and Options stay raw so malformed fixtures
 // can be checked at the JSON boundary.

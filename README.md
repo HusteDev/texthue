@@ -155,6 +155,8 @@ The CSS helper accepts `p3` in JavaScript, Python, and Go. For a native P3 rendi
 to six fractional digits per channel. For example, sRGB red serializes as
 `color(display-p3 0.917488 0.200287 0.138561)`.
 
+For a full theme of P3 custom properties, use `cssVariables(colors, {theme: 'light', slug: 'badge', format: 'p3'})` in JavaScript, `css_variables(colors, theme="light", slug="badge", format="p3")` in Python, or `CSSVariablesFormat(colors, "light", "badge", "texthue", "p3")` in Go. The hex defaults use the same property names, so a stylesheet can declare fallbacks first and override them inside `@supports (color: color(display-p3 1 0 0))`.
+
 For a translucent surface over a known opaque backdrop, use
 `compositeOver(source, alpha, backdrop)` in JavaScript,
 `composite_over(source, alpha, backdrop)` in Python, or `CompositeOver` in Go.

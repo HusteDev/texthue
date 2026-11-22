@@ -253,7 +253,7 @@ console.log(JSON.stringify([compareAssignments(side(old),side(next),texts)]));
         self.assertGreater(_cusp(0.7, 145, _XYZ_TO_P3), _cusp(0.7, 145))
 
     def test_display_p3_resolver_parity(self):
-        from texthue import ColorSet, Resolver, import_config, to_css
+        from texthue import ColorSet, Resolver, css_variables, import_config, to_css
 
         inputs = []
         expected = []
@@ -266,6 +266,11 @@ console.log(JSON.stringify([compareAssignments(side(old),side(next),texts)]));
             self.assertEqual(colors, restored.resolve(text))
             self.assertEqual(colors, ColorSet.from_dict(colors.to_dict()))
             self.assertEqual(to_css(colors.light.fill, "p3"), colors.light.fill.css)
+            variables = css_variables(colors, theme="light", slug=text, format="p3")
+            self.assertEqual(len(variables), 10)
+            for key, value in variables.items():
+                role = key.split("-", 5)[5].replace("-", "_")
+                self.assertEqual(value, getattr(colors.light, role).css)
             inputs.append({"config": snapshot, "text": text})
             expected.append(colors.to_dict())
         script = """

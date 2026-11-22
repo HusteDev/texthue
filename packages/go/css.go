@@ -56,6 +56,11 @@ func (t ThemeColors) roles() map[string]Color {
 }
 
 func CSSVariables(colors ColorSet, theme, slug, prefix string) (map[string]string, error) {
+	return CSSVariablesFormat(colors, theme, slug, prefix, "hex")
+}
+
+// CSSVariablesFormat serializes each role using the requested ToCSS format.
+func CSSVariablesFormat(colors ColorSet, theme, slug, prefix, format string) (map[string]string, error) {
 	t, err := themeColors(colors, theme)
 	if err != nil {
 		return nil, err
@@ -72,7 +77,11 @@ func CSSVariables(colors ColorSet, theme, slug, prefix string) (map[string]strin
 	result := map[string]string{}
 	for role, c := range t.roles() {
 		name := strings.NewReplacer("Hover", "-hover", "Active", "-active", "Fill", "-fill").Replace(role)
-		result[root+name] = c.Hex
+		value, err := ToCSS(c, format)
+		if err != nil {
+			return nil, err
+		}
+		result[root+name] = value
 	}
 	return result, nil
 }
