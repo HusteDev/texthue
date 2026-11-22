@@ -85,7 +85,7 @@ class Resolver(
     palette: List<PaletteEntry>? = null,
 ) {
     private val apca = contrastModel == ContrastModel.APCA
-    private val target = contrastTarget ?: if (apca) 60.0 else preset.target
+    val target = contrastTarget ?: if (apca) 60.0 else preset.target
     private val hueDomain = HueDomain(hueRange, excludeHues)
     private val scope = normalization.apply(namespace)
 

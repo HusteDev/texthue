@@ -596,15 +596,18 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
         self.assertTrue({"npm", "python", "go"}.issubset(runners))
         results = {}
         for name, package in runners.items():
-            if package.get("optionalToolchain") and not shutil.which(
-                package["conformanceRunner"][0]
-            ):
+            command = list(package["conformanceRunner"])
+            available = shutil.which(command[0])
+            if name == "kotlin":
+                available = os.environ.get("JAVA_HOME") or shutil.which("java")
+                if os.name == "nt":
+                    command[0] = str((ROOT / command[0]).with_suffix(".bat"))
+            if package.get("optionalToolchain") and not available:
                 with self.subTest(runner=name):
                     self.skipTest(f"{name} toolchain unavailable")
                 continue
             inputs = cases + replay if package.get("conformanceReplay") else cases
             with self.subTest(runner=name):
-                command = list(package["conformanceRunner"])
                 if command[0] == "python":
                     command[0] = sys.executable
                 else:

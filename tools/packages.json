@@ -68,7 +68,8 @@
       ],
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
       "verifyCommands": [["./gradlew", "check"]],
-      "conformanceRunner": null
+      "optionalToolchain": true,
+      "conformanceRunner": ["packages/kotlin/gradlew", "-q", "-p", "packages/kotlin", "jsonConformance"]
     },
     {
       "id": "swift",

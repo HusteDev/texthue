@@ -87,3 +87,18 @@ tasks.register('benchmark', JavaExec) {
     classpath = sourceSets.benchmark.runtimeClasspath
     mainClass = 'RendererBenchmarkKt'
 }
+
+sourceSets {
+    jsonRunner {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+configurations.jsonRunnerImplementation.extendsFrom configurations.implementation
+dependencies { jsonRunnerImplementation localGroovy() }
+tasks.register('jsonConformance', JavaExec) {
+    dependsOn tasks.named('jsonRunnerClasses')
+    classpath = sourceSets.jsonRunner.runtimeClasspath
+    mainClass = 'JsonRunnerKt'
+    standardInput = System.in
+}

@@ -28,6 +28,8 @@ document.
 
 ## Registered runners
 
+Kotlin supports direct sRGB resolution through the Gradle wrapper. With a JDK available, run `packages/kotlin/gradlew -q -p packages/kotlin jsonConformance` from the repository root (use `gradlew.bat` on Windows). JSON parsing uses Gradle's bundled Groovy library in a development-only source set.
+
 Dart supports direct sRGB resolution. Restore the locked dependencies with `dart pub get --enforce-lockfile` in `packages/dart`, then run `dart run packages/dart/tool/conformance.dart` from the repository root. The runner compares complete palettes, including both contrast reports, through the generated parity suite.
 
 C# supplies a .NET 9 runner for direct sRGB resolution. Run `dotnet run --configuration Release --project packages/csharp/tools/JsonRunner` from the repository root with the request array on stdin. The generated parity test includes C# when the .NET toolchain is available.
