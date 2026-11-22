@@ -16,6 +16,34 @@ from playwright.sync_api import expect, sync_playwright
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def check_issue_labels(page):
+    labels = (
+        "bug",
+        "documentation",
+        "duplicate",
+        "enhancement",
+        "good first issue",
+        "help wanted",
+        "invalid",
+        "question",
+        "wontfix",
+    )
+    page.locator("#labels").fill("\n".join(labels))
+    for theme in ("light", "dark"):
+        page.locator("#theme").select_option(theme)
+        for profile in ("normal", "deutan", "protan", "tritan"):
+            page.locator("#vision").select_option(profile)
+            previous = page.locator("table").first.element_handle()
+            page.get_by_role("button", name="Inspect palette").click()
+            page.wait_for_function("table => !table.isConnected", arg=previous)
+            previous.dispose()
+            expect(page.get_by_role("status")).to_have_text("9 distinct labels")
+            assigned = page.locator("tr td:nth-of-type(2) span").evaluate_all(
+                "(chips) => chips.map(chip => getComputedStyle(chip).color)"
+            )
+            assert len(set(assigned)) == len(labels), (theme, profile, assigned)
+
+
 def check_markers(page):
     page.locator("#labels").fill("\n".join(map(str, range(128))))
     toggle = page.get_by_role("checkbox", name="Show identity shapes")
@@ -44,6 +72,9 @@ def check_markers(page):
 def exercise(page, url, clipboard):
     page.goto(url)
     status = page.get_by_role("status")
+    expect(status).to_have_text("3 distinct labels")
+    check_issue_labels(page)
+    page.goto(url)
     expect(status).to_have_text("3 distinct labels")
     page.locator("#labels").fill("badge")
     page.locator("#options").fill(
