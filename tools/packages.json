@@ -123,6 +123,28 @@
       "conformanceRunner": null
     },
     {
+      "id": "tailwind",
+      "language": "javascript",
+      "dir": "packages/tailwind",
+      "versionFiles": [
+        { "path": "packages/tailwind/package.json", "kind": "json", "field": "version" }
+      ],
+      "sharedFiles": ["LICENSE"],
+      "verifyCommands": [["node", "--test", "../../tests/tailwind.test.mjs"]],
+      "conformanceRunner": null
+    },
+    {
+      "id": "react",
+      "language": "javascript",
+      "dir": "packages/react",
+      "versionFiles": [
+        { "path": "packages/react/package.json", "kind": "json", "field": "version" }
+      ],
+      "sharedFiles": ["LICENSE"],
+      "verifyCommands": [["node", "--test", "../../tests/react.test.mjs"]],
+      "conformanceRunner": null
+    },
+    {
       "id": "rust",
       "language": "rust",
       "dir": "packages/rust",

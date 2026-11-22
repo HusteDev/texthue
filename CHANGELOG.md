@@ -2,12 +2,20 @@
 
 All notable changes to TextHue are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
-independent version numbers for each distribution (see
+a shared release version for manifest-versioned distributions (see
 [Releasing](docs/RELEASING.md)) and a separate, explicitly versioned
 `text-to-color-v1` algorithm identifier that changes only when the color
 mapping itself changes.
 
 ## [Unreleased]
+
+### Renderer and integration changes
+
+- The redesigned renderer derives coordinated roles for both themes, fits colors to gamut, and repairs contrast. JavaScript, Python, and Go share frozen reference vectors.
+- Configured resolvers support collection assignment, saved registries, brand colors, and configuration replay. Projection can select individual themes, roles, and formats.
+- Display P3 output includes an sRGB fallback. Contrast options include WCAG ratios and APCA measurements.
+- Kotlin, Swift, Dart, C#, Rust, and WebAssembly have package-specific verification commands. The release guide lists their distribution formats and verification paths.
+- The palette inspector compares hash, collection, and registry colors. The React and Tailwind adapters integrate those colors into component rendering and stylesheet builds. Performance checks bound renderer work across five contrast scenarios.
 
 ### Added
 - `tools/packages.json`, a language-neutral manifest describing every

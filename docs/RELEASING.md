@@ -1,6 +1,20 @@
 # Releasing TextHue
 
-The repository contains three distribution units: one npm package for JavaScript and TypeScript, one Python distribution for PyPI, and one Go module. The root npm workspace is private. Build and check scripts never publish; releases go through the `Publish` GitHub Actions workflow, which uploads only after the tree is verified.
+The Publish workflow releases three targets. npm receives the core JavaScript package, PyPI receives the Python distribution, and Go resolves the module through its subdirectory tag. The root npm workspace is private.
+
+The [package manifest](../tools/packages.json) lists each package directory, version source, shared files, and verification commands. Only entries with a `publish` record are registry targets for the current workflow.
+
+| Package | Distribution format | Local verification |
+| --- | --- | --- |
+| Kotlin | Maven library | `python tools/verify.py --port kotlin` |
+| Swift | SwiftPM package | `python tools/verify.py --port swift` |
+| Dart | Dart pub package | `python tools/verify.py --port dart` |
+| C# | NuGet package | `python tools/verify.py --port csharp` |
+| Rust | Cargo crate | `python tools/verify.py --port rust` |
+| WebAssembly | npm package | `python tools/verify.py --port wasm` |
+| React and Tailwind | npm adapters | After `npm ci` and `npm run build`, run `python tools/verify.py --port react` and `python tools/verify.py --port tailwind`. |
+
+These local checks exercise the listed packages. Public registry delivery for these rows requires separate publishing integration.
 
 ## Build and verify locally
 
@@ -20,7 +34,7 @@ Inspect archive contents and rendered registry READMEs before releasing. The npm
 
 ## Version and compatibility rules
 
-- Update the root `package.json`, `packages/npm/package.json`, `packages/python/pyproject.toml`, and `packages/python/src/texthue/__init__.py` together. `python tools/check-version.py` confirms they agree, and the pre-commit hook and CI run it. Run `npm install --package-lock-only --ignore-scripts` to refresh lock metadata.
+- Update every version source listed in the manifest together. When changing the core npm version, also update the adapters’ exact `texthue` dependencies. `python tools/check-version.py` confirms they agree, and the pre-commit hook and CI run it. Run `npm install --package-lock-only --ignore-scripts` to refresh lock metadata.
 - Go's release version comes from its Git tag. A `v0`/`v1` module does not add a version suffix to the module path. A future `v2` needs a Go major-version path migration.
 - The algorithm version is a separate contract. Do not change the `text-to-color-v1` prefix, matrices, defaults, validation, tie breaks, gamut search, or rounding under that identifier. Color-changing work needs a new explicitly versioned algorithm and its own vectors.
 - `conformance/vectors.json` is frozen and protected by a SHA-256 check. Never replace expected output to make an implementation pass. `node tools/build-vectors.mjs --check` compares computed results without rewriting the fixture.

@@ -173,9 +173,7 @@ def main():
         )
     else:
         print("SKIP: Go lint (golangci-lint not on PATH; the pre-commit hook and CI run it)")
-    npm_package = next(p for p in load_packages() if p["language"] == "javascript")["publish"][
-        "packageName"
-    ]
+    npm_package = next(p for p in load_packages() if p["id"] == "npm")["publish"]["packageName"]
     run(
         "JavaScript and CommonJS examples",
         [npm, "run", "examples", "--workspace", npm_package],

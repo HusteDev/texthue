@@ -22,12 +22,12 @@ from verify import ROOT, environment, load_packages, run
 ARTIFACTS = ROOT / "artifacts"
 
 
-def manifest_package(language):
-    """Return the tools/packages.json entry for the given language."""
+def manifest_package(package_id):
+    """Return the tools/packages.json entry for the given package ID."""
     for package in load_packages():
-        if package["language"] == language:
+        if package["id"] == package_id:
             return package
-    raise SystemExit(f"No package with language {language!r} in tools/packages.json")
+    raise SystemExit(f"No package with ID {package_id!r} in tools/packages.json")
 
 
 def write(path, content):
@@ -69,7 +69,7 @@ def main():
             npm,
             "pack",
             "--workspace",
-            manifest_package("javascript")["publish"]["packageName"],
+            manifest_package("npm")["publish"]["packageName"],
             "--pack-destination",
             ARTIFACTS,
         ],
@@ -89,9 +89,7 @@ def main():
     sdist = ARTIFACTS / f"texthue-{python_version}.tar.gz"
     with tarfile.open(npm_archive) as archive:
         names = set(archive.getnames())
-        required = {
-            "package/" + path for path in manifest_package("javascript")["archiveRequiredFiles"]
-        }
+        required = {"package/" + path for path in manifest_package("npm")["archiveRequiredFiles"]}
         if not required <= names:
             raise SystemExit(f"npm archive missing: {required - names}")
     with zipfile.ZipFile(wheel) as archive:
