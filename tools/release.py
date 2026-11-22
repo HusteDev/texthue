@@ -348,12 +348,12 @@ def _cmd_npm_state(args: argparse.Namespace) -> int:
 
 def _cmd_pypi_state(args: argparse.Namespace) -> int:
     dist_dir = Path(args.dist)
-    local_digests = {
-        path.name: hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in sorted(dist_dir.glob(f"{args.package}-{args.version}*"))
-        if path.is_file()
-    }
-    state = pypi_target_state(args.package, args.version, local_digests or None)
+    stem = f"{args.package}-{args.version}"
+    files = [dist_dir / (stem + suffix) for suffix in ("-py3-none-any.whl", ".tar.gz")]
+    if any(not path.is_file() or path.is_symlink() for path in files):
+        raise ReleaseError("Missing or invalid Python release archive.")
+    local_digests = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in files}
+    state = pypi_target_state(args.package, args.version, local_digests)
     return _print_state_and_exit_code(state)
 
 

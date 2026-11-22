@@ -117,6 +117,35 @@ class NpmTargetStateTests(unittest.TestCase):
 
 
 class PypiTargetStateTests(unittest.TestCase):
+    def test_cli_retry_from_multiregistry_bundle(self):
+        import hashlib
+        import json
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            package = "texthue-1.0.0"
+            urls = []
+            for suffix in ("-py3-none-any.whl", ".tar.gz"):
+                archive = root / (package + suffix)
+                archive.write_bytes(suffix.encode())
+                urls.append(
+                    {
+                        "filename": archive.name,
+                        "digests": {"sha256": hashlib.sha256(archive.read_bytes()).hexdigest()},
+                    }
+                )
+            (root / (package + ".tgz")).write_bytes(b"npm")
+            (root / "TextHue.1.0.0.nupkg").write_bytes(b"nuget")
+            args = ["pypi-state", "--package", "texthue", "--version", "1.0.0", "--dist", directory]
+            with patch.object(
+                release, "_default_fetch", return_value=json.dumps({"urls": urls}).encode()
+            ):
+                self.assertEqual(release.main(args), 0)
+                (root / (package + ".tar.gz")).unlink()
+                with self.assertRaises(release.ReleaseError):
+                    release.main(args)
+
     def test_missing_version_is_absent(self):
         def fetch(_url):
             raise release._NotFound
