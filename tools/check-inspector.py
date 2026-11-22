@@ -20,6 +20,19 @@ def exercise(page, url):
     page.goto(url)
     status = page.get_by_role("status")
     expect(status).to_have_text("3 distinct labels")
+    page.locator("#labels").fill("item:33\nitem:633")
+    page.locator("#vision").select_option("deutan")
+    submit = page.get_by_role("button", name="Inspect palette")
+    submit.click()
+    expect(status).to_have_text("2 distinct labels")
+    swatches = page.locator("tr td:last-child")
+    before = swatches.all_text_contents()
+    page.get_by_role("checkbox", name="Optimize new placements").check()
+    submit.click()
+    expect(swatches).not_to_have_text(before)
+    expect(status).to_have_text("2 distinct labels")
+    assert swatches.all_text_contents() != before
+    page.get_by_role("checkbox", name="Optimize new placements").uncheck()
     # Two submissions in one event handler guarantee the first result is still pending.
     page.evaluate("""() => {
             const labels = document.querySelector('#labels');

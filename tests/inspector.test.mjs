@@ -38,3 +38,16 @@ test('inspector traces the placed registry fill for moved labels and supplied co
   assert.deepEqual(rows.find(row => row.label === '0').registryFillTrace.trace,{source:'supplied',hex:'#abcdef'});
   assert.equal(rows.find(row => row.label === '1').registryFillTrace.trace.source,'generated');
 });
+
+test('inspector can preview a simulation independently of optimizing new placements', () => {
+  const input = {labels:['item:33','item:633'],options:{},theme:'dark',vision:'deutan'};
+  const plain = inspect(input);
+  const normal = inspect({...input,vision:'normal'});
+  assert.deepEqual(plain.registry,normal.registry);
+  const optimized = inspect({...input,optimizeVision:true});
+  assert.notDeepEqual(optimized.registry,plain.registry);
+  assert.ok(optimized.diagnostics.stats.min > plain.diagnostics.stats.min);
+  const replay = inspect({...input,registry:optimized.registry});
+  assert.deepEqual(replay.registry,optimized.registry);
+  assert.deepEqual(replay.rows.map(row => row.swatches[2]),optimized.rows.map(row => row.swatches[2]));
+});

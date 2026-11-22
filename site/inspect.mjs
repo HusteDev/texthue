@@ -1,11 +1,13 @@
 import {analyzePalette, simulateVision} from '../packages/npm/dist/diagnostics.js';
 import {createResolver, cssVariables, importConfig} from '../packages/npm/dist/index.js';
 
-export function inspect({labels, options, theme, vision, registry}) {
+export function inspect({labels, options, theme, vision, registry, optimizeVision = false}) {
   const resolver = options && Object.hasOwn(options, 'schema') ? importConfig(options) : createResolver(options);
   const pinned = registry ? resolver.importRegistry(registry) : {};
-  const fresh = resolver.assign(labels);
-  const persistent = registry ? resolver.assign(labels, {pinned}) : fresh;
+  const profiles = vision === 'normal' ? ['normal'] : ['normal',vision];
+  const assignment = optimizeVision ? {vision:profiles} : {};
+  const fresh = resolver.assign(labels,assignment);
+  const persistent = registry ? resolver.assign(labels, {...assignment,pinned}) : fresh;
   const rows = Object.keys(fresh.colors).map(label => {
     const hash = resolver.resolve(label);
     const assigned = fresh.colors[label];

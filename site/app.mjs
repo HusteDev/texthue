@@ -37,7 +37,8 @@ function run() {
   const field = id => document.getElementById(id).value;
   try {
     const input = {labels:field('labels').split(/\r?\n/).filter(Boolean), options:JSON.parse(field('options')),
-      theme:field('theme'), vision:field('vision'), registry:field('registry') && JSON.parse(field('registry'))};
+      theme:field('theme'), vision:field('vision'), optimizeVision:document.getElementById('optimize-vision').checked,
+      registry:field('registry') && JSON.parse(field('registry'))};
     const active = new Worker('./worker.mjs', {type:'module'});
     worker = active;
     status.textContent = 'Computing palette…';
