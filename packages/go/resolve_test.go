@@ -534,6 +534,10 @@ func TestSelectedRolesMatchBothFullThemes(t *testing.T) {
 		}
 		for theme, palette := range map[string]ThemeColors{"light": full.Light, "dark": full.Dark} {
 			for role, want := range palette.roles() {
+				hex, err := resolver.Hex("example", theme, role)
+				if err != nil || hex != want.Hex {
+					t.Fatalf("%s %s.%s: hex %q, want %q, error %v", gamut, theme, role, hex, want.Hex, err)
+				}
 				got, err := resolver.Color("example", theme, role)
 				if err != nil || !reflect.DeepEqual(got, want) {
 					t.Fatalf("%s %s.%s: got %+v, want %+v, error %v", gamut, theme, role, got, want, err)

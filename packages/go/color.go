@@ -202,7 +202,7 @@ func formats(rgb encodedRGB) Color {
 	}
 	// A rounded 360 wraps to 0 so hue stays within [0, 360).
 	return Color{
-		Hex:   fmt.Sprintf("#%02x%02x%02x", int(rgb[0]), int(rgb[1]), int(rgb[2])),
+		Hex:   renditionHex(rgb, false),
 		RGB:   RGB{int(rgb[0]), int(rgb[1]), int(rgb[2])},
 		HSL:   HSL{math.Mod(round6(hue), 360), round6(saturation * 100), round6(light * 100)},
 		OKLCH: encodedOKLCH(rgb, rgbToXYZ),
@@ -438,6 +438,13 @@ func canonicalRGB(rgb encodedRGB, wide bool) encodedRGB {
 		rgb[i] = 255 * encode(math.Max(0, math.Min(1, v)))
 	}
 	return rgb
+}
+
+func renditionHex(rgb encodedRGB, wide bool) string {
+	if wide {
+		rgb, _ = p3Fallback(rgb)
+	}
+	return fmt.Sprintf("#%02x%02x%02x", int(rgb[0]), int(rgb[1]), int(rgb[2]))
 }
 
 func rendition(rgb encodedRGB, wide bool) Color {

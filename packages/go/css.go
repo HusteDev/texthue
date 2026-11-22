@@ -77,7 +77,26 @@ func CSSVariables(colors ColorSet, theme, slug, prefix string) (map[string]strin
 	return result, nil
 }
 
-func (r *Resolver) selectedColor(text, theme, role string, strict bool) (Color, error) {
+type roleSelection struct {
+	theme   int
+	role    string
+	hexOnly bool
+}
+
+func (s roleSelection) needs(role string) bool {
+	if role == s.role {
+		return true
+	}
+	switch s.role {
+	case "text":
+		return role == "subtle"
+	case "onFill", "fillHover", "fillActive":
+		return role == "fill"
+	}
+	return false
+}
+
+func (r *Resolver) selectedColor(text, theme, role string, strict, hexOnly bool) (Color, error) {
 	name, err := r.identity(text)
 	if err != nil {
 		return Color{}, err
@@ -91,12 +110,15 @@ func (r *Resolver) selectedColor(text, theme, role string, strict bool) (Color, 
 		return Color{}, invalid("theme")
 	}
 	if role == "background" {
+		if hexOnly {
+			return Color{Hex: r.bases[index].Hex}, nil
+		}
 		if r.wide {
 			return rendition(canonicalRGB(r.profiles[index].background, true), true), nil
 		}
 		return r.bases[index], nil
 	}
-	colors := r.renderTones(r.digest(name), nil, name, false, index)
+	colors := r.renderTones(r.digest(name), nil, name, false, &roleSelection{theme: index, role: role, hexOnly: hexOnly})
 	t := colors.Light
 	if index == 1 {
 		t = colors.Dark
@@ -121,16 +143,16 @@ func (r *Resolver) selectedColor(text, theme, role string, strict bool) (Color, 
 	return c, nil
 }
 func (r *Resolver) Color(text, theme, role string) (Color, error) {
-	return r.selectedColor(text, theme, role, false)
+	return r.selectedColor(text, theme, role, false, false)
 }
 
 // HexStrict returns an error when a contrast requirement for the selected role fails.
 func (r *Resolver) HexStrict(text, theme, role string) (string, error) {
-	c, err := r.selectedColor(text, theme, role, true)
+	c, err := r.selectedColor(text, theme, role, true, true)
 	return c.Hex, err
 }
 
 func (r *Resolver) Hex(text, theme, role string) (string, error) {
-	c, err := r.Color(text, theme, role)
+	c, err := r.selectedColor(text, theme, role, false, true)
 	return c.Hex, err
 }
