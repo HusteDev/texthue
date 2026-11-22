@@ -35,6 +35,17 @@ jobs:
           python tools/verify.py --port kotlin
           packages/kotlin/gradlew -p packages/kotlin publishLibraryPublicationToStagingRepository
           python tools/check-maven.py
+      - name: Measure kotlin performance
+        shell: bash
+        working-directory: .
+        run: |
+          mkdir -p benchmark-results
+          JAVA_HOME="$JAVA_HOME_17_X64" packages/kotlin/gradlew -q -p packages/kotlin benchmark > benchmark-results/kotlin.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: benchmarks-kotlin-${{ runner.os }}-${{ runner.arch }}
+          path: benchmark-results/
+          if-no-files-found: error
 
   rust:
     name: Rust conformance and packaging
@@ -49,6 +60,17 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: python ../../tools/verify.py --port rust
+      - name: Measure rust performance
+        shell: bash
+        working-directory: .
+        run: |
+          mkdir -p benchmark-results
+          cargo bench --locked --manifest-path packages/rust/Cargo.toml --bench renderer > benchmark-results/rust.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: benchmarks-rust-${{ runner.os }}-${{ runner.arch }}
+          path: benchmark-results/
+          if-no-files-found: error
       - name: Stage and verify the Rust crate and packaged consumer
         run: python ../../tools/stage-rust.py ../../artifacts/rust
 
@@ -82,6 +104,17 @@ jobs:
         with:
           dotnet-version: '9.0.x'
       - run: python tools/verify.py --port csharp
+      - name: Measure dotnet performance
+        shell: bash
+        working-directory: .
+        run: |
+          mkdir -p benchmark-results
+          dotnet run -c Release --project packages/csharp/benchmarks/Renderer > benchmark-results/dotnet.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: benchmarks-dotnet-${{ runner.os }}-${{ runner.arch }}
+          path: benchmark-results/
+          if-no-files-found: error
       - run: dotnet pack packages/csharp/src/TextHue --configuration Release --no-build --output artifacts/nuget
       - run: python tools/check-nuget.py artifacts/nuget
       - name: Check signed NuGet package recovery
@@ -104,6 +137,17 @@ jobs:
       - run: dart pub get --enforce-lockfile
       - run: python ../../tools/verify.py --port dart
       - run: python ../../tools/check-dart-publication.py
+      - name: Measure dart performance
+        shell: bash
+        working-directory: .
+        run: |
+          mkdir -p benchmark-results
+          (cd packages/dart && dart run tool/benchmark.dart) > benchmark-results/dart.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: benchmarks-dart-${{ runner.os }}-${{ runner.arch }}
+          path: benchmark-results/
+          if-no-files-found: error
 
   lint:
     name: Lint
@@ -183,6 +227,23 @@ jobs:
           python3 ../../tools/verify.py --port swift
           python3 ../../tools/check-swift-tag.py
       - run: python tools/verify.py
+      - name: Measure primary performance
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        shell: bash
+        working-directory: .
+        run: |
+          mkdir -p benchmark-results
+          node tools/bench.mjs > benchmark-results/javascript.txt
+          python tools/bench.py > benchmark-results/python.txt
+          go -C packages/go test -run '^$' -bench '^BenchmarkResolverContrast$' -benchtime=100x > benchmark-results/go-resolve.txt
+          go -C packages/go test -run '^$' -bench '^BenchmarkAssign40$' -benchtime=20x > benchmark-results/go-assign.txt
+          swift run --package-path packages/swift --force-resolved-versions -c release TextHueBenchmark > benchmark-results/swift.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        with:
+          name: benchmarks-primary-${{ runner.os }}-${{ runner.arch }}
+          path: benchmark-results/
+          if-no-files-found: error
       - name: Compile CSS with the packed Tailwind adapter
         if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
         run: python tools/check-tailwind-consumer.py

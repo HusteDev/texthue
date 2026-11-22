@@ -74,3 +74,16 @@ tasks.named('publishLibraryPublicationToStagingRepository') { dependsOn tasks.na
 detekt {
     baseline = file('detekt-baseline.xml')
 }
+
+sourceSets {
+    benchmark {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+configurations.benchmarkImplementation.extendsFrom configurations.implementation
+tasks.register('benchmark', JavaExec) {
+    dependsOn tasks.named('benchmarkClasses')
+    classpath = sourceSets.benchmark.runtimeClasspath
+    mainClass = 'RendererBenchmarkKt'
+}

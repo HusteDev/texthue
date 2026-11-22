@@ -78,7 +78,7 @@ palettes. These measurements cover the Windows .NET 9 Release build.
 ### Kotlin/JVM renderer
 
 Build the JAR with `packages/kotlin/gradlew -p packages/kotlin jar`, then run
-`kotlinc -classpath packages/kotlin/build/libs/texthue-0.1.0.jar -script tools/bench-kotlin.kts`.
+`packages/kotlin/gradlew -q -p packages/kotlin benchmark`.
 The Windows run used Android Studio's Kotlin compiler and bundled JVM.
 Each row times both theme palettes for the same 100 labels after 20 warm-up
 labels. Scenarios share a JVM and execute in table order. JIT compilation can
