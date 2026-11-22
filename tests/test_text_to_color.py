@@ -159,6 +159,39 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
             self.assertEqual(run.returncode, 0, run.stderr)
             self.compare(expected, json.loads(run.stdout))
 
+    def test_frozen_renderer_vectors(self):
+        from texthue import Resolver
+
+        corpus = json.loads((ROOT / "conformance/renderer-v1.json").read_text())
+        self.assertEqual(corpus["algorithm"], "text-to-color-v1")
+        inputs = []
+        for case in corpus["vectors"]:
+            resolver = Resolver(case["options"])
+            text, role = case["text"], case["role"]
+            full = resolver.resolve(text).to_dict()
+            inputs.append({"text": text, "config": resolver.export_config(), "trace": True})
+            for theme, expected in case["themes"].items():
+                selected = resolver.project(
+                    text, themes=[theme], roles=[role], formats=list(expected["color"])
+                )
+                self.compare(selected[theme][role], expected["color"])
+                self.compare(full[theme]["contrast"][role], expected["contrast"])
+        run = subprocess.run(
+            ["go", "-C", "packages/go", "run", "./cmd/conformance"],
+            cwd=ROOT,
+            input=json.dumps(inputs),
+            text=True,
+            capture_output=True,
+            timeout=60,
+        )
+        self.assertEqual(run.returncode, 0, run.stderr)
+        for case, full in zip(corpus["vectors"], json.loads(run.stdout), strict=True):
+            role = case["role"]
+            for theme, expected in case["themes"].items():
+                actual = full[theme][role]
+                self.compare({k: actual[k] for k in expected["color"]}, expected["color"])
+                self.compare(full[theme]["contrast"][role], expected["contrast"])
+
     def test_three_language_trace_parity(self):
         from texthue import Resolver
 

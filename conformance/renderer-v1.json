@@ -1,0 +1,413 @@
+{
+  "algorithm": "text-to-color-v1",
+  "vectors": [
+    {
+      "text": "repair",
+      "options": {
+        "contrastModel": "apca",
+        "contrastTarget": 45
+      },
+      "role": "text",
+      "themes": {
+        "light": {
+          "color": {
+            "hex": "#286771",
+            "rgb": {
+              "r": 40,
+              "g": 103,
+              "b": 113
+            }
+          },
+          "contrast": {
+            "ratio": 6.42442845553787,
+            "meetsTarget": true,
+            "lightnessAdjusted": false,
+            "chromaCapped": false,
+            "chromaReduced": false,
+            "fallback": null,
+            "model": "apca",
+            "value": 81.69405199566809
+          }
+        },
+        "dark": {
+          "color": {
+            "hex": "#53c4d7",
+            "rgb": {
+              "r": 83,
+              "g": 196,
+              "b": 215
+            }
+          },
+          "contrast": {
+            "ratio": 9.139378846459891,
+            "meetsTarget": true,
+            "lightnessAdjusted": false,
+            "chromaCapped": false,
+            "chromaReduced": false,
+            "fallback": null,
+            "model": "apca",
+            "value": -62.08185857444328
+          }
+        }
+      }
+    },
+    {
+      "text": "repair",
+      "options": {
+        "contrastModel": "apca",
+        "contrastTarget": 60
+      },
+      "role": "text",
+      "themes": {
+        "light": {
+          "color": {
+            "hex": "#286771",
+            "rgb": {
+              "r": 40,
+              "g": 103,
+              "b": 113
+            }
+          },
+          "contrast": {
+            "ratio": 6.42442845553787,
+            "meetsTarget": true,
+            "lightnessAdjusted": false,
+            "chromaCapped": false,
+            "chromaReduced": false,
+            "fallback": null,
+            "model": "apca",
+            "value": 81.69405199566809
+          }
+        },
+        "dark": {
+          "color": {
+            "hex": "#53c4d7",
+            "rgb": {
+              "r": 83,
+              "g": 196,
+              "b": 215
+            }
+          },
+          "contrast": {
+            "ratio": 9.139378846459891,
+            "meetsTarget": true,
+            "lightnessAdjusted": false,
+            "chromaCapped": false,
+            "chromaReduced": false,
+            "fallback": null,
+            "model": "apca",
+            "value": -62.08185857444328
+          }
+        }
+      }
+    },
+    {
+      "text": "repair",
+      "options": {
+        "contrastModel": "apca",
+        "contrastTarget": 75
+      },
+      "role": "text",
+      "themes": {
+        "light": {
+          "color": {
+            "hex": "#25646f",
+            "rgb": {
+              "r": 37,
+              "g": 100,
+              "b": 111
+            },
+            "trace": {
+              "source": "generated",
+              "requested": {
+                "l": 0.4830705169308931,
+                "c": 0.0663360367958493,
+                "h": 210.23590375954154
+              },
+              "biased": {
+                "l": 0.4773933209609821,
+                "c": 0.06555642107600229,
+                "h": 210.23590375954154
+              },
+              "repaired": {
+                "l": 0.468994140625,
+                "c": 0.06555642107600229,
+                "h": 210.23590375954154
+              },
+              "fitted": {
+                "l": 0.468994140625,
+                "c": 0.06555642107600229,
+                "h": 210.23590375954154
+              }
+            }
+          },
+          "contrast": {
+            "ratio": 6.706970314544815,
+            "meetsTarget": true,
+            "lightnessAdjusted": true,
+            "chromaCapped": false,
+            "chromaReduced": false,
+            "fallback": null,
+            "model": "apca",
+            "value": 82.86423597818919
+          }
+        },
+        "dark": {
+          "color": {
+            "hex": "#6dddf0",
+            "rgb": {
+              "r": 109,
+              "g": 221,
+              "b": 240
+            },
+            "trace": {
+              "source": "generated",
+              "requested": {
+                "l": 0.773070516930893,
+                "c": 0.10615969149152847,
+                "h": 210.23590375954154
+              },
+              "biased": {
+                "l": 0.7640121932617454,
+                "c": 0.10491581703167938,
+                "h": 210.23590375954154
+              },
+              "repaired": {
+                "l": 0.837890625,
+                "c": 0.10491581703167938,
+                "h": 210.23590375954154
+              },
+              "fitted": {
+                "l": 0.837890625,
+                "c": 0.10491581703167938,
+                "h": 210.23590375954154
+              }
+            }
+          },
+          "contrast": {
+            "ratio": 11.821010329605501,
+            "meetsTarget": true,
+            "lightnessAdjusted": true,
+            "chromaCapped": false,
+            "chromaReduced": false,
+            "fallback": null,
+            "model": "apca",
+            "value": -76.13186517505372
+          }
+        }
+      }
+    },
+    {
+      "text": "repair",
+      "options": {
+        "contrastModel": "apca",
+        "contrastTarget": 90
+      },
+      "role": "text",
+      "themes": {
+        "light": {
+          "color": {
+            "hex": "#003b44",
+            "rgb": {
+              "r": 0,
+              "g": 59,
+              "b": 68
+            }
+          },
+          "contrast": {
+            "ratio": 12.28747855255024,
+            "meetsTarget": true,
+            "lightnessAdjusted": true,
+            "chromaCapped": false,
+            "chromaReduced": true,
+            "fallback": null,
+            "model": "apca",
+            "value": 97.58685311263187
+          }
+        },
+        "dark": {
+          "color": {
+            "hex": "#a8f2ff",
+            "rgb": {
+              "r": 168,
+              "g": 242,
+              "b": 255
+            }
+          },
+          "contrast": {
+            "ratio": 14.995689960859957,
+            "meetsTarget": true,
+            "lightnessAdjusted": true,
+            "chromaCapped": false,
+            "chromaReduced": true,
+            "fallback": null,
+            "model": "apca",
+            "value": -91.11284422695995
+          }
+        }
+      }
+    },
+    {
+      "text": "fixed",
+      "options": {
+        "contrastModel": "apca",
+        "contrastTarget": 106,
+        "overrides": {
+          "fixed": "#777777"
+        },
+        "foregrounds": [
+          "#777777"
+        ]
+      },
+      "role": "fill",
+      "themes": {
+        "light": {
+          "color": {
+            "hex": "#777777",
+            "rgb": {
+              "r": 119,
+              "g": 119,
+              "b": 119
+            }
+          },
+          "contrast": {
+            "ratio": 1,
+            "meetsTarget": false,
+            "lightnessAdjusted": false,
+            "chromaReduced": false,
+            "chromaCapped": false,
+            "fallback": "palette-constraint",
+            "model": "apca",
+            "value": 0
+          }
+        },
+        "dark": {
+          "color": {
+            "hex": "#777777",
+            "rgb": {
+              "r": 119,
+              "g": 119,
+              "b": 119
+            }
+          },
+          "contrast": {
+            "ratio": 1,
+            "meetsTarget": false,
+            "lightnessAdjusted": false,
+            "chromaReduced": false,
+            "chromaCapped": false,
+            "fallback": "palette-constraint",
+            "model": "apca",
+            "value": 0
+          }
+        }
+      }
+    },
+    {
+      "text": "0",
+      "options": {
+        "gamut": "display-p3",
+        "preset": "chart"
+      },
+      "role": "fill",
+      "themes": {
+        "light": {
+          "color": {
+            "hex": "#68aeff",
+            "rgb": {
+              "r": 104,
+              "g": 174,
+              "b": 255
+            },
+            "p3": {
+              "r": 0.470588,
+              "g": 0.67451,
+              "b": 1
+            },
+            "css": "color(display-p3 0.470588 0.67451 1)",
+            "srgbClipped": true,
+            "trace": {
+              "source": "generated",
+              "requested": {
+                "l": 0.7421486537251621,
+                "c": 0.14573914059838394,
+                "h": 255.18241807384342
+              },
+              "biased": {
+                "l": 0.7413345292796847,
+                "c": 0.14623706061876085,
+                "h": 255.18241807384342
+              },
+              "repaired": {
+                "l": 0.7413345292796847,
+                "c": 0.14623706061876085,
+                "h": 255.18241807384342
+              },
+              "fitted": {
+                "l": 0.7413345292796847,
+                "c": 0.14623706061876085,
+                "h": 255.18241807384342
+              }
+            }
+          },
+          "contrast": {
+            "ratio": 9.153294224009217,
+            "meetsTarget": true,
+            "lightnessAdjusted": false,
+            "chromaCapped": false,
+            "chromaReduced": false,
+            "fallback": null
+          }
+        },
+        "dark": {
+          "color": {
+            "hex": "#004aa3",
+            "rgb": {
+              "r": 0,
+              "g": 74,
+              "b": 163
+            },
+            "p3": {
+              "r": 0.07451,
+              "g": 0.286275,
+              "b": 0.615686
+            },
+            "css": "color(display-p3 0.07451 0.286275 0.615686)",
+            "srgbClipped": true,
+            "trace": {
+              "source": "generated",
+              "requested": {
+                "l": 0.4221486537251622,
+                "c": 0.1779540345996751,
+                "h": 255.18241807384342
+              },
+              "biased": {
+                "l": 0.4258240531956841,
+                "c": 0.16,
+                "h": 255.18241807384342
+              },
+              "repaired": {
+                "l": 0.4258240531956841,
+                "c": 0.16,
+                "h": 255.18241807384342
+              },
+              "fitted": {
+                "l": 0.4258240531956841,
+                "c": 0.16,
+                "h": 255.18241807384342
+              }
+            }
+          },
+          "contrast": {
+            "ratio": 8.446523855742274,
+            "meetsTarget": true,
+            "lightnessAdjusted": false,
+            "chromaCapped": true,
+            "chromaReduced": false,
+            "fallback": null
+          }
+        }
+      }
+    }
+  ]
+}
