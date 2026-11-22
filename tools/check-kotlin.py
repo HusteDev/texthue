@@ -26,10 +26,11 @@ def main():
             ("gamut", "ColorMathTestKt"),
             ("contrast", "ContrastTestKt"),
             ("repair", "ToneRepairTestKt"),
+            ("kotlin-resolver", "ResolverTestKt"),
         ):
             generator = (
-                ["node", ROOT / "tools/repair-vectors.mjs"]
-                if corpus == "repair"
+                ["node", ROOT / f"tools/{corpus}-vectors.mjs"]
+                if corpus in ("repair", "kotlin-resolver")
                 else [sys.executable, ROOT / f"tools/{corpus}-vectors.py"]
             )
             rows = subprocess.check_output(generator)
