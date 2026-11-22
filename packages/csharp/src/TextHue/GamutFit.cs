@@ -35,7 +35,7 @@ internal static class GamutFit
         { 0, 32229.0 / 714400, 5220557.0 / 5000800 },
     };
 
-    private readonly record struct Triple(double X, double Y, double Z)
+    internal readonly record struct Triple(double X, double Y, double Z)
     {
         private static bool Inside(double x) => x >= -1e-12 && x <= 1 + 1e-12;
         internal bool InGamut => Inside(X) && Inside(Y) && Inside(Z);
@@ -55,10 +55,15 @@ internal static class GamutFit
         return (byte)Math.Floor(encoded * 255 + 0.5);
     }
 
-    internal static (Rgb Bytes, bool Clipped) P3Fallback(Rgb color)
+    internal static (Rgb Bytes, bool Clipped) P3Fallback(Rgb color) =>
+        FallbackFromXyz(P3ToXyz(new(color.R / 255.0, color.G / 255.0, color.B / 255.0)));
+
+    internal static Triple P3ToXyz(P3Channels color) =>
+        Multiply(p3ToXYZ, new(Contrast.LinearChannel(color.R),
+            Contrast.LinearChannel(color.G), Contrast.LinearChannel(color.B)));
+
+    internal static (Rgb Bytes, bool Clipped) FallbackFromXyz(Triple xyz)
     {
-        var xyz = Multiply(p3ToXYZ, new(Contrast.LinearChannel(color.R / 255.0),
-            Contrast.LinearChannel(color.G / 255.0), Contrast.LinearChannel(color.B / 255.0)));
         var rgb = Multiply(xyzToRGB, xyz);
         return (rgb.Bytes, !rgb.InGamut);
     }

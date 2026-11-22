@@ -3,12 +3,18 @@ namespace TextHue;
 public readonly record struct Hsl(double H, double S, double L);
 public readonly record struct Oklch(double L, double C, double H);
 
+public readonly record struct P3Channels(double R, double G, double B);
+
 public sealed class Color
 {
     public Rgb Rgb { get; }
     public string Hex { get; }
     public Hsl Hsl { get; }
     public Oklch Oklch { get; }
+
+    public P3Channels? P3 { get; }
+    public string? Css { get; }
+    public bool? SrgbClipped { get; }
 
     private static double Round6(double value) => Math.Floor(value * 1e6 + 0.5) / 1e6;
 
@@ -43,10 +49,34 @@ public sealed class Color
         }
         Hsl = new(Round6(60 * hue) % 360, Round6(100 * saturation), Round6(100 * light));
 
-        var (labL, labA, labB) = ToOklab(rgb);
-        bool neutral = rgb.R == rgb.G && rgb.G == rgb.B;
+        Oklch = Coordinates(ToOklab(rgb), rgb.R == rgb.G && rgb.G == rgb.B);
+    }
+
+    public static Color FromDisplayP3(P3Channels channels)
+    {
+        static bool Valid(double x) => x >= 0 && x <= 1;
+        if (!Valid(channels.R) || !Valid(channels.G) || !Valid(channels.B))
+            throw new ArgumentOutOfRangeException(nameof(channels));
+        var xyz = GamutFit.P3ToXyz(channels);
+        var fallback = GamutFit.FallbackFromXyz(xyz);
+        return new Color(channels, xyz, fallback.Bytes, fallback.Clipped);
+    }
+
+    private Color(P3Channels channels, GamutFit.Triple xyz, Rgb fallback, bool clipped) : this(fallback)
+    {
+        var (r, g, b) = channels;
+        P3 = new(Round6(r), Round6(g), Round6(b));
+        var (red, green, blue) = P3.Value;
+        Css = FormattableString.Invariant($"color(display-p3 {red:0.######} {green:0.######} {blue:0.######})");
+        SrgbClipped = clipped;
+        Oklch = Coordinates(XyzToOklab(xyz.X, xyz.Y, xyz.Z), r == g && g == b);
+    }
+
+    private static Oklch Coordinates((double L, double A, double B) lab, bool neutral)
+    {
+        var (labL, labA, labB) = lab;
         double degrees = (Math.Atan2(labB, labA) * 180 / Math.PI + 360) % 360;
-        Oklch = new(Round6(labL), neutral ? 0 : Round6(Math.Sqrt(labA * labA + labB * labB)),
+        return new(Round6(labL), neutral ? 0 : Round6(Math.Sqrt(labA * labA + labB * labB)),
                     neutral ? 0 : Round6(degrees) % 360);
     }
 
@@ -58,6 +88,11 @@ public sealed class Color
         double x = (506752.0 / 1228815) * r + (87881.0 / 245763) * g + (12673.0 / 70218) * b;
         double y = (87098.0 / 409605) * r + (175762.0 / 245763) * g + (12673.0 / 175545) * b;
         double z = (7918.0 / 409605) * r + (87881.0 / 737289) * g + (1001167.0 / 1053270) * b;
+        return XyzToOklab(x, y, z);
+    }
+
+    private static (double L, double A, double B) XyzToOklab(double x, double y, double z)
+    {
         double l = Math.Cbrt(0.819022437996703 * x + 0.3619062600528904 * y - 0.1288737815209879 * z);
         double m = Math.Cbrt(0.0329836539323885 * x + 0.9292868615863434 * y + 0.0361446663506424 * z);
         double s = Math.Cbrt(0.0481771893596242 * x + 0.2642395317527308 * y + 0.6335478284694309 * z);

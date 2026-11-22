@@ -106,12 +106,19 @@ foreach (var row in fits.RootElement.EnumerateArray())
     var fit = Gamut.DisplayP3.Fit(row.GetProperty("l").GetDouble(), row.GetProperty("c").GetDouble(),
                                   row.GetProperty("h").GetDouble());
     var fallback = GamutFit.P3Fallback(fit.Bytes);
+    var native = Color.FromDisplayP3(new(fit.Bytes.R / 255.0, fit.Bytes.G / 255.0, fit.Bytes.B / 255.0));
+    if (native.Rgb != fallback.Bytes || native.SrgbClipped != fallback.Clipped || native.P3 is null)
+        throw new InvalidDataException($"Native Display-P3 rendition mismatch for {row}");
     if (fit.Bytes != ReadRgb(row.GetProperty("rgb")) || fallback.Bytes != ReadRgb(row.GetProperty("fallback"))
         || fallback.Clipped != row.GetProperty("clipped").GetBoolean())
         throw new InvalidDataException($"Display-P3 fit or fallback mismatch for {row}");
 }
 if (fits.RootElement.GetArrayLength() != 108) throw new InvalidDataException("Unexpected fit corpus size.");
-Console.WriteLine("Passed 108 Display-P3 fits and sRGB fallbacks.");
+var redP3 = Color.FromDisplayP3(new(1, 0, 0));
+if (redP3.Css != "color(display-p3 1 0 0)" || redP3.Hex != "#ff0000" || redP3.SrgbClipped != true
+    || Math.Abs(redP3.Oklch.L - 0.648574) > 0.000001)
+    throw new InvalidDataException("Display-P3 red serialization or native OKLCH mismatch.");
+Console.WriteLine("Passed 108 Display-P3 fits and sRGB fallbacks plus native red serialization.");
 
 int repairs = 0;
 foreach (var line in File.ReadLines(Path.Combine(AppContext.BaseDirectory, "tone-repair-v1.tsv")))
