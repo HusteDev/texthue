@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TextHue palette inspector</title>
+<style>
+:root{font:1rem/1.55 "Source Sans 3",system-ui,sans-serif;color:#172a32;background:#f7f6f2}main{max-width:66rem;margin:auto;padding:2rem 1rem}h1,h2{line-height:1.15}form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr));gap:1rem}label{display:grid;align-content:start;gap:.3rem}textarea,select,button{font:inherit;padding:.45rem}textarea{resize:vertical}td,th{padding:.55rem;text-align:left;border-bottom:1px solid #b7c0bd}table{border-collapse:collapse}section{overflow:auto}pre{white-space:pre-wrap}button{cursor:pointer}
+</style><main><h1>TextHue palette inspector</h1>
+<form><label>Labels, one per line<textarea id="labels" rows="5">research
+design
+engineering</textarea></label><label>Resolver options (JSON)<textarea id="options" rows="5">{}</textarea></label>
+<label>Theme<select id="theme"><option>light</option><option>dark</option></select></label>
+<label>Vision profile<select id="vision"><option>normal</option><option>deutan</option><option>protan</option><option>tritan</option></select></label>
+<label>Saved registry (optional JSON)<textarea id="registry"></textarea></label><button>Inspect palette</button></form>
+<p role="status"></p><section id="results"></section></main><script type="module" src="./app.mjs"></script></html>
