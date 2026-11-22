@@ -115,3 +115,35 @@ var tie = Gamut.SRgb.Repair(0.5, 0, 0, 1, _ => 0);
 if (repairs != 192 || tie.Color.Bytes != new Rgb(0, 0, 0) || tie.Fallback != "unattainable-contrast")
     throw new InvalidDataException("Repair corpus size or fallback tie mismatch.");
 Console.WriteLine($"Passed {repairs} shared repairs and the tied fallback check.");
+
+int rendered = 0;
+foreach (var row in vectors.EnumerateArray())
+{
+    var options = row.GetProperty("options");
+    if (options.TryGetProperty("profiles", out _) || options.TryGetProperty("contrastTargets", out _)) continue;
+    Rgb? Background(string theme)
+    {
+        if (!options.TryGetProperty("backgrounds", out var backgrounds) || !backgrounds.TryGetProperty(theme, out var hex)) return null;
+        var bytes = Convert.FromHexString(hex.GetString()![1..]);
+        return new(bytes[0], bytes[1], bytes[2]);
+    }
+    var renderer = new Renderer(options.TryGetProperty("namespace", out var scope) ? scope.GetString()! : "",
+        options.TryGetProperty("seed", out var seed) ? seed.GetUInt32() : 0,
+        options.TryGetProperty("contrastTarget", out var target) ? target.GetDouble() : 4.5,
+        Background("light"), Background("dark"));
+    var palette = renderer.Resolve(row.GetProperty("text").GetString()!);
+    var expected = row.GetProperty("expected");
+    if (palette.Hue != expected.GetProperty("hue").GetDouble() || palette.HueFraction != expected.GetProperty("hueFraction").GetDouble() ||
+        palette.Version != expected.GetProperty("version").GetString() || palette.Source != expected.GetProperty("source").GetString())
+        throw new InvalidDataException($"Renderer identity mismatch for {row.GetProperty("id")}");
+    foreach (var (theme, colors) in new[] { ("light", palette.Light), ("dark", palette.Dark) })
+    {
+        if (colors.Count != 10) throw new InvalidDataException("Missing roles.");
+        foreach (var (role, color) in colors)
+            if (color.Hex != expected.GetProperty(theme).GetProperty(role).GetProperty("hex").GetString())
+                throw new InvalidDataException($"Renderer mismatch for {row.GetProperty("id")} {theme} {role}");
+    }
+    rendered++;
+}
+if (rendered != 25) throw new InvalidDataException("Unexpected renderer corpus size.");
+Console.WriteLine($"Passed {rendered} two-theme renderer cases.");
