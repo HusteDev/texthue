@@ -1,22 +1,54 @@
 import Foundation
 
-struct RoleProfile: Decodable {
-    var lightness: [Double]?
-    var chromaScale: [Double]?
-    var chromaCap: Double?
+public struct RoleProfile: Decodable {
+    public var lightness: [Double]?
+    public var chromaScale: [Double]?
+    public var chromaCap: Double?
+
+    public init(lightness: [Double]? = nil, chromaScale: [Double]? = nil, chromaCap: Double? = nil) {
+        self.lightness = lightness
+        self.chromaScale = chromaScale
+        self.chromaCap = chromaCap
+    }
+
+    fileprivate func validate() throws {
+        for pair in [lightness, chromaScale].compactMap({ $0 }) {
+            guard pair.count == 2, pair[0] >= 0, pair[1] <= 1, pair[0] <= pair[1] else {
+                throw RenderError.invalidOptions
+            }
+        }
+        if let chromaCap, !(0...0.4).contains(chromaCap) { throw RenderError.invalidOptions }
+    }
 }
 
-struct RenderOptions: Decodable {
-    var normalize: Normalization?
-    var namespace: String?
-    var seed: UInt32?
-    var contrastTarget: Double?
-    var contrastTargets: [String: Double]?
-    var backgrounds: [String: String]?
-    var profiles: [String: [String: RoleProfile]]?
+public struct RenderOptions: Decodable {
+    public var normalize: Normalization?
+    public var namespace: String?
+    public var seed: UInt32?
+    public var contrastTarget: Double?
+    public var contrastTargets: [String: Double]?
+    public var backgrounds: [String: String]?
+    public var profiles: [String: [String: RoleProfile]]?
+
+    public init() {}
 }
 
-enum RenderError: Error { case invalidOptions }
+public enum RenderError: Error { case invalidOptions }
+
+private struct ThemeBackground {
+    let bytes: [UInt8]
+    let lightness: Double
+
+    init(_ raw: String) throws {
+        let digits = raw.utf8.dropFirst()
+        guard raw.first == "#", digits.count == 6,
+              digits.allSatisfy({ (48...57).contains($0) || (65...70).contains($0) || (97...102).contains($0) }),
+              let n = UInt32(raw.dropFirst(), radix: 16) else { throw RenderError.invalidOptions }
+        let rgb = RGB(r: UInt8(n >> 16), g: UInt8((n >> 8) & 255), b: UInt8(n & 255))
+        bytes = [rgb.r, rgb.g, rgb.b]
+        lightness = floor(Color(rgb: rgb).oklch.l * 4096 + 0.5) / 4096
+    }
+}
 
 public struct RenderedPalette: Equatable {
     public let hue: Double
@@ -29,7 +61,23 @@ public struct Renderer {
     private let normalization: Normalization
     private let scope: String
 
-    init(options: RenderOptions) {
+    private let lightBackground, darkBackground: ThemeBackground
+
+    public init(options: RenderOptions) throws {
+        let themes = ["light", "dark"]
+        let roles = ["fill", "fillHover", "fillActive", "border", "text", "textOnSubtle", "strong"]
+        guard (1...21).contains(options.contrastTarget ?? 4.5),
+              (options.contrastTargets ?? [:]).allSatisfy({ roles.contains($0.key) && (1...21).contains($0.value) }),
+              (options.backgrounds ?? [:]).keys.allSatisfy(themes.contains) else { throw RenderError.invalidOptions }
+        for (theme, profiles) in options.profiles ?? [:] {
+            guard themes.contains(theme) else { throw RenderError.invalidOptions }
+            for (role, profile) in profiles {
+                guard role == "fill" || role == "text" else { throw RenderError.invalidOptions }
+                try profile.validate()
+            }
+        }
+        lightBackground = try ThemeBackground(options.backgrounds?["light"] ?? "#ffffff")
+        darkBackground = try ThemeBackground(options.backgrounds?["dark"] ?? "#121212")
         self.options = options
         let normalization = options.normalize ?? Normalization()
         self.normalization = normalization
@@ -37,8 +85,12 @@ public struct Renderer {
     }
 
     public init(namespace: String = "", seed: UInt32 = 0, contrastTarget: Double = 4.5, normalize: Normalization = Normalization()) throws {
-        guard (1...21).contains(contrastTarget) else { throw RenderError.invalidOptions }
-        self.init(options: RenderOptions(normalize: normalize, namespace: namespace, seed: seed, contrastTarget: contrastTarget))
+        var options = RenderOptions()
+        options.normalize = normalize
+        options.namespace = namespace
+        options.seed = seed
+        options.contrastTarget = contrastTarget
+        try self.init(options: options)
     }
 
     public func resolve(_ text: String) throws -> RenderedPalette {
@@ -75,35 +127,25 @@ public struct Renderer {
 
     private func theme(_ name: String, _ hue: Double, _ uL: Double, _ uC: Double) throws -> [String: Color] {
         let dark = name == "dark", direction: Double = dark ? 1 : -1
-        let raw = options.backgrounds?[name] ?? (dark ? "#121212" : "#ffffff")
-        guard raw.first == "#", raw.utf8.count == 7, let n = UInt32(raw.dropFirst(), radix: 16)
-        else { throw RenderError.invalidOptions }
-        let base = RGB(r: UInt8(n >> 16), g: UInt8((n >> 8) & 255), b: UInt8(n & 255))
-        let bg = [base.r, base.g, base.b]
-        let lb = floor(Color(rgb: base).oklch.l * 4096 + 0.5) / 4096
+        let base = dark ? darkBackground : lightBackground
+        let bg = base.bytes, lb = base.lightness
         let target = options.contrastTarget ?? 4.5
         func required(_ role: String) -> Double {
             options.contrastTargets?[role] ?? (role == "border" ? min(target, 3) : target)
         }
-        func sampled(_ role: String) throws -> (l: Double, scale: Double, cap: Double) {
+        func sampled(_ role: String) -> (l: Double, scale: Double, cap: Double) {
             let profile = options.profiles?[name]?[role]
             let fill = role == "fill"
             let range = profile?.lightness ?? (dark ? (fill ? [0.4,0.5] : [0.72,0.82]) :
                                                 (fill ? [0.72,0.82] : [0.43,0.53]))
             let scale = profile?.chromaScale ?? [0.6,0.8]
             let cap = profile?.chromaCap ?? (fill ? 0.16 : 0.19)
-            for pair in [range, scale] {
-                guard pair.count == 2, pair[0] >= 0, pair[1] <= 1, pair[0] <= pair[1] else {
-                    throw RenderError.invalidOptions
-                }
-            }
-            guard (0...0.4).contains(cap) else { throw RenderError.invalidOptions }
             let bias = biases[(dark ? 2 : 0) + (fill ? 0 : 1)], sector = Int(hue / 30)
             let offset = bias[sector] + (bias[(sector + 1) % 12] - bias[sector]) * (hue / 30 - Double(sector))
             return (min(1, max(0, range[0] + (range[1] - range[0]) * uL + offset)),
                     scale[0] + (scale[1] - scale[0]) * uC, cap)
         }
-        let fillP = try sampled("fill"), textP = try sampled("text")
+        let fillP = sampled("fill"), textP = sampled("text")
         func ratio(_ a: [UInt8], _ b: [UInt8]) -> Double {
             ContrastModel.wcag2.measure(text: a, background: b, gamut: .sRGB)
         }
