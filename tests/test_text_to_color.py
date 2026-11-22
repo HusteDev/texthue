@@ -641,8 +641,7 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
                 continue
             inputs = cases + replay if package.get("conformanceReplay") else cases
             wide_start = len(inputs)
-            if name in ("csharp", "dart", "kotlin", "rust", "swift"):
-                inputs = inputs + wide_cases
+            inputs = inputs + wide_cases
             with self.subTest(runner=name):
                 if command[0] == "python":
                     command[0] = sys.executable
@@ -664,8 +663,7 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
                 results[name] = output[: len(cases)]
                 if package.get("conformanceReplay"):
                     self.assertEqual(results[name], output[len(cases) : wide_start])
-                if len(inputs) > wide_start:
-                    self.compare(output[wide_start:], wide_expected)
+                self.compare(output[wide_start:], wide_expected)
         expected = results.pop("npm")
         for index, result in enumerate(expected):
             for name, output in results.items():
