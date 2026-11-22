@@ -28,7 +28,7 @@ const XYZTOP3: [[f64; 3]; 3] = [
     [-14852.0 / 17905.0, 63121.0 / 35810.0, 423.0 / 17905.0],
     [11844.0 / 330415.0, -50337.0 / 660830.0, 316169.0 / 330415.0],
 ];
-const P3TOXYZ: [[f64; 3]; 3] = [
+pub(crate) const P3TOXYZ: [[f64; 3]; 3] = [
     [
         608311.0 / 1250200.0,
         189793.0 / 714400.0,
@@ -161,6 +161,14 @@ mod tests {
             let fit = Gamut::DisplayP3.fit(row.l, row.c, row.h);
             assert_eq!(fit.bytes, row.rgb);
             assert_eq!(p3_fallback(fit.bytes), (row.fallback, row.clipped));
+            let color = crate::Color::from_display_p3(fit.bytes);
+            assert_eq!(color.rgb, row.fallback);
+            assert_eq!(color.srgb_clipped, row.clipped);
+            let [r, g, b] = color.p3.unwrap();
+            assert_eq!(color.css.unwrap(), format!("color(display-p3 {r} {g} {b})"));
+            for (channel, byte) in [r, g, b].iter().zip(row.rgb) {
+                assert!((channel - f64::from(byte) / 255.0).abs() <= 0.0000005);
+            }
         }
     }
 }

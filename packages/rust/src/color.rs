@@ -33,10 +33,17 @@ pub struct Color {
     pub hex: String,
     pub hsl: Hsl,
     pub oklch: Oklch,
+    pub p3: Option<[f64; 3]>,
+    pub css: Option<String>,
+    pub srgb_clipped: bool,
 }
 
 pub(crate) fn oklab(rgb: [u8; 3]) -> [f64; 3] {
-    let xyz = multiply(&RGBTOXYZ, rgb.map(|v| linear_channel(f64::from(v) / 255.0)));
+    lab_from_channels(rgb, &RGBTOXYZ)
+}
+
+fn lab_from_channels(rgb: [u8; 3], matrix: &[[f64; 3]; 3]) -> [f64; 3] {
+    let xyz = multiply(matrix, rgb.map(|v| linear_channel(f64::from(v) / 255.0)));
     let lms = multiply(&XYZTOLMS, xyz);
     multiply(&LMSTOLAB, lms.map(f64::cbrt))
 }
@@ -64,9 +71,6 @@ impl From<[u8; 3]> for Color {
             };
             (60.0 * hue, (hi - light) / light.min(1.0 - light))
         };
-        let [l, a, lab_b] = oklab(rgb);
-        let neutral = rgb[0] == rgb[1] && rgb[1] == rgb[2];
-        let degrees = (lab_b.atan2(a) * 180.0 / std::f64::consts::PI + 360.0) % 360.0;
         Self {
             rgb,
             hex: format!("#{:02x}{:02x}{:02x}", rgb[0], rgb[1], rgb[2]),
@@ -75,19 +79,45 @@ impl From<[u8; 3]> for Color {
                 s: round6(100.0 * saturation),
                 l: round6(100.0 * light),
             },
-            oklch: Oklch {
-                l: round6(l),
-                c: if neutral {
-                    0.0
-                } else {
-                    round6((a * a + lab_b * lab_b).sqrt())
-                },
-                h: if neutral {
-                    0.0
-                } else {
-                    round6(degrees) % 360.0
-                },
-            },
+            oklch: coordinates(rgb, &RGBTOXYZ),
+            p3: None,
+            css: None,
+            srgb_clipped: false,
+        }
+    }
+}
+
+fn coordinates(rgb: [u8; 3], matrix: &[[f64; 3]; 3]) -> Oklch {
+    let [l, a, lab_b] = lab_from_channels(rgb, matrix);
+    let neutral = rgb[0] == rgb[1] && rgb[1] == rgb[2];
+    let degrees = (lab_b.atan2(a) * 180.0 / std::f64::consts::PI + 360.0) % 360.0;
+    Oklch {
+        l: round6(l),
+        c: if neutral {
+            0.0
+        } else {
+            round6((a * a + lab_b * lab_b).sqrt())
+        },
+        h: if neutral {
+            0.0
+        } else {
+            round6(degrees) % 360.0
+        },
+    }
+}
+
+impl Color {
+    /// Build a native Display-P3 rendition and its clipped sRGB fallback.
+    pub fn from_display_p3(bytes: [u8; 3]) -> Self {
+        let (fallback, srgb_clipped) = crate::p3_fallback(bytes);
+        let channels = bytes.map(|v| round6(f64::from(v) / 255.0));
+        let [r, g, b] = channels;
+        Self {
+            oklch: coordinates(bytes, &crate::gamut::P3TOXYZ),
+            p3: Some(channels),
+            css: Some(format!("color(display-p3 {r} {g} {b})")),
+            srgb_clipped,
+            ..Self::from(fallback)
         }
     }
 }
