@@ -178,13 +178,27 @@ class Resolver(
         for ((name, mapped) in mappings) {
             if (mapped.fixed != null) placements.putIfAbsent(name, Placement(mapped.fraction, 0, false))
         }
-        val colors = mappings.mapValues { (name, mapped) ->
-            val p = placements.getOrPut(name) { place(mapped.fraction, placements.values, separation) }
+        fun placed(mapped: Mapping, p: Placement): Palette {
             val ring = (p.ring % ringOffsets.size).toInt()
             val selected = if (mapped.fixed != null) mapped.copy(ring = ring) else
                 mapped.copy(hue = hueDomain.mappedHue(p.hueFraction), fraction = p.hueFraction,
                     source = "assigned", ring = ring)
-            render(selected)
+            return render(selected)
+        }
+        val occupied = placements.map { (name, p) ->
+            fillPoints(placed(mappings[name] ?: mapping(name), p))
+        }.toMutableList()
+        val colors = mappings.mapValues { (name, mapped) ->
+            val pinnedPlacement = placements[name]
+            if (pinnedPlacement != null) placed(mapped, pinnedPlacement) else {
+                val initial = place(mapped.fraction, placements.values, separation)
+                val (p, palette) = repairPlacement(initial, placements.values, separation, occupied) {
+                    placed(mapped, it)
+                }
+                placements[name] = p
+                occupied.add(fillPoints(palette))
+                palette
+            }
         }
         return Assignment(placements.toMap(), colors, assignmentReport(colors, size, separation))
     }
