@@ -189,8 +189,20 @@ class Resolver(
         return Assignment(placements.toMap(), colors, assignmentReport(colors, size, separation))
     }
 
-    fun hex(text: String, dark: Boolean = false, role: String = "fill"): String =
-        theme(dark, mapping(normalization.apply(text)), role).colors.getValue(role)
+    fun hex(text: String, dark: Boolean = false, role: String = "fill", strict: Boolean = false): String {
+        val mapped = mapping(normalization.apply(text))
+        fun value(name: String) = theme(dark, mapped, name).colors.getValue(name)
+        val result = value(role)
+        if (strict) {
+            val cache = mutableMapOf(role to result)
+            fun bytes(name: String) = parseHex(cache.getOrPut(name) { value(name) })
+            for ((pair, front, back) in contrastPairs(role)) {
+                val required = contrastTargets.required(pair, target, apca)
+                check(contrast(bytes(front), bytes(back)) >= required) { "Contrast target for $pair was not met" }
+            }
+        }
+        return result
+    }
 
     fun color(text: String, dark: Boolean = false, role: String = "fill"): Color =
         renderedColor(parseHex(hex(text, dark, role)))
@@ -233,7 +245,7 @@ class Resolver(
             }.color.bytes
         }
         val unconstrained = if (apca) 0.0 else 1.0
-        val borderTarget = contrastTargets.border ?: if (apca) target else minOf(3.0, target)
+        val borderTarget = contrastTargets.required("border", target, apca)
         val subtle by lazy(LazyThreadSafetyMode.NONE) { tone(lb + direction * 0.04, profile.fill, 0.16, unconstrained) }
         val fill by lazy(LazyThreadSafetyMode.NONE) {
             fixed?.bytes ?: tone(fillL, profile.fill, 0.16, contrastTargets.fill ?: target)
@@ -276,3 +288,24 @@ private fun List<RankedEntry>.selectEntry(digest: ByteArray): Pair<FixedTone, Fi
     }
     return winner?.colors
 }
+
+private fun contrastPairs(role: String): List<Triple<String, String, String>> = when (role) {
+    "fill", "onFill" -> listOf(Triple("fill", "onFill", "fill"))
+    "fillHover", "fillActive" -> listOf(Triple(role, "onFill", role))
+    "text" -> listOf(Triple(role, role, "background"), Triple("textOnSubtle", role, "subtle"))
+    "strong", "border" -> listOf(Triple(role, role, "background"))
+    else -> emptyList()
+}
+
+private const val BORDER_CONTRAST = 3.0
+
+private fun ContrastTargets.required(pair: String, target: Double, apca: Boolean): Double = when (pair) {
+    "fill" -> fill
+    "fillHover" -> fillHover
+    "fillActive" -> fillActive
+    "border" -> border ?: if (apca) target else minOf(BORDER_CONTRAST, target)
+    "text" -> text
+    "textOnSubtle" -> textOnSubtle
+    "strong" -> strong
+    else -> error("Unknown contrast relationship: $pair")
+} ?: target

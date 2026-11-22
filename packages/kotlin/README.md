@@ -77,4 +77,6 @@ resolver vectors compared individual hex and color selections with full
 palettes for all ten roles in each theme. The Android run used D8 37.0.0
 and the API 34 platform library.
 
+Use `resolver.hex(text, role = "text", strict = true)` to enforce contrast against the background and subtle surface. An unmet target throws `IllegalStateException`.
+
 Use `resolver.assign(labels)` to assign a collection. Pass `pinned = previous.assignments` to retain prior placements. The report measures closest pairs by rendered light-fill OKLab distance.

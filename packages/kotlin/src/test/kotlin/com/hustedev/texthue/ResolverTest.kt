@@ -70,6 +70,16 @@ fun main() {
     for (invalid in listOf(emptyList(), listOf("#abc"), listOf("ffffff"), listOf("#ffggff"))) {
         check(runCatching { Resolver(foregrounds = invalid) }.exceptionOrNull() is IllegalArgumentException)
     }
+    for (model in ContrastModel.entries) {
+        val fixed = Resolver(contrastModel = model, overrides = mapOf("gray" to BrandColors("#777777")),
+            foregrounds = listOf("#777777"))
+        for (role in listOf("fill", "onFill")) {
+            check(fixed.hex("gray", role = role) == "#777777")
+            val failure = runCatching { fixed.hex("gray", role = role, strict = true) }.exceptionOrNull()
+            check(failure is IllegalStateException)
+        }
+        check(fixed.hex("gray", role = "background", strict = true) == "#ffffff")
+    }
     val mutableCandidates = mutableListOf("#123456")
     val compiled = Resolver(foregrounds = mutableCandidates)
     mutableCandidates.clear()
