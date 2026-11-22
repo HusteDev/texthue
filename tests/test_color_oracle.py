@@ -21,17 +21,24 @@ class ColorOracleTests(unittest.TestCase):
 
         for _ in range(1000):
             rgb = tuple(int(256 * sample()) for _ in range(3))
-            reference = Color("srgb", [v / 255 for v in rgb]).convert("oklab").coords()
-            for actual, expected in zip(
-                _core._oklab(rgb, _core._RGB_TO_XYZ), reference, strict=True
-            ):
-                self.assertAlmostEqual(actual, expected, delta=1e-7, msg=str(rgb))
             lightness, hue = 0.01 + 0.98 * sample(), 360 * sample()
-            edge = _core._cusp(lightness, hue)
-            for offset, inside in ((-0.000002, True), (0.000002, False)):
-                linear = Color("oklch", [lightness, edge + offset, hue]).convert("srgb-linear")
-                self.assertEqual(
-                    all(-1e-12 <= v <= 1 + 1e-12 for v in linear.coords()),
-                    inside,
-                    (lightness, hue, edge, offset),
-                )
+            for space, to_xyz, from_xyz in (
+                ("srgb", _core._RGB_TO_XYZ, _core._XYZ_TO_RGB),
+                ("display-p3", _core._P3_TO_XYZ, _core._XYZ_TO_P3),
+            ):
+                reference = Color(space, [v / 255 for v in rgb]).convert("oklab").coords()
+                for actual, expected in zip(_core._oklab(rgb, to_xyz), reference, strict=True):
+                    self.assertAlmostEqual(actual, expected, delta=1e-7, msg=str((space, rgb)))
+                edge = _core._cusp(lightness, hue, from_xyz)
+                self.assertTrue(0 <= edge <= 0.4, (space, lightness, hue, edge))
+                for offset, inside in ((-0.000002, True), (0.000002, False)):
+                    chroma = edge + offset
+                    # The algorithm limits chroma to 0.4 even if the gamut extends farther.
+                    if space == "display-p3" and chroma > 0.4:
+                        continue
+                    linear = Color("oklch", [lightness, chroma, hue]).convert(space + "-linear")
+                    self.assertEqual(
+                        all(-1e-12 <= v <= 1 + 1e-12 for v in linear.coords()),
+                        inside,
+                        (space, lightness, hue, edge, offset),
+                    )
