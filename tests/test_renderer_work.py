@@ -61,3 +61,19 @@ class RendererWorkTests(unittest.TestCase):
                     with self.subTest(scenario=name, label=index):
                         resolver.resolve(f"item:{index}")
         self.assertEqual(observed, {False, True})
+
+    def test_selective_hex_only_computes_required_tones(self):
+        core = BENCH["_core"]
+        for gamut in ("srgb", "display-p3"):
+            resolver = BENCH["Resolver"](gamut=gamut)
+            expected = resolver.resolve("sample").light
+            for role, tones in (("background", 0), ("fill", 1), ("fill_hover", 2), ("text", 2)):
+                with (
+                    self.subTest(gamut=gamut, role=role),
+                    patch.object(core, "_cusp", wraps=core._cusp) as cusps,
+                ):
+                    self.assertEqual(
+                        resolver.hex("sample", theme="light", role=role),
+                        getattr(expected, role).hex,
+                    )
+                    self.assertEqual(cusps.call_count, tones)

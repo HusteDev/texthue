@@ -11,6 +11,7 @@ import hashlib
 import math
 import re
 import unicodedata
+from copy import deepcopy
 
 from ._tables import ANCHORS, BIASES
 
@@ -703,8 +704,20 @@ def render(
     *,
     trace=False,
     themes=("light", "dark"),
+    roles=None,
+    hex_only=False,
 ):
     _text(text, "text", "INVALID_TEXT")
+    requested_roles = None if roles is None else set(roles)
+    if requested_roles == {"background"} and not trace:
+        return {theme: {"background": deepcopy(bases[theme])} for theme in themes}
+    needed = None if requested_roles is None else requested_roles.copy()
+    if needed is not None:
+        if "text" in needed:
+            needed.add("subtle")
+        if needed.intersection(("fillHover", "fillActive", "onFill")):
+            needed.add("fill")
+
     if digest is None:
         digest = hashlib.sha256(prefix + settings["normalize"](text).encode("utf-8")).digest()
     # The first three big-endian 32-bit digest words become fractions in [0, 1) for hue, lightness, and chroma.
@@ -814,74 +827,80 @@ def render(
                 tp = (tp[0], tp[1], 0, tp[3])
         target = settings["contrastTarget"]
         targets = settings["targets"]
-        subtle = tone(lb + direction * 0.04, fp, None, 0 if settings["apca"] else 1)
-        muted = tone(lb + direction * 0.10, fp, None, 0 if settings["apca"] else 1)
-        fill = tone(fp[0], fp, None, targets["fill"], requested=fp[3])
-        if brand:
-            fill["rgb"] = settings["canonical"](brand[theme])
-        on_fill = settings["selectForeground"](fill["rgb"], targets["fill"])
-        if brand:
-            ratio = abs(settings["measure"](on_fill, fill["rgb"]))
-            fill["metadata"] = {
-                "ratio": ratio,
-                "meetsTarget": ratio >= targets["fill"],
-                "lightnessAdjusted": False,
-                "chromaReduced": False,
-                "chromaCapped": False,
-                "fallback": "palette-constraint" if ratio < targets["fill"] else None,
-            }
-        colors = {
-            "subtle": subtle,
-            "muted": muted,
-            "fill": fill,
-            "fillHover": tone(
+        colors = {}
+        if needed is None or "subtle" in needed:
+            colors["subtle"] = tone(lb + direction * 0.04, fp, None, 0 if settings["apca"] else 1)
+        if needed is None or "muted" in needed:
+            colors["muted"] = tone(lb + direction * 0.10, fp, None, 0 if settings["apca"] else 1)
+        if needed is None or "fill" in needed:
+            fill = tone(fp[0], fp, None, targets["fill"], requested=fp[3])
+            if brand:
+                fill["rgb"] = settings["canonical"](brand[theme])
+            on_fill = settings["selectForeground"](fill["rgb"], targets["fill"])
+            if brand:
+                ratio = abs(settings["measure"](on_fill, fill["rgb"]))
+                fill["metadata"] = {
+                    "ratio": ratio,
+                    "meetsTarget": ratio >= targets["fill"],
+                    "lightnessAdjusted": False,
+                    "chromaReduced": False,
+                    "chromaCapped": False,
+                    "fallback": "palette-constraint" if ratio < targets["fill"] else None,
+                }
+            colors["fill"] = fill
+        if needed is None or "fillHover" in needed:
+            colors["fillHover"] = tone(
                 fp[0] + direction * 0.025,
                 fp,
                 on_fill,
                 targets["fillHover"],
                 surface=True,
                 requested=fp[3] + direction * 0.025,
-            ),
-            "fillActive": tone(
+            )
+        if needed is None or "fillActive" in needed:
+            colors["fillActive"] = tone(
                 fp[0] + direction * 0.05,
                 fp,
                 on_fill,
                 targets["fillActive"],
                 surface=True,
                 requested=fp[3] + direction * 0.05,
-            ),
-            "border": tone(lb + direction * 0.39, fp, background, targets["border"]),
-            "text": tone(
+            )
+        if needed is None or "border" in needed:
+            colors["border"] = tone(lb + direction * 0.39, fp, background, targets["border"])
+        if needed is None or "text" in needed:
+            colors["text"] = tone(
                 tp[0],
                 tp,
                 background,
                 targets["text"],
-                subtle["rgb"],
+                colors["subtle"]["rgb"],
                 targets["textOnSubtle"],
                 requested=tp[3],
-            ),
-            "strong": tone(
+            )
+        if needed is None or "strong" in needed:
+            colors["strong"] = tone(
                 tp[0] + direction * 0.10,
                 tp,
                 background,
                 targets["strong"],
                 requested=tp[3] + direction * 0.10,
-            ),
-        }
+            )
         meta = {k: v["metadata"] for k, v in colors.items() if k not in ("subtle", "muted")}
-        for name, backdrop in (("text", background), ("textOnSubtle", subtle["rgb"])):
-            ratio = settings["contrast"](colors["text"]["rgb"], backdrop)
-            meta[name] = {
-                **colors["text"]["metadata"],
-                "ratio": ratio,
-                "meetsTarget": ratio >= targets[name],
-            }
+        if "text" in colors:
+            for name, backdrop in (("text", background), ("textOnSubtle", colors["subtle"]["rgb"])):
+                ratio = settings["contrast"](colors["text"]["rgb"], backdrop)
+                meta[name] = {
+                    **colors["text"]["metadata"],
+                    "ratio": ratio,
+                    "meetsTarget": ratio >= targets[name],
+                }
         if settings["apca"]:
             for name, item in meta.items():
                 if name in ("fill", "fillHover", "fillActive"):
                     front, back = on_fill, colors[name]["rgb"]
                 elif name == "textOnSubtle":
-                    front, back = colors["text"]["rgb"], subtle["rgb"]
+                    front, back = colors["text"]["rgb"], colors["subtle"]["rgb"]
                 else:
                     front, back = colors[name]["rgb"], background
                 value = settings["measure"](front, back)
@@ -891,15 +910,25 @@ def render(
                     ratio=settings["contrast"](front, back),
                     meetsTarget=abs(value) >= targets[name],
                 )
-        result[theme] = {
-            **{k: settings["formats"](v["rgb"]) for k, v in colors.items()},
-            "background": base,
-            "onFill": settings["formats"](on_fill),
-            "contrast": {"target": target, **meta},
+
+        def display(rgb):
+            if hex_only:
+                channels = _p3_fallback(rgb)[0] if settings["wide"] else rgb
+                return {"hex": "#" + "".join(f"{v:02x}" for v in channels)}
+            return settings["formats"](rgb)
+
+        output = {
+            k: display(v["rgb"])
+            for k, v in colors.items()
+            if requested_roles is None or k in requested_roles
         }
+        if requested_roles is None or "background" in requested_roles:
+            output["background"] = deepcopy(base) if requested_roles is not None else dict(base)
+        if requested_roles is None or "onFill" in requested_roles:
+            output["onFill"] = display(on_fill)
+        result[theme] = {**output, "contrast": {"target": target, **meta}}
         if trace:
-            result[theme]["background"] = dict(base)
-            for role in (*colors, "background", "onFill"):
+            for role in output:
                 fixed_input = role in ("background", "onFill") or (brand and role == "fill")
                 result[theme][role]["trace"] = (
                     {"source": "supplied", "hex": result[theme][role]["hex"]}

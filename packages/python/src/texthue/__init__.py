@@ -35,6 +35,7 @@ from ._models import (
     DisplayP3,
     ThemeColors,
     ThemeContrast,
+    _wire_name,
 )
 from ._types import Backgrounds, ColorProfile, Profiles, Range, TextColorOptions, ThemeProfiles
 
@@ -205,7 +206,14 @@ class Resolver:
         themes = select(themes, ("light", "dark"), ("light", "dark"))
         roles = select(roles, role_names, role_names)
         formats = select(formats, (*standard, "trace"), standard)
-        result = _core.render(text, *self._compiled, trace="trace" in formats, themes=themes)
+        result = _core.render(
+            text,
+            *self._compiled,
+            trace="trace" in formats,
+            themes=themes,
+            roles=roles,
+            hex_only=set(formats) == {"hex"},
+        )
         return {
             theme: {role: {fmt: result[theme][role][fmt] for fmt in formats} for role in roles}
             for theme in themes
@@ -224,7 +232,7 @@ class Resolver:
             result.append(cache[name])
         return result
 
-    def _selected_theme(self, text: str, theme: str, role: str) -> ThemeColors:
+    def _selected_theme(self, text: str, theme: str, role: str, *, hex_only=False):
         if theme not in ("light", "dark") or role not in {
             "background",
             "subtle",
@@ -238,15 +246,17 @@ class Resolver:
             "strong",
         }:
             raise TextColorError("INVALID_OPTIONS", "Unknown theme or role")
-        return getattr(self.resolve(text), theme)
+        return _core.render(
+            text, *self._compiled, themes=(theme,), roles=(_wire_name(role),), hex_only=hex_only
+        )[theme]
 
     def color(self, text: str, *, theme: str, role: str) -> Color:
-        return getattr(self._selected_theme(text, theme, role), role)
+        return Color.from_dict(self._selected_theme(text, theme, role)[_wire_name(role)])
 
     def hex(self, text: str, *, theme: str, role: str, strict: bool = False) -> str:
         if not isinstance(strict, bool):
             raise TextColorError("INVALID_OPTIONS", "strict must be boolean")
-        selected = self._selected_theme(text, theme, role)
+        selected = self._selected_theme(text, theme, role, hex_only=True)
         if strict:
             pairs = {
                 "fill": ("fill",),
@@ -258,11 +268,11 @@ class Resolver:
                 "fill_active": ("fill_active",),
             }
             for pair in pairs.get(role, ()):
-                if not getattr(selected.contrast, pair).meets_target:
+                if not selected["contrast"][_wire_name(pair)]["meetsTarget"]:
                     raise TextColorError(
                         "UNMET_CONSTRAINT", f"{theme}.{pair} contrast target was not met"
                     )
-        return getattr(selected, role).hex
+        return selected[_wire_name(role)]["hex"]
 
 
 def export_config(resolver: Resolver):
