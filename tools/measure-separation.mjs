@@ -11,10 +11,10 @@ for (let i = 0; i < 300; i++) {
     seed = (Math.imul(seed,1664525) + 1013904223) >>> 0;
     return String(seed);
   });
-  const {colors,assignments} = resolver.assign(labels);
+  const {colors,assignments,report} = resolver.assign(labels);
   if (process.argv.includes('--cases')) {
     const fills = labels.map(label => [colors[label].light.fill.hex,colors[label].dark.fill.hex]);
-    cases.push({labels,assignments,fills});
+    cases.push({labels,assignments,fills,report});
   }
   for (const [theme, result] of Object.entries(totals)) {
     const fills = Object.values(colors).map(set => set[theme].fill.hex);

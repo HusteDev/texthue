@@ -38,7 +38,20 @@ def assignment_rows():
     def name(text):
         return base64.b64encode(text.encode()).decode()
 
-    for row in json.loads((ROOT / "conformance/assign-vectors.json").read_text(encoding="utf-8")):
+    rows = json.loads((ROOT / "conformance/assign-vectors.json").read_text(encoding="utf-8"))
+    corpus = subprocess.check_output(["node", ROOT / "tools/measure-separation.mjs", "--cases"])
+    for case in json.loads(corpus):
+        labels = case["labels"]
+        rows.append(
+            {
+                "texts": labels,
+                "assignments": case["assignments"],
+                "report": case["report"],
+                "lightFills": dict(zip(labels, (pair[0] for pair in case["fills"]), strict=True)),
+                "darkFills": dict(zip(labels, (pair[1] for pair in case["fills"]), strict=True)),
+            }
+        )
+    for row in rows:
         options = row.get("options", {})
         yield options.get("normalize", {}).get("case", "none").upper()
         for text in row["texts"]:
@@ -53,6 +66,8 @@ def assignment_rows():
                 yield f"{tag}\t{name(text)}\t{p['hueFraction']}\t{p['ring']}\t{str(p['moved']).lower()}"
         for text, fill in row["lightFills"].items():
             yield f"fill\t{name(text)}\t{fill}"
+        for text, fill in row.get("darkFills", {}).items():
+            yield f"darkFill\t{name(text)}\t{fill}"
         report = row["report"]
         for first, second in report["closestPairs"]:
             yield f"pair\t{name(first)}\t{name(second)}"
