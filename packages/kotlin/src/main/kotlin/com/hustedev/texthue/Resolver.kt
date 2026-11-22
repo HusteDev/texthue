@@ -6,14 +6,17 @@ data class ThemePalette(val colors: Map<String, String>)
 data class Palette(val hue: Double, val light: ThemePalette, val dark: ThemePalette)
 
 class Resolver(
-    private val namespace: String = "",
+    namespace: String = "",
     private val seed: UInt = 0u,
     private val contrastTarget: Double = 4.5,
+    private val normalization: Normalization = Normalization(),
 ) {
+    private val scope = normalization.apply(namespace)
+
     init { require(contrastTarget in 1.0..21.0) }
 
     fun resolve(text: String): Palette {
-        val (uH, uL, uC) = Identity.fractions(Identity.digest(text, namespace, seed))
+        val (uH, uL, uC) = Identity.fractions(Identity.digest(normalization.apply(text), scope, seed))
         val position = uH * 12
         val slot = position.toInt()
         val hue = (anchors[slot] + (anchors[slot + 1] - anchors[slot]) * (position - slot)) % 360
