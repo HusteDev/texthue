@@ -42,3 +42,9 @@ The shared assignment corpus includes two pairs from the original review. The ta
 | item:79 and item:81 | 0.2679 / 0.2679 | 0.2067 / 0.2067 |
 
 Collection assignment moved one member of the first pair. The redesigned hash renderer already placed the second pair far enough apart to retain both placements. These measurements cover two pairs and normal vision. They do not establish a general perceptual threshold.
+
+### Compiled Rust renderer
+
+On the Windows x64 benchmark host, Criterion estimated 19.8 µs for the default two-theme resolution of `project:atlas`, 47.5 µs at 7:1 and 74.0 µs at 21:1 on white. On #777777 the estimates were 29.2 µs at 4.5:1 and 70.4 µs at 21:1. A 40-label batch took 1.09 ms with distinct labels and 0.195 ms with eight distinct labels. These are Criterion point estimates for repeated inputs. The three-runtime table above samples different identities.
+
+Reproduce from the crate directory with `cargo bench --locked --bench renderer -- --warm-up-time 1 --measurement-time 2 --sample-size 20`. The timed loops reuse compiled settings.

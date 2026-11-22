@@ -8,20 +8,23 @@ fn render(c: &mut Criterion) {
         ("default", 4.5, [255; 3]),
         ("aaa", 7.0, [255; 3]),
         ("maximum", 21.0, [255; 3]),
+        ("gray", 4.5, [119; 3]),
         ("unattainable_on_gray", 21.0, [119; 3]),
     ] {
-        let renderer = Renderer {
+        let options = Renderer {
             contrast_target: Some(target),
             light_background: background,
             ..Renderer::default()
         };
+        let renderer = options.compile().unwrap();
         singles.bench_function(name, |b| {
             b.iter(|| renderer.resolve(black_box("project:atlas")).unwrap())
         });
     }
     singles.finish();
 
-    let renderer = Renderer::default();
+    let options = Renderer::default();
+    let renderer = options.compile().unwrap();
     let mut batches = c.benchmark_group("batch");
     batches.throughput(Throughput::Elements(40));
     for (name, distinct) in [("40_unique", 40), ("40_with_8_unique", 8)] {
