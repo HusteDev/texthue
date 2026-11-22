@@ -347,7 +347,12 @@ try { _ = new Renderer(overrides: pins, normalization: folding); throw new Inval
 catch (ArgumentException) { }
 Console.WriteLine("Passed 90 normalization vectors, normalized overrides and batch reuse.");
 using var collections = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "assign-vectors.json")));
-foreach (var row in collections.RootElement.EnumerateArray())
+using var corpus = args.Length == 0 ? null : JsonDocument.Parse(File.ReadAllBytes(args.Single()));
+if (corpus != null && corpus.RootElement.GetArrayLength() != 300)
+    throw new InvalidDataException("Expected 300 separation cases");
+var collectionRows = collections.RootElement.EnumerateArray().AsEnumerable();
+if (corpus != null) collectionRows = collectionRows.Concat(corpus.RootElement.EnumerateArray());
+foreach (var row in collectionRows)
 {
     bool lower = false;
     var collectionOverrides = new Dictionary<string, BrandColors>();
@@ -370,12 +375,24 @@ foreach (var row in collections.RootElement.EnumerateArray())
         value.EnumerateObject().ToDictionary(e => e.Name, e => new Placement(e.Value.GetProperty("hueFraction").GetDouble(),
             e.Value.GetProperty("ring").GetInt64(), e.Value.GetProperty("moved").GetBoolean()));
     var registry = row.TryGetProperty("pinned", out var previous) ? Placements(previous) : null;
+    bool generated = row.TryGetProperty("labels", out var generatedLabels);
+    var collectionLabels = (generated ? generatedLabels : row.GetProperty("texts")).EnumerateArray().Select(s => s.GetString()!).ToArray();
     var result = new Renderer(normalization: new Normalization(Lowercase: lower), overrides: collectionOverrides)
-        .Assign(row.GetProperty("texts").EnumerateArray().Select(s => s.GetString()!), registry);
+        .Assign(collectionLabels, registry);
     var expected = Placements(row.GetProperty("assignments"));
     if (expected.Count != result.Assignments.Count || expected.Any(e => result.Assignments[e.Key] != e.Value))
         throw new InvalidDataException("Placement mismatch");
-    foreach (var fill in row.GetProperty("lightFills").EnumerateObject())
+    if (generated)
+    {
+        var fills = row.GetProperty("fills");
+        for (int i = 0; i < collectionLabels.Length; i++)
+        {
+            var palette = result.Colors[collectionLabels[i]];
+            if (palette.Light["fill"].Hex != fills[i][0].GetString() || palette.Dark["fill"].Hex != fills[i][1].GetString())
+                throw new InvalidDataException($"Assigned fills differ for {collectionLabels[i]}");
+        }
+    }
+    else foreach (var fill in row.GetProperty("lightFills").EnumerateObject())
         if (result.Colors[fill.Name].Light["fill"].Hex != fill.Value.GetString()) throw new InvalidDataException("Assigned fill mismatch");
     var report = row.GetProperty("report");
     var closest = report.GetProperty("closestPairs").EnumerateArray().Select(pair => (pair[0].GetString()!, pair[1].GetString()!));
@@ -384,7 +401,7 @@ foreach (var row in collections.RootElement.EnumerateArray())
         result.Report.DistinctFills != report.GetProperty("distinctFills").GetBoolean() || !closest.SequenceEqual(result.Report.ClosestPairs))
         throw new InvalidDataException("Assignment report mismatch");
 }
-Console.WriteLine($"Passed {collections.RootElement.GetArrayLength()} collection assignment vectors.");
+Console.WriteLine($"Passed {collectionRows.Count()} collection assignment vectors.");
 
 var gray = new Rgb(119, 119, 119);
 foreach (var model in new[] { ContrastModel.Wcag2, ContrastModel.Apca })
