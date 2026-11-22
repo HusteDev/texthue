@@ -3,9 +3,16 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <PackageId>TextHue</PackageId>
+    <Authors>HusteDev</Authors>
+    <Description>Deterministic text-to-color assignments for .NET.</Description>
+    <RepositoryUrl>https://github.com/HusteDev/texthue</RepositoryUrl>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <Version>0.1.0</Version>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="../../LICENSE;../../README.md;../../SPECIFICATION.md;../../THIRD_PARTY_NOTICES.md" Pack="true" PackagePath="/" />
     <InternalsVisibleTo Include="Conformance" />
   </ItemGroup>
 </Project>

@@ -82,6 +82,16 @@
       ],
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
       "conformanceRunner": null
+    },
+    {
+      "id": "csharp",
+      "language": "csharp",
+      "dir": "packages/csharp",
+      "versionFiles": [
+        { "path": "packages/csharp/src/TextHue/TextHue.csproj", "kind": "pyRegex", "pattern": "<Version>([^<]+)</Version>" }
+      ],
+      "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+      "conformanceRunner": null
     }
   ]
 }
