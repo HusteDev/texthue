@@ -100,6 +100,32 @@ struct FixedTone {
     neutral: bool,
 }
 
+const ROLES: [&str; 10] = [
+    "background",
+    "subtle",
+    "muted",
+    "fill",
+    "onFill",
+    "fillHover",
+    "fillActive",
+    "border",
+    "text",
+    "strong",
+];
+struct RawTheme {
+    roles: BTreeMap<&'static str, [u8; 3]>,
+    flags: BTreeMap<&'static str, (bool, bool, bool, Option<&'static str>)>,
+}
+
+struct Mapping {
+    source: &'static str,
+    fraction: f64,
+    hue: f64,
+    lightness: f64,
+    chroma: f64,
+    fixed: Option<(FixedTone, FixedTone)>,
+}
+
 impl From<[u8; 3]> for FixedTone {
     fn from(rgb: [u8; 3]) -> Self {
         let coordinates = Color::from(rgb).oklch;
@@ -170,6 +196,25 @@ impl CompiledRenderer<'_> {
     pub fn resolve(&self, text: &str) -> Result<RenderedPalette, &'static str> {
         let normalized = self.renderer.normalization.apply(text);
         self.renderer.resolve_normalized(&normalized, self)
+    }
+
+    fn selected(&self, text: &str, dark: bool, role: &str) -> Result<[u8; 3], &'static str> {
+        if !ROLES.contains(&role) {
+            return Err("Unknown role");
+        }
+        let mapped = self
+            .renderer
+            .mapping(&self.renderer.normalization.apply(text), self)?;
+        Ok(self.renderer.role_bytes(dark, &mapped, Some(role)).roles[role])
+    }
+
+    pub fn color(&self, text: &str, dark: bool, role: &str) -> Result<Color, &'static str> {
+        self.selected(text, dark, role).map(Color::from)
+    }
+
+    pub fn hex(&self, text: &str, dark: bool, role: &str) -> Result<String, &'static str> {
+        let [r, g, b] = self.selected(text, dark, role)?;
+        Ok(format!("#{r:02x}{g:02x}{b:02x}"))
     }
 
     /// Resolve in input order, sharing normalized duplicates only within this call.
@@ -291,6 +336,26 @@ impl Renderer {
         text: &str,
         prepared: &CompiledRenderer<'_>,
     ) -> Result<RenderedPalette, &'static str> {
+        let m = self.mapping(text, prepared)?;
+        let (light, light_contrast) = self.theme(false, &m);
+        let (dark, dark_contrast) = self.theme(true, &m);
+        Ok(RenderedPalette {
+            version: "text-to-color-v1",
+            source: m.source,
+            hue_fraction: m.fraction,
+            hue: m.hue,
+            light,
+            light_contrast,
+            dark,
+            dark_contrast,
+        })
+    }
+
+    fn mapping(
+        &self,
+        text: &str,
+        prepared: &CompiledRenderer<'_>,
+    ) -> Result<Mapping, &'static str> {
         let fixed = |colors: BrandColors, source| {
             let light = FixedTone::from(colors.light);
             let dark = FixedTone::from(colors.dark);
@@ -301,18 +366,13 @@ impl Renderer {
             };
             let i = ANCHORS.partition_point(|&a| a <= angle) - 1;
             let fraction = (i as f64 + (angle - ANCHORS[i]) / (ANCHORS[i + 1] - ANCHORS[i])) / 12.0;
-            let hue = light.hue;
-            let (light, light_contrast) = self.theme(false, hue, 0.5, 0.5, Some(light));
-            let (dark, dark_contrast) = self.theme(true, dark.hue, 0.5, 0.5, Some(dark));
-            RenderedPalette {
-                version: "text-to-color-v1",
+            Mapping {
                 source,
-                hue_fraction: fraction,
-                hue,
-                light,
-                light_contrast,
-                dark,
-                dark_contrast,
+                fraction,
+                hue: light.hue,
+                lightness: 0.5,
+                chroma: 0.5,
+                fixed: Some((light, dark)),
             }
         };
         if let Some(colors) = prepared.overrides.get(text) {
@@ -340,28 +400,32 @@ impl Renderer {
         let i = position as usize;
         let hue = (ANCHORS[i] + (ANCHORS[i + 1] - ANCHORS[i]) * (position - i as f64)) % 360.0;
         let hue = prepared.domain.map(hue);
-        let (light, light_contrast) = self.theme(false, hue, u_l, u_c, None);
-        let (dark, dark_contrast) = self.theme(true, hue, u_l, u_c, None);
-        Ok(RenderedPalette {
-            version: "text-to-color-v1",
+        Ok(Mapping {
             source: "hash",
-            hue_fraction: u_h,
+            fraction: u_h,
             hue,
-            light,
-            light_contrast,
-            dark,
-            dark_contrast,
+            lightness: u_l,
+            chroma: u_c,
+            fixed: None,
         })
     }
 
-    fn theme(
-        &self,
-        dark: bool,
-        hue: f64,
-        u_l: f64,
-        u_c: f64,
-        fixed: Option<FixedTone>,
-    ) -> (Theme, ContrastReport) {
+    fn required_target(&self, role: &str, default: f64) -> f64 {
+        self.contrast_targets.get(role).copied().unwrap_or(
+            if role == "border" && self.contrast_model == ContrastModel::Wcag2 {
+                default.min(3.0)
+            } else {
+                default
+            },
+        )
+    }
+
+    fn role_bytes(&self, dark: bool, mapped: &Mapping, selected: Option<&str>) -> RawTheme {
+        let fixed = mapped
+            .fixed
+            .map(|(light, night)| if dark { night } else { light });
+        let hue = fixed.map_or(mapped.hue, |tone| tone.hue);
+        let (u_l, u_c) = (mapped.lightness, mapped.chroma);
         let bg = if dark {
             self.dark_background
         } else {
@@ -378,16 +442,7 @@ impl Renderer {
         let wcag = self.contrast_model == ContrastModel::Wcag2;
         let default_target = self.default_target();
         let unconstrained = if wcag { 1.0 } else { 0.0 };
-        let required = |role: &str| {
-            self.contrast_targets
-                .get(role)
-                .copied()
-                .unwrap_or(if role == "border" && wcag {
-                    default_target.min(3.0)
-                } else {
-                    default_target
-                })
-        };
+        let required = |role: &str| self.required_target(role, default_target);
         let sample = |fill: bool| {
             let (low, high) = profile(fill).lightness.unwrap_or(match (dark, fill) {
                 (true, true) => (0.4, 0.5),
@@ -475,91 +530,91 @@ impl Renderer {
         };
         let lf = fixed.map_or_else(|| sample(true), |tone| tone.lightness);
         let lt = sample(false);
-        let subtle = tone(
-            "subtle",
-            lb + direction * 0.04,
-            true,
-            unconstrained,
-            Candidates,
-            None,
-        );
-        let fill = fixed.map_or_else(
-            || tone("fill", lf, true, required("fill"), Candidates, None),
-            |tone| tone.rgb,
-        );
-        let on_fill = foreground(fill, required("fill"));
-        let roles = [
-            ("background", bg),
-            ("subtle", subtle),
-            (
-                "muted",
-                tone(
-                    "muted",
+        let mut roles = BTreeMap::new();
+        for role in ROLES {
+            let needed = selected.is_none_or(|want| {
+                want == role
+                    || matches!(
+                        (role, want),
+                        ("subtle", "text")
+                            | ("fill", "onFill" | "fillHover" | "fillActive")
+                            | ("onFill", "fillHover" | "fillActive")
+                    )
+            });
+            if !needed {
+                continue;
+            }
+            let rgb = match role {
+                "background" => bg,
+                "subtle" => tone(
+                    role,
+                    lb + direction * 0.04,
+                    true,
+                    unconstrained,
+                    Candidates,
+                    None,
+                ),
+                "muted" => tone(
+                    role,
                     lb + direction * 0.10,
                     true,
                     unconstrained,
                     Candidates,
                     None,
                 ),
-            ),
-            ("fill", fill),
-            ("onFill", on_fill),
-            (
-                "fillHover",
-                tone(
-                    "fillHover",
-                    lf + direction * 0.025,
-                    true,
-                    required("fillHover"),
-                    Text(on_fill),
-                    None,
+                "fill" => fixed.map_or_else(
+                    || tone(role, lf, true, required(role), Candidates, None),
+                    |f| f.rgb,
                 ),
-            ),
-            (
-                "fillActive",
-                tone(
-                    "fillActive",
-                    lf + direction * 0.05,
-                    true,
-                    required("fillActive"),
-                    Text(on_fill),
-                    None,
-                ),
-            ),
-            (
-                "border",
-                tone(
-                    "border",
+                "onFill" => foreground(roles["fill"], required("fill")),
+                "fillHover" | "fillActive" => {
+                    let offset = if role == "fillHover" { 0.025 } else { 0.05 };
+                    tone(
+                        role,
+                        lf + direction * offset,
+                        true,
+                        required(role),
+                        Text(roles["onFill"]),
+                        None,
+                    )
+                }
+                "border" => tone(
+                    role,
                     lb + direction * 0.39,
                     true,
-                    required("border"),
+                    required(role),
                     Background(bg),
                     None,
                 ),
-            ),
-            (
-                "text",
-                tone(
-                    "text",
+                "text" => tone(
+                    role,
                     lt,
                     false,
-                    required("text"),
+                    required(role),
                     Background(bg),
-                    Some(subtle),
+                    Some(roles["subtle"]),
                 ),
-            ),
-            (
-                "strong",
-                tone(
-                    "strong",
+                "strong" => tone(
+                    role,
                     lt + direction * 0.10,
                     false,
-                    required("strong"),
+                    required(role),
                     Background(bg),
                     None,
                 ),
-            ),
-        ];
+                _ => unreachable!(),
+            };
+            roles.insert(role, rgb);
+        }
+        RawTheme { roles, flags }
+    }
+
+    fn theme(&self, dark: bool, mapped: &Mapping) -> (Theme, ContrastReport) {
+        let RawTheme { roles, flags } = self.role_bytes(dark, mapped, None);
+        let (bg, on_fill, subtle) = (roles["background"], roles["onFill"], roles["subtle"]);
+        let wcag = self.contrast_model == ContrastModel::Wcag2;
+        let default_target = self.default_target();
+        let required = |role: &str| self.required_target(role, default_target);
         let colors: Theme = roles
             .into_iter()
             .map(|(name, rgb)| (name, Color::from(rgb)))
@@ -597,7 +652,7 @@ impl Renderer {
                     lightness_adjusted,
                     chroma_capped,
                     chroma_reduced,
-                    fallback: if fixed.is_some() && role == "fill" && !meets_target {
+                    fallback: if mapped.fixed.is_some() && role == "fill" && !meets_target {
                         Some("palette-constraint")
                     } else {
                         fallback
@@ -949,7 +1004,15 @@ mod tests {
                 dark_background: background("dark", [18; 3]),
                 ..Default::default()
             };
-            let p = renderer.resolve(row["text"].as_str().unwrap()).unwrap();
+            let label = row["text"].as_str().unwrap();
+            let compiled = renderer.compile().unwrap();
+            let p = compiled.resolve(label).unwrap();
+            for (dark, theme) in [(false, &p.light), (true, &p.dark)] {
+                for (role, color) in theme {
+                    assert_eq!(compiled.hex(label, dark, role).unwrap(), color.hex);
+                    assert_eq!(&compiled.color(label, dark, role).unwrap(), color);
+                }
+            }
             let e = &row["expected"];
             assert_eq!(p.hue, e["hue"].as_f64().unwrap());
             assert_eq!(p.hue_fraction, e["hueFraction"].as_f64().unwrap());

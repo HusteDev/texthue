@@ -14,10 +14,8 @@ pub fn resolve_role_hex(
         seed,
         ..Renderer::default()
     };
-    let palette = renderer.resolve(text).map_err(JsError::new)?;
-    let theme = if dark { palette.dark } else { palette.light };
-    theme
-        .get(role)
-        .map(|color| color.hex.clone())
-        .ok_or_else(|| JsError::new("Unknown role"))
+    renderer
+        .compile()
+        .and_then(|compiled| compiled.hex(text, dark, role))
+        .map_err(JsError::new)
 }
