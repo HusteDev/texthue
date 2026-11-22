@@ -34,6 +34,12 @@ class PublishWorkflowTests(unittest.TestCase):
         stage = next(s for s in build["steps"] if s.get("name") == "Stage original tested bytes")
         self.assertEqual(stage["if"], "steps.bundle.outputs.state == 'absent'")
         self.assertIn("--draft", stage["run"])
+        steps = build["steps"]
+        verify = next(s for s in steps if "tools/release.py verify-bundle" in s.get("run", ""))
+        self.assertNotIn("if", verify)
+        upload = next(s for s in steps if s.get("uses", "").startswith("actions/upload-artifact@"))
+        self.assertLess(steps.index(verify), steps.index(stage))
+        self.assertLess(steps.index(stage), steps.index(upload))
         self.assertEqual(
             self.jobs["github-release"]["if"],
             "inputs.github_release && !inputs.dry_run && !failure() && !cancelled()",
