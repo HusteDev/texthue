@@ -35,6 +35,15 @@ The resolver benchmarks also exercise APCA at a target of 75 Lc on white and Dis
 
 Python counted 11,133 fits for APCA and 1,600 for Display P3. Each scenario performed 1,600 cusp evaluations and 100 hashes.
 
+The four other native ports ran the same 75 Lc scenario sequentially. Swift used a Linux x86_64 container on the Windows host. The other measurements ran directly on Windows x64.
+
+| Runtime | APCA median (µs) | APCA p95 (µs) |
+| --- | ---: | ---: |
+| Rust, optimized | 70 | 82 |
+| C#, Release | 506 | 825 |
+| Swift 6.1.3, Release | 400 | 560 |
+| Dart, JIT | 373 | 645 |
+
 ### sRGB WCAG work budgets
 
 The JavaScript benchmark collects V8 function-entry counts separately from latency measurements. Each row covers the full 100-label corpus. The default run made 1,600 gamut fits. The 7:1 and 21:1 white-background runs made 5,732 and 12,725. The gray-background runs made 2,868 fits at 4.5:1 and 11,452 at 21:1. Every scenario made 1,600 cusp evaluations and 100 identity hashes. The JavaScript test suite enforces these fit and cusp ceilings and checks for one hash per label.

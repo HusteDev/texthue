@@ -4,11 +4,12 @@ using TextHue;
 
 foreach (var (scenario, target, gray) in new[] {
     ("default", 4.5, false), ("aaa", 7, false), ("maximum", 21, false),
-    ("gray", 4.5, true), ("impossible", 21, true)
+    ("gray", 4.5, true), ("impossible", 21, true), ("apca", 75, false)
 })
 {
     byte channel = gray ? (byte)119 : (byte)255;
-    var renderer = new Renderer(contrastTarget: target, lightBackground: new Rgb(channel, channel, channel));
+    var renderer = new Renderer(contrastModel: scenario == "apca" ? ContrastModel.Apca : ContrastModel.Wcag2,
+        contrastTarget: target, lightBackground: new Rgb(channel, channel, channel));
     var samples = new double[100];
     for (int i = -20; i < samples.Length; i++)
     {

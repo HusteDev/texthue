@@ -3,9 +3,10 @@ import TextHue
 
 for (scenario, target, light) in [
     ("default", 4.5, "#ffffff"), ("aaa", 7, "#ffffff"), ("maximum", 21, "#ffffff"),
-    ("gray", 4.5, "#777777"), ("impossible", 21, "#777777")
+    ("gray", 4.5, "#777777"), ("impossible", 21, "#777777"), ("apca", 75, "#ffffff")
 ] {
     var options = RenderOptions()
+    options.contrastModel = scenario == "apca" ? .apca : .wcag2
     options.contrastTarget = target
     options.backgrounds = ["light": light]
     let renderer = try Renderer(options: options)

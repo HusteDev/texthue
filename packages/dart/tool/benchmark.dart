@@ -8,8 +8,13 @@ void main() {
     ('maximum', 21.0, '#ffffff'),
     ('gray', 4.5, '#777777'),
     ('impossible', 21.0, '#777777'),
+    ('apca', 75.0, '#ffffff'),
   ]) {
-    final renderer = Renderer(contrastTarget: target, lightBackground: light);
+    final renderer = Renderer(
+        contrastModel:
+            scenario == 'apca' ? ContrastModel.apca : ContrastModel.wcag2,
+        contrastTarget: target,
+        lightBackground: light);
     final timer = Stopwatch();
     final samples = <double>[];
     for (var i = -20; i < 100; i++) {

@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use std::hint::black_box;
 use std::time::Instant;
-use texthue::Renderer;
+use texthue::{ContrastModel, Renderer};
 
 fn render(c: &mut Criterion) {
     let mut singles = c.benchmark_group("resolve");
@@ -11,8 +11,14 @@ fn render(c: &mut Criterion) {
         ("maximum", 21.0, [255; 3]),
         ("gray", 4.5, [119; 3]),
         ("unattainable_on_gray", 21.0, [119; 3]),
+        ("apca", 75.0, [255; 3]),
     ] {
         let options = Renderer {
+            contrast_model: if name == "apca" {
+                ContrastModel::Apca
+            } else {
+                ContrastModel::Wcag2
+            },
             contrast_target: Some(target),
             light_background: background,
             ..Renderer::default()
