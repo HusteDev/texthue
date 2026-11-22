@@ -25,4 +25,5 @@ for (let i = 0; i < 300; i++) {
   }
 }
 console.log(JSON.stringify(cases.length ? cases : totals));
-if (Object.values(totals).some(result => result.belowMinimum > 0)) process.exitCode = 1;
+// Each of the 300 sets must contribute all 45 unordered pairs in both themes.
+if (Object.values(totals).some(result => result.pairs !== 13500 || result.belowMinimum > 0)) process.exitCode = 1;

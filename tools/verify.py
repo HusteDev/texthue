@@ -139,6 +139,9 @@ def main():
     run("TypeScript compilation", [npm, "run", "build"], env=env)
     run("swatch gallery", ["node", "tools/render-gallery.mjs", "--check"], env=env)
     run("assignment vectors", ["node", "tools/build-assign-vectors.mjs", "--check"], env=env)
+    run(
+        "300-collection rendered fill separation", ["node", "tools/measure-separation.mjs"], env=env
+    )
     fixtures = ROOT / "conformance"
     for line in (fixtures / "DIGESTS").read_text(encoding="ascii").splitlines():
         expected, filename = line.split()
