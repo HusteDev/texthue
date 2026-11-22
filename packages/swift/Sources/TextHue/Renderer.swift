@@ -18,7 +18,7 @@ struct RenderOptions: Decodable {
 
 enum RenderError: Error { case invalidOptions }
 
-public struct RenderedPalette {
+public struct RenderedPalette: Equatable {
     public let hue: Double
     public let light, dark: [String: Color]
 }
@@ -26,16 +26,41 @@ public struct RenderedPalette {
 public struct Renderer {
     let options: RenderOptions
 
-    init(options: RenderOptions) { self.options = options }
+    private let normalization: Normalization
+    private let scope: String
+
+    init(options: RenderOptions) {
+        self.options = options
+        let normalization = options.normalize ?? Normalization()
+        self.normalization = normalization
+        self.scope = normalization.apply(options.namespace ?? "")
+    }
 
     public init(namespace: String = "", seed: UInt32 = 0, contrastTarget: Double = 4.5, normalize: Normalization = Normalization()) throws {
         guard (1...21).contains(contrastTarget) else { throw RenderError.invalidOptions }
-        options = RenderOptions(normalize: normalize, namespace: namespace, seed: seed, contrastTarget: contrastTarget)
+        self.init(options: RenderOptions(normalize: normalize, namespace: namespace, seed: seed, contrastTarget: contrastTarget))
     }
 
     public func resolve(_ text: String) throws -> RenderedPalette {
-        let normalize = options.normalize ?? Normalization()
-        let digest = try identityDigest(normalize.apply(text), namespace: normalize.apply(options.namespace ?? ""), seed: options.seed ?? 0)
+        try resolveNormalized(normalization.apply(text))
+    }
+
+    /// Resolve in input order, sharing work for identical normalized UTF-8 bytes within this batch.
+    public func batch(_ texts: [String]) throws -> [RenderedPalette] {
+        var cache: [Data: RenderedPalette] = [:]
+        return try texts.map { text in
+            let name = normalization.apply(text)
+            // Swift String equality treats canonically equivalent spellings as equal.
+            let key = Data(name.utf8)
+            if let palette = cache[key] { return palette }
+            let palette = try resolveNormalized(name)
+            cache[key] = palette
+            return palette
+        }
+    }
+
+    private func resolveNormalized(_ name: String) throws -> RenderedPalette {
+        let digest = try identityDigest(name, namespace: scope, seed: options.seed ?? 0)
         let fractions = identityFractions(digest)
         return try render(hueFraction: fractions[0], lightness: fractions[1], chroma: fractions[2])
     }
