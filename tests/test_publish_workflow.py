@@ -19,7 +19,7 @@ class PublishWorkflowTests(unittest.TestCase):
         for registry in ("npm", "pypi", "go"):
             job = self.jobs[f"publish-{registry}"]
             with self.subTest(registry=registry):
-                self.assertEqual(job["if"], f"inputs.{registry}")
+                self.assertEqual(job["if"], f"inputs.{registry} && !inputs.dry_run")
                 self.assertEqual(job["needs"], "build")
                 steps = job["steps"]
                 state = next(i for i, step in enumerate(steps) if step.get("id") == "state")
@@ -27,6 +27,17 @@ class PublishWorkflowTests(unittest.TestCase):
                 for step in steps[state + 1 : -1]:
                     self.assertEqual(step["if"], "steps.state.outputs.state == 'absent'")
                 self.assertEqual(steps[-1]["if"], "steps.state.outputs.state == 'matching'")
+
+    def test_dry_run_stages_the_bundle_without_promoting_it(self):
+        build = self.jobs["build"]
+        self.assertNotIn("if", build)
+        stage = next(s for s in build["steps"] if s.get("name") == "Stage original tested bytes")
+        self.assertEqual(stage["if"], "steps.bundle.outputs.state == 'absent'")
+        self.assertIn("--draft", stage["run"])
+        self.assertEqual(
+            self.jobs["github-release"]["if"],
+            "inputs.github_release && !inputs.dry_run && !failure() && !cancelled()",
+        )
 
     def test_checkout_precedes_archive_download(self):
         for registry in ("npm", "pypi"):

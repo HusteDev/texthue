@@ -43,6 +43,10 @@ Inspect archive contents and rendered registry READMEs before releasing. The npm
 - After changing the specification, notices, or Python README, run `python tools/sync-shared.py` and commit all distributed copies. The pre-commit hook and `python tools/verify.py` reject stale copies.
 - Once a registry release exists, treat its contents as immutable and publish a new version for corrections.
 
+## Rehearse draft staging
+
+Set `dry_run` to true on the Publish workflow to verify the version and stage the original tested archives in a draft GitHub release. This writes draft release assets in the repository. Registry jobs, the Go module tag, and release promotion are skipped regardless of the individual target selections. For a later release from the same commit, set `resume` to true and `dry_run` to false to reuse the verified bundle.
+
 ## One-time publishing setup
 
 The `Publish` workflow (`.github/workflows/publish.yml`) needs the following configured once in the GitHub repository and the registries.

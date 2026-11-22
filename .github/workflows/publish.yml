@@ -30,6 +30,10 @@ on:
         description: Release version without a leading v. Must match every package manifest.
         required: true
         type: string
+      dry_run:
+        description: Stage or verify the draft bundle and skip all registry jobs and release promotion
+        type: boolean
+        default: false
       resume:
         description: Require the original release bundle and fail if it is missing
         type: boolean
@@ -161,7 +165,7 @@ jobs:
 
   publish-npm:
     name: Publish npm
-    if: inputs.npm
+    if: inputs.npm && !inputs.dry_run
     needs: build
     runs-on: ubuntu-latest
     environment:
@@ -220,7 +224,7 @@ jobs:
 
   publish-pypi:
     name: Publish PyPI
-    if: inputs.pypi
+    if: inputs.pypi && !inputs.dry_run
     needs: build
     runs-on: ubuntu-latest
     environment:
@@ -267,7 +271,7 @@ jobs:
 
   publish-go:
     name: Tag Go module
-    if: inputs.go
+    if: inputs.go && !inputs.dry_run
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -322,7 +326,7 @@ jobs:
 
   github-release:
     name: Promote the draft GitHub release
-    if: inputs.github_release && !failure() && !cancelled()
+    if: inputs.github_release && !inputs.dry_run && !failure() && !cancelled()
     needs: [build, publish-npm, publish-pypi, publish-go]
     runs-on: ubuntu-latest
     permissions:
