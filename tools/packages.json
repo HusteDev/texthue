@@ -170,7 +170,11 @@
         { "source": "root:conformance/assign-vectors.json", "dest": "testdata/assign-vectors.json" },
         { "source": "root:conformance/vectors.json", "dest": "testdata/vectors.json" }
       ],
-      "verifyCommands": [["cargo", "test", "--locked"]],
+      "verifyCommands": [
+        ["cargo", "fmt", "--check"],
+        ["cargo", "clippy", "--locked", "--all-targets", "--", "-D", "warnings"],
+        ["cargo", "test", "--locked"]
+      ],
       "optionalToolchain": true,
       "conformanceRunner": ["cargo", "run", "--quiet", "--locked", "--manifest-path", "packages/rust/Cargo.toml", "--example", "conformance"]
     }
