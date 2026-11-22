@@ -30,7 +30,7 @@ enum ContrastModel {
                 let x = Double(rgb[i]) / 255
                 let linear: Double
                 if self == .apca { linear = pow(x, 2.4) }
-                else { linear = x <= 0.04045 ? x / 12.92 : pow((x + 0.055) / 1.055, 2.4) }
+                else { linear = linearChannel(x) }
                 sum += weights[i] * linear
             }
             return self == .apca && sum < 0.022 ? sum + pow(0.022 - sum, 1.414) : sum

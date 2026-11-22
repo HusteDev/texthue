@@ -12,6 +12,16 @@ public struct RGB: Codable, Equatable {
 public struct HSL: Codable, Equatable { public let h, s, l: Double }
 public struct OKLCH: Codable, Equatable { public let l, c, h: Double }
 
+func linearChannel(_ encoded: Double) -> Double {
+    encoded <= 0.04045 ? encoded / 12.92 : pow((encoded + 0.055) / 1.055, 2.4)
+}
+
+func channelByte(_ linear: Double) -> UInt8 {
+    let x = min(1, max(0, linear))
+    let encoded = x <= 0.0031308 ? x * 12.92 : 1.055 * pow(x, 1 / 2.4) - 0.055
+    return UInt8(floor(encoded * 255 + 0.5))
+}
+
 func multiply(_ matrix: [[Double]], _ v: [Double]) -> [Double] {
     matrix.map { row in (row[0] * v[0] + row[1] * v[1]) + row[2] * v[2] }
 }
@@ -55,7 +65,7 @@ public struct Color: Codable, Equatable {
         }
         hsl = HSL(h: round6(60 * hue).truncatingRemainder(dividingBy: 360),
                   s: round6(saturation * 100), l: round6(light * 100))
-        let linear = values.map { $0 <= 0.04045 ? $0 / 12.92 : pow(($0 + 0.055) / 1.055, 2.4) }
+        let linear = values.map(linearChannel)
         let xyz = multiply(Self.rgbToXYZ, linear)
         let lab = multiply(Self.lmsToLab, multiply(Self.xyzToLMS, xyz).map { cbrt($0) })
         let neutral = rgb.r == rgb.g && rgb.g == rgb.b

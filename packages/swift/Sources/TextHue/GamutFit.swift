@@ -61,11 +61,7 @@ extension Gamut {
             retained = limit(l, c, h, steps: 24)
             channels = linear(l, retained, h)
         }
-        let bytes = channels.map { value -> UInt8 in
-            let x = min(1, max(0, value))
-            let encoded = x <= 0.0031308 ? x * 12.92 : 1.055 * pow(x, 1 / 2.4) - 0.055
-            return UInt8(floor(encoded * 255 + 0.5))
-        }
+        let bytes = channels.map(channelByte)
         return FittedColor(bytes: bytes, lightness: l, chroma: retained)
     }
 }
