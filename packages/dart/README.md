@@ -26,3 +26,5 @@ Expected output is `#5ab95a #ffffff`. For a single label use `renderer.resolve('
 ## Dependencies and verification
 
 The package pins `crypto` 3.0.6 for SHA-256 and `unorm_dart` 0.3.3 for Unicode normalization. Run `dart analyze --fatal-infos` and `dart run tool/check_renderer.dart` from the package directory. The renderer check compares both themes with the repository's shared reference vectors.
+
+From the repository root, `python tools/check-dart-publication.py` runs pub’s publication dry run, then installs a temporary path consumer from a copy of the public library and manifest. The consumer resolves dependencies from the local pub cache and verifies the example output. Run `dart pub get --enforce-lockfile` in the package directory first to populate that cache.
