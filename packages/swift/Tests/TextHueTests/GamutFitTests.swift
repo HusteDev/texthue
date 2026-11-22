@@ -16,6 +16,14 @@ final class GamutFitTests: XCTestCase {
             let fallback = Gamut.p3Fallback(RGB(r: fit.bytes[0], g: fit.bytes[1], b: fit.bytes[2]))
             XCTAssertEqual([fallback.rgb.r, fallback.rgb.g, fallback.rgb.b], row.fallback)
             XCTAssertEqual(fallback.clipped, row.clipped)
+            let color = Color(bytes: RGB(r: fit.bytes[0], g: fit.bytes[1], b: fit.bytes[2]), gamut: .displayP3)
+            XCTAssertEqual(color.rgb, fallback.rgb)
+            XCTAssertEqual(color.srgbClipped, row.clipped)
+            let channels = fit.bytes.map { (Double($0) / 255 * 1e6).rounded() / 1e6 }
+            XCTAssertEqual(color.p3, DisplayP3(r: channels[0], g: channels[1], b: channels[2]))
+            let css = try XCTUnwrap(color.css)
+            XCTAssertTrue(css.hasPrefix("color(display-p3 ") && css.hasSuffix(")"))
+            XCTAssertEqual(css.dropFirst("color(display-p3 ".count).dropLast().split(separator: " ").compactMap { Double($0) }, channels)
         }
     }
 

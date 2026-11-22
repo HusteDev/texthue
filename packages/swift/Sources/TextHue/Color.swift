@@ -26,11 +26,16 @@ func multiply(_ matrix: [[Double]], _ v: [Double]) -> [Double] {
     matrix.map { row in (row[0] * v[0] + row[1] * v[1]) + row[2] * v[2] }
 }
 
+public struct DisplayP3: Codable, Equatable { public let r, g, b: Double }
+
 public struct Color: Codable, Equatable {
     public let hex: String
     public let rgb: RGB
     public let hsl: HSL
     public let oklch: OKLCH
+    public let p3: DisplayP3?
+    public let css: String?
+    public let srgbClipped: Bool?
     private static let rgbToXYZ: [[Double]] = [
         [506752 / 1228815, 87881 / 245763, 12673 / 70218],
         [87098 / 409605, 175762 / 245763, 12673 / 175545],
@@ -51,15 +56,39 @@ public struct Color: Codable, Equatable {
         "#" + bytes.map { String(format: "%02x", $0) }.joined()
     }
 
-    static func lab(_ values: [Double]) -> [Double] {
+    static func lab(_ values: [Double], gamut: Gamut = .sRGB) -> [Double] {
         let linear = values.map(linearChannel)
-        let xyz = multiply(Self.rgbToXYZ, linear)
+        let xyz = multiply(gamut == .sRGB ? Self.rgbToXYZ : Gamut.p3ToXYZ, linear)
         return multiply(Self.lmsToLab, multiply(Self.xyzToLMS, xyz).map { cbrt($0) })
     }
 
     public init(rgb: RGB) {
+        self.init(bytes: rgb, gamut: .sRGB)
+    }
+
+    public init(bytes native: RGB, gamut: Gamut) {
         func round6(_ value: Double) -> Double { floor(value * 1e6 + 0.5) / 1e6 }
-        self.rgb = rgb
+        let nativeValues = [native.r, native.g, native.b].map { Double($0) / 255 }
+        if gamut == .displayP3 {
+            let fallback = Gamut.p3Fallback(native)
+            rgb = fallback.rgb
+            srgbClipped = fallback.clipped
+            let channels = nativeValues.map(round6)
+            p3 = DisplayP3(r: channels[0], g: channels[1], b: channels[2])
+            let decimals = channels.map { channel in
+                let units = Int((channel * 1_000_000).rounded())
+                if units == 0 || units == 1_000_000 { return String(units / 1_000_000) }
+                var digits = String(units + 1_000_000).dropFirst()
+                while digits.last == "0" { digits = digits.dropLast() }
+                return "0." + digits
+            }
+            css = "color(display-p3 " + decimals.joined(separator: " ") + ")"
+        } else {
+            rgb = native
+            srgbClipped = nil
+            p3 = nil
+            css = nil
+        }
         let bytes = [rgb.r, rgb.g, rgb.b]
         hex = Self.hexString(bytes)
         let values = bytes.map { Double($0) / 255 }
@@ -75,8 +104,8 @@ public struct Color: Codable, Equatable {
         }
         hsl = HSL(h: round6(60 * hue).truncatingRemainder(dividingBy: 360),
                   s: round6(saturation * 100), l: round6(light * 100))
-        let lab = Self.lab(values)
-        let neutral = rgb.r == rgb.g && rgb.g == rgb.b
+        let lab = Self.lab(nativeValues, gamut: gamut)
+        let neutral = native.r == native.g && native.g == native.b
         let angle = atan2(lab[2], lab[1]) * 180 / .pi
         let degrees = (angle + 360).truncatingRemainder(dividingBy: 360)
         oklch = OKLCH(l: round6(lab[0]),

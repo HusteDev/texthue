@@ -1,6 +1,6 @@
 import Foundation
 
-enum Gamut {
+public enum Gamut {
     case sRGB, displayP3
 
     var ratioWeights: [Double] {
