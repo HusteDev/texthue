@@ -6,10 +6,11 @@ fn main() -> Result<(), &'static str> {
         seed: 42,
         ..Renderer::default()
     };
-    let palettes = renderer.batch(["apple", "pear", "apple"])?;
+    let compiled = renderer.compile()?;
     println!(
         "{} {}",
-        palettes[0].light["fill"].hex, palettes[0].dark["onFill"].hex
+        compiled.hex("apple", false, "fill")?,
+        compiled.color("apple", true, "onFill")?.hex
     );
     Ok(())
 }

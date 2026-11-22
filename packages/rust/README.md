@@ -4,7 +4,7 @@ Resolve a label into ten sRGB roles for each theme with `Renderer::resolve`. Eac
 
 From a Rust consumer project, add the local checkout with `cargo add --path ../texthue/packages/rust`, adjusting the path to your checkout. The [labels example](examples/labels.rs) uses namespace `project` and seed `42` and prints the light fill and dark foreground for `apple`.
 
-From the crate directory, run `cargo run --locked --example labels`. Expected output is `#5ab95a #ffffff`. Run `cargo test --locked` to check the reference vectors included in the crate.
+From the crate directory, run `cargo run --locked --example labels`. The example calls `compiled.hex("apple", false, "fill")` for the light fill and `compiled.color("apple", true, "onFill")` for the dark foreground. Expected output is `#5ab95a #ffffff`. Run `cargo test --locked` to check the reference vectors included in the crate.
 
 Runtime dependencies are pinned to `sha2` 0.10.9 and `unicode-normalization` 0.1.24. Exact text is the default. Configure `Normalization` to apply NFC or NFKC, lowercasing, or whitespace handling before hashing.
 
