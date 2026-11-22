@@ -113,7 +113,8 @@
       ],
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
       "verifyCommands": [["dotnet", "run", "--configuration", "Release", "--project", "tests/Conformance"]],
-      "conformanceRunner": null
+      "optionalToolchain": true,
+      "conformanceRunner": ["dotnet", "run", "--configuration", "Release", "--project", "packages/csharp/tools/JsonRunner"]
     },
     {
       "id": "wasm",
