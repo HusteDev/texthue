@@ -13,9 +13,11 @@ const fixture = JSON.parse(await readFile(new URL('../conformance/vectors.json',
 const rgb = color => [color.rgb.r, color.rgb.g, color.rgb.b];
 
 test('frozen v1 fixture file matches its pinned SHA-256 digest', async () => {
-  const bytes = await readFile(new URL('../conformance/vectors.json', import.meta.url));
-  assert.equal(createHash('sha256').update(bytes).digest('hex'),
-    '53cd60a14cc970bf0cba0a54276f641a87ba957d986ca3af4782088410725513');
+  const manifest = await readFile(new URL('../conformance/DIGESTS', import.meta.url), 'utf8');
+  const entries = [...manifest.matchAll(/^([0-9a-f]{64})[ \t]+vectors\.json\r?$/gm)];
+  assert.equal(entries.length, 1, 'Expected one pinned digest for vectors.json');
+  const text = await readFile(new URL('../conformance/vectors.json', import.meta.url), 'utf8');
+  assert.equal(createHash('sha256').update(text.replace(/\r\n?/g, '\n')).digest('hex'), entries[0][1]);
 });
 
 /** Independent HSL-to-RGB conversion used to confirm published HSL round-trips to the canonical bytes. */
