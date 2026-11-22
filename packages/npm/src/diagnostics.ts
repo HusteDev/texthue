@@ -1,4 +1,4 @@
-import { decode, encode, hexFormat, multiply } from './color-math.js';
+import { decode, encode, hexFormat, multiply, toOklab } from './color-math.js';
 import type { Matrix, Triple } from './types.js';
 
 export type Vision = 'protan' | 'deutan' | 'tritan';
@@ -21,11 +21,56 @@ const matrices: Record<Vision, Record<Severity, Matrix>> = {
   },
 };
 
+function rgbBytes(hex: string): Triple {
+  if (typeof hex !== 'string' || !/^#[0-9a-f]{6}$/i.test(hex) || hex.length !== 7) throw new TypeError('Expected a six-digit sRGB color');
+  return [1, 3, 5].map(i => Number.parseInt(hex.slice(i, i + 2), 16)) as Triple;
+}
+
 /** Simulate a rendered sRGB color using a fixed Machado model and severity. */
 export function simulateVision(hex: string, vision: Vision, severity: Severity = 1): string {
-  if (typeof hex !== 'string' || !/^#[0-9a-f]{6}$/i.test(hex) || hex.length !== 7) throw new TypeError('Expected a six-digit sRGB color');
   if (!Object.hasOwn(matrices, vision) || (severity !== 0.5 && severity !== 1)) throw new RangeError('Unknown vision model or severity');
-  const linear = [1, 3, 5].map(i => decode(Number.parseInt(hex.slice(i, i + 2), 16) / 255)) as Triple;
+  const linear = rgbBytes(hex).map(channel => decode(channel / 255)) as Triple;
   const simulated = multiply(matrices[vision][severity], linear);
   return hexFormat(simulated.map(x => Math.round(255 * encode(Math.max(0, Math.min(1, x))))) as Triple);
+}
+
+/** Compare rendered sRGB swatches in input order. Distances are Euclidean OKLab units. */
+export function analyzePalette(colors: readonly string[], vision: Vision | 'normal' = 'normal', severity: Severity = 1) {
+  if (!Array.isArray(colors)) throw new TypeError('Expected an array of sRGB colors');
+  if (vision !== 'normal' && !Object.hasOwn(matrices, vision)) throw new RangeError('Unknown vision model');
+  if (severity !== 0.5 && severity !== 1) throw new RangeError('Unknown severity');
+  const originals = Array.from(colors, hex => hexFormat(rgbBytes(hex)));
+  const points = originals.map(hex => toOklab(rgbBytes(vision === 'normal' ? hex : simulateVision(hex, vision, severity))));
+  const pairs: {first: number; second: number; distance: number}[] = [];
+  const nearest = points.map((): {indices: number[]; distance: number | null} => ({indices: [], distance: null}));
+  const duplicates: [number, number][] = [];
+  let total = 0;
+  let min = Infinity;
+  let max = 0;
+  function record(index: number, other: number, distance: number) {
+    const entry = nearest[index];
+    if (!entry) throw new Error('Missing swatch');
+    if (entry.distance === null || distance < entry.distance) {
+      entry.distance = distance;
+      entry.indices = [other];
+    } else if (distance === entry.distance) entry.indices.push(other);
+  }
+  for (const [first, a] of points.entries()) {
+    for (let second = first + 1; second < points.length; second++) {
+      const b = points[second];
+      if (!b) throw new Error('Missing swatch');
+      const distance = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+      pairs.push({first, second, distance});
+      if (originals[first] === originals[second]) duplicates.push([first, second]);
+      record(first, second, distance);
+      record(second, first, distance);
+      min = Math.min(min, distance);
+      max = Math.max(max, distance);
+      total += distance;
+    }
+  }
+  return {pairs, nearest, duplicates, stats: {
+    count: pairs.length, min: pairs.length ? min : null, max: pairs.length ? max : null,
+    mean: pairs.length ? total / pairs.length : null,
+  }};
 }

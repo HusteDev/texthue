@@ -208,11 +208,14 @@ export function hslFormat(rgb:Triple) {
   }
   return {h:round6(hue)%360,s:round6(saturation*100),l:round6(light*100)};
 }
-export function oklchFormat(rgb:Triple, matrix:Matrix=RGB_TO_XYZ) {
-  const [r,g,b] = rgb;
+export function toOklab(rgb:Triple, matrix:Matrix=RGB_TO_XYZ):Triple {
   const values = rgb.map(x => x/255);
   const xyz = multiply(matrix, values.map(decode) as Triple);
-  const lab = multiply(LMS_TO_LAB, multiply(XYZ_TO_LMS, xyz).map(Math.cbrt) as Triple);
+  return multiply(LMS_TO_LAB, multiply(XYZ_TO_LMS, xyz).map(Math.cbrt) as Triple);
+}
+export function oklchFormat(rgb:Triple, matrix:Matrix=RGB_TO_XYZ) {
+  const [r,g,b] = rgb;
+  const lab = toOklab(rgb, matrix);
   const neutral = r === g && g === b;
   const chroma = neutral ? 0 : Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
   const okHue = neutral ? 0 : hueDegrees(Math.atan2(lab[2], lab[1]) * 180 / Math.PI);
