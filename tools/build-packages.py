@@ -15,6 +15,7 @@ import sys
 import tarfile
 import tempfile
 import zipfile
+from email.parser import BytesHeaderParser
 from pathlib import Path
 
 from verify import ROOT, environment, load_packages, run
@@ -92,6 +93,11 @@ def main():
         required = {"package/" + path for path in manifest_package("npm")["archiveRequiredFiles"]}
         if not required <= names:
             raise SystemExit(f"npm archive missing: {required - names}")
+        with archive.extractfile("package/package.json") as manifest:
+            metadata = json.load(manifest)
+        for field in ("dependencies", "optionalDependencies", "peerDependencies"):
+            if metadata.get(field):
+                raise SystemExit(f"Packed npm library declares {field}: {metadata[field]}")
     with zipfile.ZipFile(wheel) as archive:
         names = set(archive.namelist())
         required = {
@@ -101,6 +107,10 @@ def main():
             raise SystemExit(f"Python wheel missing: {required - names}")
         if any(name.endswith(".py") and "/_docs/" in name for name in names):
             raise SystemExit("Python wheel must not bundle example scripts")
+        metadata_name = f"texthue-{python_version}.dist-info/METADATA"
+        headers = BytesHeaderParser().parsebytes(archive.read(metadata_name))
+        if requirements := headers.get_all("Requires-Dist"):
+            raise SystemExit(f"Python wheel declares runtime dependencies: {requirements}")
     with tempfile.TemporaryDirectory(prefix="package-check-", dir=cache) as temporary:
         consumer = Path(temporary).resolve()
         if not consumer.is_relative_to(cache.resolve()):
