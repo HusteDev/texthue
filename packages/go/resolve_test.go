@@ -287,10 +287,64 @@ func TestPortableConfigFingerprint(t *testing.T) {
 	if err := json.Unmarshal(data, &value); err != nil {
 		t.Fatal(err)
 	}
+	resolver, err := ImportConfig(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	exported, err := resolver.ExportConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var roundTrip map[string]any
+	if err := json.Unmarshal(exported, &roundTrip); err != nil || !reflect.DeepEqual(value, roundTrip) {
+		t.Fatalf("round trip mismatch: %s, %v", exported, err)
+	}
+	colors, err := resolver.Resolve("🐈")
+	if err != nil || colors.Light.Fill.Hex != "#ab1234" {
+		t.Fatalf("override replay: %s %v", colors.Light.Fill.Hex, err)
+	}
 	want := value["fingerprint"]
 	delete(value, "fingerprint")
 	got, err := fingerprint(value)
 	if err != nil || got != want {
 		t.Fatalf("fingerprint %s, want %s: %v", got, want, err)
+	}
+}
+
+func TestConfigRejectsChangedAndIncompletePayloads(t *testing.T) {
+	r, err := NewResolver()
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := r.ExportConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []string{"tampered", "unexpanded", "algorithm"} {
+		var payload map[string]any
+		if err := json.Unmarshal(encoded, &payload); err != nil {
+			t.Fatal(err)
+		}
+		switch test {
+		case "tampered":
+			payload["options"].(map[string]any)["seed"] = float64(5)
+		case "unexpanded":
+			delete(payload["options"].(map[string]any), "seed")
+			delete(payload, "fingerprint")
+			digest, err := fingerprint(payload)
+			if err != nil {
+				t.Fatal(err)
+			}
+			payload["fingerprint"] = digest
+		case "algorithm":
+			payload["algorithm"] = "unknown"
+		}
+		data, err := json.Marshal(payload)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ImportConfig(data); err == nil {
+			t.Errorf("accepted %s config", test)
+		}
 	}
 }

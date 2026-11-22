@@ -247,19 +247,27 @@ class ConformanceTests(unittest.TestCase):
                     },
                 }
             )
+        from texthue import Resolver
+
+        replay = [
+            {"text": item["text"], "config": Resolver(item["options"]).export_config()}
+            for item in cases
+        ]
         script = """
-import { resolveTextColors } from './packages/npm/dist/index.js';
+import { importConfig, resolveTextColors } from './packages/npm/dist/index.js';
 let input = '';
 process.stdin.setEncoding('utf8');
 for await (const chunk of process.stdin) input += chunk;
 const output = [];
-for (const item of JSON.parse(input)) output.push(await resolveTextColors(item.text, item.options));
+for (const item of JSON.parse(input)) {
+  output.push(item.config ? importConfig(item.config).resolve(item.text) : resolveTextColors(item.text, item.options));
+}
 process.stdout.write(JSON.stringify(output));
 """
         completed = subprocess.run(
             ["node", "--input-type=module", "-e", script],
             cwd=ROOT,
-            input=json.dumps(cases, ensure_ascii=True),
+            input=json.dumps(cases + replay, ensure_ascii=True),
             text=True,
             capture_output=True,
             check=True,
@@ -269,14 +277,17 @@ process.stdout.write(JSON.stringify(output));
         go_completed = subprocess.run(
             ["go", "-C", "packages/go", "run", "./cmd/conformance"],
             cwd=ROOT,
-            input=json.dumps(cases, ensure_ascii=True),
+            input=json.dumps(cases + replay, ensure_ascii=True),
             text=True,
             capture_output=True,
             check=True,
             timeout=60,
         )
         go_results = json.loads(go_completed.stdout)
-        self.assertEqual(len(go_results), len(cases))
+        self.assertEqual(len(go_results), 2 * len(cases))
+        self.assertEqual(go_results[: len(cases)], go_results[len(cases) :])
+        self.assertEqual(expected[: len(cases)], expected[len(cases) :])
+        expected = expected[: len(cases)]
         for index, (item, result) in enumerate(zip(cases, expected, strict=True)):
             with self.subTest(index=index):
                 self.compare(resolve_text_colors(item["text"], item["options"]).to_dict(), result)

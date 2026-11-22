@@ -262,6 +262,7 @@ func compileForegrounds(options Options) (func(rgb8, float64) rgb8, error) {
 }
 
 type Resolver struct {
+	replay           replayInputs
 	brand            brandConfig
 	selectForeground func(rgb8, float64) rgb8
 	domain           hueDomain
@@ -312,7 +313,7 @@ func NewResolver(options ...Option) (*Resolver, error) {
 	prefix = binary.BigEndian.AppendUint32(prefix, raw.Seed)
 	prefix = binary.BigEndian.AppendUint32(prefix, uint32(len(namespace)))
 	prefix = append(prefix, namespace...)
-	return &Resolver{brand: brand, selectForeground: selectForeground, domain: domain, normalize: normalization, prefix: prefix, target: target, targets: maps.Clone(raw.ContrastTargets), profiles: profiles,
+	return &Resolver{replay: replayFrom(raw), brand: brand, selectForeground: selectForeground, domain: domain, normalize: normalization, prefix: prefix, target: target, targets: maps.Clone(raw.ContrastTargets), profiles: profiles,
 		bases: [2]Color{formats(profiles[0].background), formats(profiles[1].background)}}, nil
 }
 

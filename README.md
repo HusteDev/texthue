@@ -94,6 +94,15 @@ Python provides `Resolver.assign(texts, pinned=...)`. Go provides `NewResolver(W
 
 ## Brand colors and foregrounds
 
+A configured resolver can export its expanded settings for replay in another
+language. JavaScript uses `resolver.exportConfig()` and `importConfig(value)`.
+Python uses `resolver.export_config()` and `import_config(value)`. Both return a
+JSON-compatible object on export. Go uses `resolver.ExportConfig()` and
+`texthue.ImportConfig(data)` with JSON bytes and an error return. Imports check
+the schema, algorithm identifier, and SHA-256 fingerprint of the expanded
+settings. The fingerprint detects accidental changes. A caller able to edit the
+settings can also calculate a replacement fingerprint.
+
 Use `overrides` to pin a label to a hex fill for both themes, or supply distinct light and dark fills. A palette entry has a stable `id` and at least one theme color. A single supplied theme color applies to both. The resolver prefers palette entries meeting the fill target in both themes, then ranks them by the SHA-256 digest of the identity digest followed by the UTF-8 entry ID. Reordering entries preserves assignments.
 
 ```typescript

@@ -16,6 +16,7 @@ import (
 // run decodes the cases, resolves them in order, and encodes the results.
 func run() error {
 	var cases []struct {
+		Config  json.RawMessage               `json:"config"`
 		Texts   []string                      `json:"texts"`
 		Pinned  map[string]texthue.Assignment `json:"pinned"`
 		Text    string                        `json:"text"`
@@ -26,6 +27,18 @@ func run() error {
 	}
 	results := make([]any, 0, len(cases))
 	for _, item := range cases {
+		if item.Config != nil {
+			resolver, err := texthue.ImportConfig(item.Config)
+			if err != nil {
+				return err
+			}
+			colors, err := resolver.Resolve(item.Text)
+			if err != nil {
+				return err
+			}
+			results = append(results, colors)
+			continue
+		}
 		if item.Options == nil {
 			item.Options = json.RawMessage("{}")
 		}
