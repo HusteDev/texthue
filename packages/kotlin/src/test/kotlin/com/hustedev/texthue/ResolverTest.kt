@@ -29,18 +29,26 @@ fun main() {
             val (key, light, dark) = it.split(',')
             decode(key) to BrandColors(light, dark)
         }
+        val entries = row[21].takeIf { it.isNotEmpty() }?.split('|')?.map {
+            val (id, light, dark) = it.split(',')
+            PaletteEntry(decode(id), light.ifEmpty { null }, dark.ifEmpty { null })
+        }
         val palette = Resolver(decode(row[1]), row[2].toUInt(), row[3].ifEmpty { null }?.toDouble(), normalization, Preset.valueOf(row[7].uppercase()),
             ContrastModel.valueOf(row[8].uppercase()), targets, row[10].split(','),
             ForegroundPolicy.valueOf(row[11].replace('-', '_').uppercase()), arc(row[12]),
             row[13].split('|').filter { it.isNotEmpty() }.map(::arc), Backgrounds(row[14], row[15]),
-            Profiles(ThemeProfiles(profile(row[16]), profile(row[17])), ThemeProfiles(profile(row[18]), profile(row[19]))), overrides).resolve(decode(row[0]))
-        check(palette.source == row[21])
-        check(abs(palette.hueFraction - row[22].toDouble()) < 1e-12)
-        check(abs(palette.hue - row[23].toDouble()) < 1e-12)
+            Profiles(ThemeProfiles(profile(row[16]), profile(row[17])), ThemeProfiles(profile(row[18]), profile(row[19]))), overrides, entries).resolve(decode(row[0]))
+        check(palette.source == row[22])
+        check(abs(palette.hueFraction - row[23].toDouble()) < 1e-12)
+        check(abs(palette.hue - row[24].toDouble()) < 1e-12)
         val colors = listOf(palette.light, palette.dark).flatMap { theme -> roles.map { theme.colors.getValue(it) } }
-        check(colors == row.drop(24)) { "$line: $colors" }
+        check(colors == row.drop(25)) { "$line: $colors" }
     }.count()
     check(count > 0)
+    val duplicate = PaletteEntry("duplicate", light = "#abcdef")
+    for (invalid in listOf(emptyList(), listOf(duplicate, duplicate), listOf(PaletteEntry("missing")))) {
+        check(runCatching { Resolver(palette = invalid) }.exceptionOrNull() is IllegalArgumentException)
+    }
     check(runCatching { UnitRange(0.8, 0.1) }.exceptionOrNull() is IllegalArgumentException)
     check(runCatching { RoleProfile(chromaCap = Double.NaN) }.exceptionOrNull() is IllegalArgumentException)
     check(runCatching { Resolver(backgrounds = Backgrounds(light = "#ffff")) }.exceptionOrNull() is IllegalArgumentException)

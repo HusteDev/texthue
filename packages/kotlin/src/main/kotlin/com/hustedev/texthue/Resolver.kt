@@ -2,6 +2,7 @@ package com.hustedev.texthue
 
 import kotlin.math.abs
 import kotlin.math.floor
+import java.security.MessageDigest
 
 data class ThemePalette(val colors: Map<String, String>) {
     fun color(role: String): Color = renderedColor(parseHex(colors.getValue(role)))
@@ -44,6 +45,10 @@ private class ThemeBackground(hex: String) {
 
 data class BrandColors(val light: String, val dark: String = light)
 
+data class PaletteEntry(val id: String, val light: String? = null, val dark: String? = null)
+
+private data class RankedEntry(val id: ByteArray, val colors: Pair<FixedTone, FixedTone>)
+
 private class FixedTone(hex: String) {
     val bytes = parseHex(hex)
     private val coordinates = ColorMath.oklch(bytes)
@@ -73,6 +78,7 @@ class Resolver(
     backgrounds: Backgrounds = Backgrounds(),
     private val profiles: Profiles = Profiles(),
     overrides: Map<String, BrandColors> = emptyMap(),
+    palette: List<PaletteEntry>? = null,
 ) {
     private val apca = contrastModel == ContrastModel.APCA
     private val target = contrastTarget ?: if (apca) 60.0 else preset.target
@@ -100,12 +106,62 @@ class Resolver(
         }
     }
 
+    private val rankedEntries = palette?.let { entries ->
+        require(entries.isNotEmpty()) { "Empty palette" }
+        val ids = mutableSetOf<String>()
+        val compiled = entries.map { entry ->
+            require(ids.add(entry.id) && Charsets.UTF_8.newEncoder().canEncode(entry.id)) { "Invalid palette ID" }
+            val light = FixedTone(requireNotNull(entry.light ?: entry.dark))
+            val dark = FixedTone(requireNotNull(entry.dark ?: entry.light))
+            RankedEntry(entry.id.toByteArray(Charsets.UTF_8), light to dark)
+        }
+        val required = contrastTargets.fill ?: target
+        fun passes(tone: FixedTone) = contrast(foreground(tone.bytes, required), tone.bytes) >= required
+        compiled.filter { passes(it.colors.first) && passes(it.colors.second) }.ifEmpty { compiled }
+    }.orEmpty()
+
+    private fun selectEntry(digest: ByteArray): Pair<FixedTone, FixedTone>? {
+        if (rankedEntries.isEmpty()) return null
+        val hash = MessageDigest.getInstance("SHA-256")
+        var best: ByteArray? = null
+        var winner: RankedEntry? = null
+        for (entry in rankedEntries) {
+            hash.update(digest)
+            val rank = hash.digest(entry.id)
+            val previous = best
+            if (previous != null) {
+                val index = rank.indices.firstOrNull { rank[it] != previous[it] } ?: continue
+                if (rank[index].toUByte() < previous[index].toUByte()) continue
+            }
+            best = rank
+            winner = entry
+        }
+        return winner?.colors
+    }
+
+    private fun contrast(a: IntArray, b: IntArray) = abs(Contrast.measure(a, b, contrastModel, Gamut.SRGB))
+    private fun foreground(rgb: IntArray, required: Double): IntArray {
+        var best = candidates.first()
+        var bestScore = -1.0
+        for (candidate in candidates) {
+            val score = contrast(candidate, rgb)
+            if (foregroundPolicy == ForegroundPolicy.FIRST_PASSING && score >= required) return candidate
+            if (score > bestScore) {
+                best = candidate
+                bestScore = score
+            }
+        }
+        return best
+    }
+
     fun resolve(text: String): Palette {
         val name = normalization.apply(text)
-        val (uH, uL, uC) = Identity.fractions(Identity.digest(name, scope, seed))
-        fixedColors[name]?.let { (light, dark) ->
+        val digest = Identity.digest(name, scope, seed)
+        val (uH, uL, uC) = Identity.fractions(digest)
+        val override = fixedColors[name]
+        (override ?: selectEntry(digest))?.let { (light, dark) ->
             return Palette(light.hue, theme(false, light.hue, 0.5, 0.5, light),
-                theme(true, dark.hue, 0.5, 0.5, dark), "override", light.fraction())
+                theme(true, dark.hue, 0.5, 0.5, dark), if (override != null) "override" else "palette", light.fraction())
         }
         val position = uH * 12
         val slot = position.toInt()
@@ -131,20 +187,6 @@ class Resolver(
         val fillL = fixed?.lightness ?: sample(fillRange.low, fillRange.high, 0)
         val textRange = profile.text.lightness ?: if (dark) UnitRange(0.72, 0.82) else UnitRange(0.43, 0.53)
         val textL = sample(textRange.low, textRange.high, 1)
-        fun contrast(a: IntArray, b: IntArray) = abs(Contrast.measure(a, b, contrastModel, Gamut.SRGB))
-        fun foreground(rgb: IntArray, required: Double): IntArray {
-            var best = candidates.first()
-            var bestScore = -1.0
-            for (candidate in candidates) {
-                val score = contrast(candidate, rgb)
-                if (foregroundPolicy == ForegroundPolicy.FIRST_PASSING && score >= required) return candidate
-                if (score > bestScore) {
-                    best = candidate
-                    bestScore = score
-                }
-            }
-            return best
-        }
         fun tone(l: Double, role: RoleProfile, defaultCap: Double, target: Double, backdrop: IntArray? = null, second: IntArray? = null, secondTarget: Double = target, surface: Boolean = false): IntArray {
             val lightness = l.coerceIn(0.0, 1.0)
             val scale = role.chromaScale?.sample(uC) ?: defaultScale

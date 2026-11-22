@@ -1,12 +1,12 @@
 import { createResolver } from '../packages/npm/dist/index.js';
 const roles = ['background','subtle','muted','fill','onFill','fillHover','fillActive','border','text','strong'];
 const encode = s => Buffer.from(s).toString('base64');
-function emit(text, namespace, seed, contrastTarget, normalize = {unicode:'none', case:'none', whitespace:'none'}, preset = 'labels', contrastModel = 'wcag2', contrastTargets = {}, foregrounds = ['#000000','#ffffff'], foregroundPolicy = 'best', hueRange = [0,360], excludeHues = [], backgrounds = {}, profiles = {}, overrides = {}) {
-  const color = createResolver({namespace,seed,preset,normalize,contrastModel,contrastTargets,foregrounds,foregroundPolicy,hueRange,excludeHues,backgrounds,profiles,overrides,...(contrastTarget === undefined ? {} : {contrastTarget})}).resolve(text);
+function emit(text, namespace, seed, contrastTarget, normalize = {unicode:'none', case:'none', whitespace:'none'}, preset = 'labels', contrastModel = 'wcag2', contrastTargets = {}, foregrounds = ['#000000','#ffffff'], foregroundPolicy = 'best', hueRange = [0,360], excludeHues = [], backgrounds = {}, profiles = {}, overrides = {}, palette) {
+  const color = createResolver({namespace,seed,preset,normalize,contrastModel,contrastTargets,foregrounds,foregroundPolicy,hueRange,excludeHues,backgrounds,profiles,overrides,...(palette ? {palette} : {}),...(contrastTarget === undefined ? {} : {contrastTarget})}).resolve(text);
   console.log([encode(text),encode(namespace),seed,contrastTarget,normalize.unicode,normalize.case,normalize.whitespace,preset,contrastModel,['fill','fillHover','fillActive','border','text','textOnSubtle','strong'].map(role=>contrastTargets[role]).join(','),foregrounds.join(','),foregroundPolicy,hueRange.join(','),excludeHues.map(arc=>arc.join(',')).join('|'),backgrounds.light ?? '#ffffff',backgrounds.dark ?? '#121212',...['light','dark'].flatMap(theme => ['fill','text'].map(role => {
       const p = profiles[theme]?.[role];
       return [p?.lightness?.join(','),p?.chromaScale?.join(','),p?.chromaCap].join('|');
-    })),Object.entries(overrides).map(([key,pair]) => [encode(key),pair.light,pair.dark].join(',')).join('|'),color.source,color.hueFraction,color.hue,
+    })),Object.entries(overrides).map(([key,pair]) => [encode(key),pair.light,pair.dark].join(',')).join('|'),(palette ?? []).map(entry=>[encode(entry.id),entry.light,entry.dark].join(',')).join('|'),color.source,color.hueFraction,color.hue,
     ...['light','dark'].flatMap(theme=>roles.map(role=>color[theme][role].hex))].join('\t'));
 }
 for (const contrastTarget of [1, 4.5, 7, 21]) {
@@ -82,6 +82,17 @@ for (const pair of [{light:'#ff4444',dark:'#55ccff'},{light:'#888888',dark:'#000
   for (const model of ['wcag2','apca']) {
     for (const name of ['Brand',' BRAND ','unmatched']) {
       emit(name,'scope',31,undefined,{unicode:'NFC',case:'lower',whitespace:'trim'},'chart',model,{},['#777777'],'best',undefined,undefined,{}, {},{brand:pair});
+    }
+  }
+}
+
+const entries = [{id:'é',light:'#555555',dark:'#777777'}, {id:'red',dark:'#ff1111'}, {id:'blue',light:'#000088'}];
+for (const palette of [entries,[...entries].reverse()]) {
+  for (const model of ['wcag2','apca']) {
+    for (const target of (model === 'wcag2' ? [1,7,21] : [0,60,106])) {
+      for (const text of ['fixed', ...Array.from({length:12},(_,i)=>String(i))])
+        emit(text,'scope',7,target,undefined,'labels',model,{},['#ffffff'],'best',undefined,undefined,{}, {},
+          {fixed:{light:'#123456',dark:'#abcdef'}},palette);
     }
   }
 }
