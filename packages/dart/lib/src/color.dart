@@ -23,6 +23,14 @@ String rgbHex(List<int> bytes) =>
 
 double _round6(double value) => (value * 1e6 + 0.5).floor() / 1e6;
 
+List<double> srgbToLab(double r, double g, double b) {
+  final xyz = multiply(
+      _rgbToXYZ, [linearChannel(r), linearChannel(g), linearChannel(b)]);
+  final lms = multiply(_xyzToLMS, xyz);
+  return multiply(_lmsToLab,
+      [for (final x in lms) x.sign * math.pow(x.abs(), 1 / 3).toDouble()]);
+}
+
 final class Color {
   final String hex;
   final ({int r, int g, int b}) rgb;
@@ -64,11 +72,7 @@ final class Color {
         hue = (r - g) / delta + 4;
       }
     }
-    final xyz = multiply(
-        _rgbToXYZ, [linearChannel(r), linearChannel(g), linearChannel(b)]);
-    final lms = multiply(_xyzToLMS, xyz);
-    final lab = multiply(_lmsToLab,
-        [for (final x in lms) x.sign * math.pow(x.abs(), 1 / 3).toDouble()]);
+    final lab = srgbToLab(r, g, b);
     final neutral = red == green && green == blue;
     final degrees = (math.atan2(lab[2], lab[1]) * 180 / math.pi + 360) % 360;
     return Color._(hex, (

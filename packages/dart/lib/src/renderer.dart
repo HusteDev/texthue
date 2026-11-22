@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'dart:math' as math;
 import 'color.dart';
@@ -9,6 +10,8 @@ import 'normalization.dart';
 import 'hue_domain.dart';
 import 'tables.dart';
 import 'tone_repair.dart';
+
+part 'assignment.dart';
 
 typedef RenderedPalette = ({
   String version,
@@ -232,10 +235,11 @@ final class Renderer {
     return Color.fromRgb(bytes[0], bytes[1], bytes[2]);
   }
 
-  RenderedPalette _resolveNormalized(String text) {
-    final mapping = _mapping(text);
+  RenderedPalette _resolveNormalized(String text) => _render(_mapping(text));
+
+  RenderedPalette _render(_Mapping mapping, [int ring = 0]) {
     Map<String, Color> theme(bool dark) =>
-        Map.unmodifiable(_theme(dark, mapping)
+        Map.unmodifiable(_theme(dark, mapping, null, ring)
             .map((role, v) => MapEntry(role, Color.fromRgb(v[0], v[1], v[2]))));
     return (
       version: 'text-to-color-v1',
@@ -256,10 +260,11 @@ final class Renderer {
         fixed: tones
       );
 
-  _Mapping _mapping(String text) {
+  _Mapping _mapping(String text, [Uint8List? prehashed]) {
     final fixed = _overrides[text];
     if (fixed != null) return _fixedMapping(fixed, 'override');
-    final digest = identityDigest(text, namespace: _scope, seed: seed);
+    final digest =
+        prehashed ?? identityDigest(text, namespace: _scope, seed: seed);
     _RankedTone? winner;
     var best = '';
     for (final entry in _palette) {
@@ -271,12 +276,9 @@ final class Renderer {
     }
     if (winner != null) return _fixedMapping(winner.tones, 'palette');
     final f = identityFractions(digest);
-    final pos = f[0] * 12, i = pos.floor();
-    final hue = _hues
-        .map((anchors[i] + (anchors[i + 1] - anchors[i]) * (pos - i)) % 360);
     return (
       source: 'hash',
-      hue: hue,
+      hue: _mappedHue(f[0]),
       fraction: f[0],
       uL: f[1],
       uC: f[2],
@@ -284,8 +286,14 @@ final class Renderer {
     );
   }
 
+  double _mappedHue(double fraction) {
+    final pos = fraction * 12, i = pos.floor();
+    return _hues
+        .map((anchors[i] + (anchors[i + 1] - anchors[i]) * (pos - i)) % 360);
+  }
+
   Map<String, List<int>> _theme(bool dark, _Mapping mapping,
-      [String? selected]) {
+      [String? selected, int ring = 0]) {
     final fixed = dark ? mapping.fixed?.$2 : mapping.fixed?.$1;
     final hue = fixed?.hue ?? mapping.hue, uL = mapping.uL, uC = mapping.uC;
     final base = dark ? _dark : _light, direction = dark ? 1 : -1;
@@ -305,7 +313,11 @@ final class Renderer {
           sector = (hue / 30).floor();
       final offset = bias[sector] +
           (bias[(sector + 1) % 12] - bias[sector]) * (hue / 30 - sector);
-      return (start + (end - start) * uL + offset).clamp(0.0, 1.0);
+      return (start +
+              (end - start) * uL +
+              offset +
+              const [0.0, 0.08, -0.08, 0.16, -0.16][ring % 5])
+          .clamp(0.0, 1.0);
     }
 
     double score(List<int> text, List<int> bg) =>
@@ -336,7 +348,8 @@ final class Renderer {
           : math.min(
               role?.chromaCap ?? (fill ? 0.16 : 0.19),
               Gamut.sRGB.cusp(l, hue) *
-                  (scale.$1 + (scale.$2 - scale.$1) * uC));
+                  ((scale.$1 + (scale.$2 - scale.$1) * uC) *
+                      (ring % 5 < 3 ? 1 : 0.6)));
       final secondary = subtle == null ? 0.0 : target('textOnSubtle');
       return Gamut.sRGB
           .repair(l, c, hue, threshold == 0 ? secondary : threshold, (bytes) {
