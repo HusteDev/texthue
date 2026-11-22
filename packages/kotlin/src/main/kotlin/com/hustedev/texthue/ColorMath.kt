@@ -21,6 +21,7 @@ enum class Gamut(internal val fromXyz: Array<DoubleArray>) {
 
 internal data class FittedColor(val bytes: IntArray, val chroma: Double, val lightness: Double)
 
+@Suppress("TooManyFunctions") // Shared color-space conversion operations.
 internal object ColorMath {
     private val labToLms = arrayOf(
         doubleArrayOf(1.0, 0.3963377773761749, 0.2158037573099136),
@@ -39,6 +40,7 @@ internal object ColorMath {
         doubleArrayOf(7918.0 / 409605, 87881.0 / 737289, 1001167.0 / 1053270),
     )
 
+    @Suppress("MagicNumber") // Exact rational coefficients of the Display-P3 conversion matrix.
     private val p3ToXyz = arrayOf(
         doubleArrayOf(608311.0 / 1250200, 189793.0 / 714400, 198249.0 / 1000160),
         doubleArrayOf(35783.0 / 156275, 247089.0 / 357200, 198249.0 / 2500400),

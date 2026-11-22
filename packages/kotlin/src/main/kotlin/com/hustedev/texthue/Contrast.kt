@@ -40,10 +40,13 @@ internal object Contrast {
         val fg = luminance(weights, model, text)
         val bg = luminance(weights, model, background)
         if (model == ContrastModel.WCAG2) return (maxOf(fg, bg) + 0.05) / (minOf(fg, bg) + 0.05)
+        return apcaContrast(fg, bg)
+    }
+
+    private fun apcaContrast(fg: Double, bg: Double): Double {
         if (abs(fg - bg) < 0.0005) return 0.0
         val darkText = bg > fg
         val raw = 1.14 * (bg.pow(if (darkText) 0.56 else 0.65) - fg.pow(if (darkText) 0.57 else 0.62))
-        if (abs(raw) < 0.1) return 0.0
-        return 100 * (raw - if (darkText) 0.027 else -0.027)
+        return if (abs(raw) < 0.1) 0.0 else 100 * (raw - if (darkText) 0.027 else -0.027)
     }
 }

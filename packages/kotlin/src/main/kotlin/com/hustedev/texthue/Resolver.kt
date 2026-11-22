@@ -1,6 +1,7 @@
 package com.hustedev.texthue
 
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlin.math.floor
 import java.security.MessageDigest
 
@@ -45,7 +46,7 @@ internal fun parseHex(hex: String): IntArray {
 
 private class ThemeBackground(hex: String) {
     val bytes = parseHex(hex)
-    val lightness = floor(ColorMath.oklch(bytes).l * 4096 + 0.5) / 4096
+    val lightness = snapLightness(ColorMath.oklch(bytes).l)
 }
 
 data class BrandColors(val light: String, val dark: String = light)
@@ -58,7 +59,7 @@ private class FixedTone(hex: String) {
     val bytes = parseHex(hex)
     private val coordinates = ColorMath.oklch(bytes)
     val hue = (floor(coordinates.h * 1024 + 0.5) / 1024) % 360
-    val lightness = floor(coordinates.l * 4096 + 0.5) / 4096
+    val lightness = snapLightness(coordinates.l)
     val neutral = coordinates.c == 0.0
 
     fun fraction(): Double {
@@ -68,6 +69,11 @@ private class FixedTone(hex: String) {
     }
 }
 
+private const val LIGHTNESS_STEPS = 4096.0
+private fun snapLightness(value: Double) = (value * LIGHTNESS_STEPS).roundToInt() / LIGHTNESS_STEPS
+
+// The named arguments form the public configuration API.
+@Suppress("LongParameterList", "TooManyFunctions")
 class Resolver(
     namespace: String = "",
     private val seed: UInt = 0u,
@@ -228,7 +234,7 @@ class Resolver(
         val base = if (dark) darkBackground else lightBackground
         val background = canonical(base.bytes)
         val direction = if (dark) 1 else -1
-        val lb = if (gamut == Gamut.SRGB) base.lightness else floor(ColorMath.oklch(background, gamut).l * 4096 + 0.5) / 4096
+        val lb = if (gamut == Gamut.SRGB) base.lightness else snapLightness(ColorMath.oklch(background, gamut).l)
         val profile = if (dark) profiles.dark else profiles.light
         val defaultScale = preset.minScale + (preset.maxScale - preset.minScale) * uC
         fun sample(low: Double, high: Double, role: Int): Double {
@@ -298,7 +304,9 @@ class Resolver(
         val report = adjustments?.let { relationshipReport(colors, it, contrastModel, gamut, fixed != null) { pair ->
             contrastTargets.required(pair, target, apca)
         } }.orEmpty()
-        return ThemePalette(java.util.Collections.unmodifiableMap(hex), java.util.Collections.unmodifiableMap(report), renditions)
+        return ThemePalette(
+            java.util.Collections.unmodifiableMap(hex), java.util.Collections.unmodifiableMap(report), renditions
+        )
     }
 }
 

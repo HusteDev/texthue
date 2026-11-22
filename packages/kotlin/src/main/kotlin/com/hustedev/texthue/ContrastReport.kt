@@ -9,8 +9,10 @@ data class ContrastRelationship(val ratio: Double, val model: ContrastModel, val
 internal data class ToneAdjustment(val adjusted: Boolean, val capped: Boolean,
     val reduced: Boolean, val fallback: String?)
 
+@Suppress("LongParameterList") // All inputs are required for a model-specific relationship report.
 internal fun relationshipReport(colors: Map<String, DoubleArray>, adjustments: Map<String, ToneAdjustment>,
-    model: ContrastModel, gamut: Gamut, fixed: Boolean, target: (String) -> Double): Map<String, ContrastRelationship> = buildMap {
+    model: ContrastModel, gamut: Gamut, fixed: Boolean,
+    target: (String) -> Double): Map<String, ContrastRelationship> = buildMap {
     for (role in listOf("fill", "fillHover", "fillActive", "text", "strong", "border")) {
         val flags = adjustments[role]
         for ((pair, front, back) in contrastPairs(role)) {
