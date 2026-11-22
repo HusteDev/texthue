@@ -282,6 +282,7 @@ class ReleaseManifestTests(unittest.TestCase):
                 "texthue-1.0.0-maven.zip",
                 "texthue-react-1.0.0.tgz",
                 "texthue-tailwind-1.0.0.tgz",
+                "texthue-wasm-1.0.0.tgz",
             )
             for name in (
                 "texthue-1.0.0.tgz",

@@ -66,6 +66,16 @@ class PublishWorkflowTests(unittest.TestCase):
         self.assertIn('"artifacts/texthue-${ADAPTER}-${VERSION}.tgz"', publish["run"])
         self.assertIn("publish-adapters", self.jobs["github-release"]["needs"])
 
+    def test_wasm_can_publish_without_core(self):
+        wasm = self.jobs["publish-wasm"]
+        self.assertEqual(wasm["if"], "inputs.wasm && !inputs.dry_run")
+        self.assertEqual(wasm["needs"], "build")
+        self.assertEqual(wasm["env"]["ADAPTER"], "wasm")
+        self.assertIn("publish-wasm", self.jobs["github-release"]["needs"])
+        self.assertEqual(wasm["steps"], self.jobs["publish-adapters"]["steps"])
+        state = next(step["run"] for step in wasm["steps"] if step.get("id") == "state")
+        self.assertIn('if [[ "$ADAPTER" != wasm ]]', state)
+
     def test_npm_version_gate(self):
         steps = self.jobs["publish-npm"]["steps"]
         gate = next(s["run"] for s in steps if s.get("name", "").startswith("Require an npm CLI"))

@@ -302,6 +302,7 @@ def verify_bundle(version: str, commit: str, directory: Path) -> None:
         f"texthue-{version}-maven.zip",
         f"texthue-react-{version}.tgz",
         f"texthue-tailwind-{version}.tgz",
+        f"texthue-wasm-{version}.tgz",
     ):
         if (directory / archive).exists():
             names.add(archive)

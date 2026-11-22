@@ -16,7 +16,10 @@ The [package manifest](../tools/packages.json) lists each package directory, ver
 
 For Rust distribution testing, run `python tools/stage-rust.py .cache/rust-staging`. It tests the unpacked crate and executes its bundled consumer before copying the original Cargo archive into the destination. A conflicting archive at the same destination fails staging.
 
-These local checks exercise the listed packages. The native ports and WebAssembly package still require separate registry delivery integration.
+Select `wasm` to publish the staged `@texthue/wasm` tarball. Configure the npm
+environment for that scoped package. Its Node and browser checks run before
+draft staging. A retry compares the staged archive with the registry, independently
+of the core JavaScript package.
 
 Select `npm_adapters` to publish both scoped packages. Configure npm publishing rights or trusted publishing for each package in the `npm` environment. The jobs require the staged core version to match the registry before uploading either adapter. On retry, each matching adapter is skipped independently.
 

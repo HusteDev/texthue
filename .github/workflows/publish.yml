@@ -42,6 +42,10 @@ on:
         description: Publish the npm package
         type: boolean
         default: true
+      wasm:
+        description: Publish the staged WebAssembly npm package
+        type: boolean
+        default: false
       npm_adapters:
         description: Publish the staged React and Tailwind npm adapters
         type: boolean
@@ -189,6 +193,19 @@ jobs:
           packages/kotlin/gradlew -p packages/kotlin publishLibraryPublicationToStagingRepository
           python tools/check-maven.py --stage artifacts
           (cd artifacts && sha256sum "texthue-${VERSION}-maven.zip" >> SHA256SUMS)
+      - name: Stage the tested WebAssembly npm archive
+        if: steps.bundle.outputs.state == 'absent'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          rustup target add wasm32-unknown-unknown
+          cargo install --locked --version 0.2.130 wasm-bindgen-cli
+          npm pack ./packages/wasm --pack-destination artifacts
+          archive="texthue-wasm-${VERSION}.tgz"
+          python tools/check-wasm-consumer.py "artifacts/$archive"
+          python tools/check-browser.py google-chrome --wasm-package "artifacts/$archive"
+          (cd artifacts && sha256sum "$archive" >> SHA256SUMS)
       - name: Stage the tested Rust crate
         if: steps.bundle.outputs.state == 'absent'
         env:
@@ -302,7 +319,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    steps:
+    steps: &scoped_npm_steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -328,10 +345,12 @@ jobs:
         # skipped just because the registry could not be reached.
         run: |
           set -euo pipefail
-          CORE=$(python3 tools/release.py npm-state --package texthue --version "$VERSION" --tarball "artifacts/texthue-${VERSION}.tgz")
-          if [[ "$CORE" != matching ]]; then
-            echo "::error::The exact core dependency must already be published"
-            exit 1
+          if [[ "$ADAPTER" != wasm ]]; then
+            CORE=$(python3 tools/release.py npm-state --package texthue --version "$VERSION" --tarball "artifacts/texthue-${VERSION}.tgz")
+            if [[ "$CORE" != matching ]]; then
+              echo "::error::The exact core dependency must already be published"
+              exit 1
+            fi
           fi
           STATE=$(python3 tools/release.py npm-state --package "@texthue/$ADAPTER" --version "$VERSION" --tarball "artifacts/texthue-${ADAPTER}-${VERSION}.tgz")
           echo "state=$STATE" >> "$GITHUB_OUTPUT"
@@ -354,6 +373,21 @@ jobs:
       - name: Already published with these exact bytes
         if: steps.state.outputs.state == 'matching'
         run: echo "npm already has @texthue/$ADAPTER@${{ needs.build.outputs.version }} with matching bytes; skipping."
+
+  publish-wasm:
+    name: Publish @texthue/wasm
+    if: inputs.wasm && !inputs.dry_run
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      ADAPTER: wasm
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@texthue/wasm/v/${{ needs.build.outputs.version }}
+    permissions:
+      contents: read
+      id-token: write
+    steps: *scoped_npm_steps
 
   publish-pypi:
     name: Publish PyPI
@@ -460,7 +494,7 @@ jobs:
   github-release:
     name: Promote the draft GitHub release
     if: inputs.github_release && !inputs.dry_run && !failure() && !cancelled()
-    needs: [build, publish-npm, publish-adapters, publish-pypi, publish-go]
+    needs: [build, publish-npm, publish-adapters, publish-wasm, publish-pypi, publish-go]
     runs-on: ubuntu-latest
     permissions:
       contents: write
