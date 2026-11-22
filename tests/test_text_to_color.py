@@ -77,6 +77,23 @@ console.log(JSON.stringify([compareAssignments(side(old),side(next),texts)]));
             )
             self.compare(json.loads(result.stdout)[0], report)
 
+    def test_linear_light_composite(self):
+        from texthue import composite_over
+
+        cases = json.loads((ROOT / "conformance/composite-v1.json").read_text())
+        for case in cases:
+            bases = resolve_text_colors(
+                "blend", backgrounds={"light": case["source"], "dark": case["backdrop"]}
+            )
+            result = composite_over(bases.light.background, case["alpha"], bases.dark.background)
+            self.assertEqual(result.hex, case["expected"])
+            self.assertEqual(
+                resolve_text_colors("blend", backgrounds={"light": result}).light.background, result
+            )
+            for alpha in (math.nan, -0.1, 1.1, True):
+                with self.assertRaises(TextColorError):
+                    composite_over(result, alpha, result)
+
     def test_registry_replay(self):
         from texthue import Resolver
 

@@ -465,3 +465,6 @@ func (r *Resolver) render(digest []byte, placement *Assignment, name string) Col
 	}
 	return ColorSet{Source: source, Version: Version, HueFraction: uH, Hue: hue, Light: themes[0], Dark: themes[1]}
 }
+
+// WithColorBackgrounds uses the hex renditions of two opaque colors as theme backgrounds.
+func WithColorBackgrounds(light, dark Color) Option { return WithBackgrounds(light.Hex, dark.Hex) }

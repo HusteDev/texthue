@@ -282,3 +282,11 @@ export function chooseColor(lightness: number, chroma: number, hue: number, back
     },
   };
 }
+
+/** Composite validated sRGB bytes in linear light, quantizing once at the end. */
+export function blendOver(source:Triple, alpha:number, background:Triple):Triple {
+  return source.map((byte,i) => {
+    const linear = alpha*decode(byte/255) + (1-alpha)*decode(Number(background[i])/255);
+    return Math.round(255*encode(linear));
+  }) as Triple;
+}

@@ -281,3 +281,21 @@ func chooseForeground(l, c, h float64, background *rgb8, target float64, selectC
 	return chosen.rgb, ContrastResult{Ratio: ratio, MeetsTarget: ratio >= target,
 		LightnessAdjusted: chosen.l != l, ChromaReduced: chosen.c < c, Fallback: fallback}
 }
+
+// CompositeOver blends canonical sRGB bytes in linear light over an opaque backdrop.
+func CompositeOver(source Color, alpha float64, backdrop Color) (Color, error) {
+	if math.IsNaN(alpha) || alpha < 0 || alpha > 1 {
+		return Color{}, invalid("alpha")
+	}
+	front := rgb8{source.RGB.R, source.RGB.G, source.RGB.B}
+	back := rgb8{backdrop.RGB.R, backdrop.RGB.G, backdrop.RGB.B}
+	var result rgb8
+	for i, channel := range front {
+		if channel < 0 || channel > 255 || back[i] < 0 || back[i] > 255 {
+			return Color{}, invalid("sRGB bytes")
+		}
+		linear := alpha*decode(float64(channel)/255) + (1-alpha)*decode(float64(back[i])/255)
+		result[i] = int(math.Floor(255*encode(linear) + 0.5))
+	}
+	return formats(result), nil
+}

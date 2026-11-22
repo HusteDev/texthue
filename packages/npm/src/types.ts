@@ -64,7 +64,7 @@ export interface TextColorOptions {
   namespace?: string;
   seed?: number;
   /** Theme backgrounds used for text contrast, as opaque `#RRGGBB` strings. Defaults `#ffffff` and `#121212`. */
-  backgrounds?: { light?: string; dark?: string };
+  backgrounds?: { light?: string | Color; dark?: string | Color };
   /** WCAG contrast ratio required for both contrast pairs in both themes; `1..21` inclusive. Default `4.5`. */
   contrastTarget?: number;
   /** Per-theme, per-role lightness and chroma preferences. */

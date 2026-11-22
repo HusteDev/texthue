@@ -15,6 +15,7 @@ Example::
 The package has no runtime dependencies and performs no I/O.
 """
 
+import math
 from collections.abc import Iterable
 from typing import cast
 
@@ -58,6 +59,26 @@ _ALIASES = {
 }
 
 
+def _color_bytes(color: Color) -> tuple[int, int, int]:
+    if not isinstance(color, Color) or not isinstance(color.rgb, RGB):
+        raise TextColorError("INVALID_OPTIONS", "Expected an opaque sRGB color")
+    channels = (color.rgb.r, color.rgb.g, color.rgb.b)
+    if any(type(c) is not int or not 0 <= c <= 255 for c in channels):
+        raise TextColorError("INVALID_OPTIONS", "Expected sRGB bytes")
+    return channels
+
+
+def composite_over(color: Color, alpha: float, backdrop: Color) -> Color:
+    """Composite a translucent source over an opaque backdrop in linear sRGB."""
+    if not _core._number(alpha) or not 0 <= alpha <= 1:
+        raise TextColorError("INVALID_OPTIONS", "Alpha must be in [0,1]")
+    channels = []
+    for src, dst in zip(_color_bytes(color), _color_bytes(backdrop), strict=True):
+        linear = alpha * _core._decode(src / 255) + (1 - alpha) * _core._decode(dst / 255)
+        channels.append(math.floor(255 * _core._encode(linear) + 0.5))
+    return Color.from_dict(_core._formats(channels))
+
+
 def _native_options(value):
     if isinstance(value, dict):
         output = {}
@@ -65,6 +86,11 @@ def _native_options(value):
             name = _ALIASES.get(key, key)
             if name in output:
                 raise TextColorError("INVALID_OPTIONS", f"Duplicate option {name}")
+            if name == "backgrounds" and isinstance(item, dict):
+                item = {
+                    k: "#" + bytes(_color_bytes(v)).hex() if isinstance(v, Color) else v
+                    for k, v in item.items()
+                }
             output[name] = item if name == "overrides" else _native_options(item)
         return output
     if isinstance(value, tuple):
@@ -232,6 +258,7 @@ def assign_text_colors(texts, options=_OMITTED_OPTIONS, *, pinned=None, **kwargs
 
 
 __all__ = [
+    "composite_over",
     "compare_assignments",
     "export_config",
     "import_config",

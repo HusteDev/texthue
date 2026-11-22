@@ -9,11 +9,11 @@
  */
 
 import { assignCollection, type Placement } from './assignment.js';
-import { chooseColor, contrast, cusp, formats, hexFormat, hslFormat, oklchFormat, rgbFormat } from './color-math.js';
+import { blendOver, chooseColor, contrast, cusp, formats, hexFormat, hslFormat, oklchFormat, rgbFormat } from './color-math.js';
 import { compareBytes, fingerprint } from './fingerprint.js';
 import { sha256 } from './sha256.js';
 import { anchors, biases } from './tables.js';
-import type { ChosenColor, ColorSet, Range, ResolvedOptions, TextColorErrorCode, TextColorOptions, ThemeColors, Triple } from './types.js';
+import type { ChosenColor, Color, ColorSet, Range, ResolvedOptions, TextColorErrorCode, TextColorOptions, ThemeColors, Triple } from './types.js';
 
 export type { Color, ColorProfile, ColorSet, ContrastResult, HSL, OKLCH, Range, RGB, TextColorErrorCode, TextColorOptions, ThemeColors, ThemeProfiles } from './types.js';
 
@@ -46,6 +46,20 @@ export class TextColorError extends TypeError {
     this.name = 'TextColorError';
     this.code = code;
   }
+}
+
+function colorBytes(color:Color):Triple {
+  const rgb = color?.rgb;
+  if (!rgb || ![rgb.r,rgb.g,rgb.b].every(v=>Number.isInteger(v) && v>=0 && v<=255)) {
+    fail('INVALID_OPTIONS','Expected an opaque color with sRGB bytes');
+  }
+  return [rgb.r,rgb.g,rgb.b];
+}
+
+/** Composite a translucent source over an opaque backdrop in linear sRGB. */
+export function compositeOver(color:Color, alpha:number, backdrop:Color):Color {
+  if (!Number.isFinite(alpha) || alpha<0 || alpha>1) fail('INVALID_OPTIONS','Alpha must be in [0,1]');
+  return formats(blendOver(colorBytes(color),alpha,colorBytes(backdrop)));
 }
 
 /** Throws a `TextColorError`; typed as `never` so callers can use it in expressions. */
@@ -211,7 +225,8 @@ function optionsValue(options: unknown): ResolvedOptions {
   const backgrounds = {} as ResolvedOptions['backgrounds'];
   const profiles = {} as ResolvedOptions['profiles'];
   for (const theme of ['light', 'dark'] as const) {
-    const background = own(backgroundsSource, theme, theme === 'light' ? '#ffffff' : '#121212');
+    const input = own(backgroundsSource, theme, theme === 'light' ? '#ffffff' : '#121212');
+    const background = input && typeof input === 'object' ? hexFormat(colorBytes(input as Color)) : input;
     if (typeof background !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(background)) {
       fail('INVALID_OPTIONS', `backgrounds.${theme} must be opaque #RRGGBB`);
     }

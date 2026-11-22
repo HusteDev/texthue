@@ -120,3 +120,18 @@ test('migration compares both normalization policies without counting aliases as
   const same = compareAssignments({resolver:next,registry},{resolver:next,registry},['a','A']);
   assert.deepEqual(same,{moved:[],colors:[],contrast:[],collisions:{before:[],after:[]}});
 });
+
+test('linear-light compositing produces a reusable opaque background', async () => {
+  const {compositeOver} = await import('../packages/npm/dist/index.js');
+  const {readFile} = await import('node:fs/promises');
+  const cases = JSON.parse(await readFile(new URL('../conformance/composite-v1.json',import.meta.url),'utf8'));
+  for (const {source,alpha,backdrop,expected} of cases) {
+    const colors = resolveTextColors('blend',{backgrounds:{light:source,dark:backdrop}});
+    const result = compositeOver(colors.light.background,alpha,colors.dark.background);
+    assert.equal(result.hex,expected);
+    assert.deepEqual(resolveTextColors('blend',{backgrounds:{light:result}}).light.background,result);
+    for (const invalid of [NaN, Infinity, -0.1, 1.1]) {
+      assert.throws(()=>compositeOver(result,invalid,result),{code:'INVALID_OPTIONS'});
+    }
+  }
+});

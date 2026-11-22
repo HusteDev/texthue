@@ -394,3 +394,34 @@ func TestRegistryReplay(t *testing.T) {
 		t.Fatal("accepted different configuration")
 	}
 }
+
+func TestLinearLightComposite(t *testing.T) {
+	data, err := os.ReadFile("../../conformance/composite-v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []struct {
+		Source, Backdrop, Expected string
+		Alpha                      float64
+	}
+	if err = json.Unmarshal(data, &cases); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range cases {
+		bases, err := Resolve("blend", WithBackgrounds(c.Source, c.Backdrop))
+		if err != nil {
+			t.Fatal(err)
+		}
+		result, err := CompositeOver(bases.Light.Background, c.Alpha, bases.Dark.Background)
+		if err != nil || result.Hex != c.Expected {
+			t.Fatalf("composite %s: %v", result.Hex, err)
+		}
+		replay, err := Resolve("blend", WithColorBackgrounds(result, result))
+		if err != nil || replay.Light.Background != result {
+			t.Fatalf("background: %v", err)
+		}
+		if _, err := CompositeOver(result, math.NaN(), result); err == nil {
+			t.Fatal("accepted NaN")
+		}
+	}
+}

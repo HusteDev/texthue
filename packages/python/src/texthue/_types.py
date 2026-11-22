@@ -7,6 +7,8 @@ the types alone cannot express them.
 
 from typing import TypedDict
 
+from ._models import Color
+
 #: An ordered ``[minimum, maximum]`` pair of preferred bounds as a two-item list.
 #: Equal endpoints request a fixed value. Contrast enforcement may move lightness
 #: outside the range, and gamut fitting may reduce chroma below its minimum.
@@ -43,9 +45,9 @@ class Backgrounds(TypedDict, total=False):
     """Theme backgrounds as opaque ``#RRGGBB`` strings, case-insensitive."""
 
     #: Default ``"#ffffff"``.
-    light: str
+    light: str | Color
     #: Default ``"#121212"``.
-    dark: str
+    dark: str | Color
 
 
 class TextColorOptions(TypedDict, total=False):

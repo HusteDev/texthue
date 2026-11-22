@@ -111,6 +111,14 @@ registry import method, and pass the returned pins to the next assignment call.
 A registry from a different configuration is rejected. Previously pinned labels
 retain their placements even when absent from the new batch.
 
+For a translucent surface over a known opaque backdrop, use
+`compositeOver(source, alpha, backdrop)` in JavaScript,
+`composite_over(source, alpha, backdrop)` in Python, or `CompositeOver` in Go.
+Both inputs are TextHue colors. Alpha ranges from zero to one. The helper blends
+in linear sRGB and rounds once to opaque sRGB bytes. Half-opacity white over
+black produces `#bcbcbc`. Use the result as a theme background to check contrast
+against that composite. Go accepts two resulting colors via `WithColorBackgrounds`.
+
 Preview a migration before saving the new registry. In JavaScript, use
 `compareAssignments({resolver: old, registry}, {resolver: next}, labels)`.
 Python exposes `compare_assignments` with dictionaries for the two sides. Go
