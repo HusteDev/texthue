@@ -1,6 +1,6 @@
 """Immutable Python results with canonical JSON serialization."""
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 from typing import Literal, Self
 
 
@@ -14,9 +14,11 @@ class _Record:
 
     def to_dict(self) -> dict:
         result = {}
-        for field in fields(self):
-            value = getattr(self, field.name)
-            result[_wire_name(field.name)] = (
+        for member in fields(self):
+            value = getattr(self, member.name)
+            if member.metadata.get("optional") and value is None:
+                continue
+            result[_wire_name(member.name)] = (
                 value.to_dict() if isinstance(value, _Record) else value
             )
         return result
@@ -24,10 +26,12 @@ class _Record:
     @classmethod
     def from_dict(cls, values: dict) -> Self:
         result = {}
-        for field in fields(cls):
-            value = values[_wire_name(field.name)]
-            nested = isinstance(field.type, type) and issubclass(field.type, _Record)
-            result[field.name] = field.type.from_dict(value) if nested else value
+        for member in fields(cls):
+            if member.metadata.get("optional") and _wire_name(member.name) not in values:
+                continue
+            value = values[_wire_name(member.name)]
+            nested = isinstance(member.type, type) and issubclass(member.type, _Record)
+            result[member.name] = member.type.from_dict(value) if nested else value
         return cls(**result)
 
 
@@ -87,6 +91,8 @@ class ContrastResult(_Record):
     chroma_capped: bool
     #: ``"unattainable-contrast"`` when no sRGB text can reach the target; otherwise ``None``.
     fallback: Literal["unattainable-contrast", "palette-constraint"] | None
+    model: Literal["apca", "wcag2"] | None = field(default=None, metadata={"optional": True})
+    value: float | None = field(default=None, metadata={"optional": True})
 
 
 @dataclass(frozen=True, slots=True)

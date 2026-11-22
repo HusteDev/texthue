@@ -204,7 +204,16 @@ def _formats(rgb):
 
 
 def _choose(
-    lightness, chroma, hue, background, target, second=None, second_target=None, select=None
+    lightness,
+    chroma,
+    hue,
+    background,
+    target,
+    second=None,
+    second_target=None,
+    select=None,
+    apca=False,
+    surface=False,
 ):
     """Select the final color for one role, enforcing the contrast target.
 
@@ -231,7 +240,26 @@ def _choose(
             endpoints guarantee this cannot happen for valid targets.
     """
 
+    primary_target = target
+    if apca and target == 0 and second is not None:
+        target = second_target
+
     def measure(rgb):
+        if apca:
+            backdrop = background if background is not None else select(rgb, primary_target)
+            primary = abs(
+                _apca_contrast(backdrop, rgb)
+                if surface or background is None
+                else _apca_contrast(rgb, backdrop)
+            )
+            if second is None or not second_target:
+                return primary
+            secondary = abs(_apca_contrast(rgb, second))
+            return (
+                min(primary, secondary * (primary_target / second_target))
+                if primary_target
+                else secondary
+            )
         ratio = _contrast(
             rgb,
             (
@@ -424,6 +452,7 @@ def _options(options):
             "palette",
             "foregrounds",
             "foregroundPolicy",
+            "contrastModel",
             "preset",
             "hueRange",
             "excludeHues",
@@ -437,6 +466,12 @@ def _options(options):
         ),
         "options",
     )
+    model = source.get("contrastModel", "wcag2")
+    if model not in ("wcag2", "apca"):
+        raise TextColorError("INVALID_OPTIONS", "Unknown contrast model")
+    apca = model == "apca"
+    measure = _apca_contrast if apca else _contrast
+    low, high = (0, 106) if apca else (1, 21)
     normalize = _normalizer(source.get("normalize", {}))
     namespace = _text(source.get("namespace", ""), "namespace", "INVALID_OPTIONS")
     candidates = source.get("foregrounds", ["#000000", "#ffffff"])
@@ -456,7 +491,7 @@ def _options(options):
     def select_foreground(rgb, target):
         selected, best = colors[0], -1
         for candidate in colors:
-            ratio = _contrast(rgb, candidate)
+            ratio = abs(measure(candidate, rgb))
             if policy == "first-passing" and ratio >= target:
                 return candidate
             if ratio > best:
@@ -470,17 +505,16 @@ def _options(options):
     seed = source.get("seed", 0)
     if not _number(seed) or not 0 <= seed <= 0xFFFFFFFF or int(seed) != seed:
         raise TextColorError("INVALID_OPTIONS", "seed must be uint32")
-    target = source.get("contrastTarget", 7 if preset == "controls" else 4.5)
-    if not _number(target) or not 1 <= target <= 21:
-        raise TextColorError(
-            "INVALID_OPTIONS", "contrastTarget must be a finite number from 1 through 21"
-        )
+    target = source.get("contrastTarget", 60 if apca else 7 if preset == "controls" else 4.5)
+    if not _number(target) or not low <= target <= high:
+        raise TextColorError("INVALID_OPTIONS", "contrastTarget outside selected model range")
     roles = ("fill", "fillHover", "fillActive", "border", "text", "textOnSubtle", "strong")
     overrides = _record(source.get("contrastTargets", {}), roles, "contrastTargets")
     targets = {
-        role: overrides.get(role, min(3, target) if role == "border" else target) for role in roles
+        role: overrides.get(role, min(3, target) if role == "border" and not apca else target)
+        for role in roles
     }
-    if any(not _number(v) or not 1 <= v <= 21 for v in targets.values()):
+    if any(not _number(v) or not low <= v <= high for v in targets.values()):
         raise TextColorError("INVALID_OPTIONS", "invalid contrastTargets")
     background_source = _record(source.get("backgrounds", {}), ("light", "dark"), "backgrounds")
     profile_source = _record(source.get("profiles", {}), ("light", "dark"), "profiles")
@@ -550,7 +584,7 @@ def _options(options):
             "dark": parse_hex(entry.get("dark", entry.get("light"))),
         }
         passing = all(
-            _contrast(rgb, select_foreground(rgb, targets["fill"])) >= targets["fill"]
+            abs(measure(select_foreground(rgb, targets["fill"]), rgb)) >= targets["fill"]
             for rgb in pair.values()
         )
         palette[ident] = (passing, pair)
@@ -589,6 +623,8 @@ def _options(options):
             for key in overrides
         },
     }
+    if apca:
+        expanded["contrastModel"] = model
     if palette:
         expanded["palette"] = [
             {"id": ident.decode(), **{k: hex_color(rgb) for k, rgb in palette[ident][1].items()}}
@@ -597,6 +633,7 @@ def _options(options):
 
     return {
         "exportOptions": expanded,
+        "apca": apca,
         "brand": brand,
         "selectForeground": select_foreground,
         "namespace": normalize(namespace),
@@ -687,7 +724,16 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
                 profile["chromaCap"],
             )
 
-        def tone(lightness, profile, backdrop, target, second=None, second_target=None, hue=hue):
+        def tone(
+            lightness,
+            profile,
+            backdrop,
+            target,
+            second=None,
+            second_target=None,
+            surface=False,
+            hue=hue,
+        ):
             lightness = max(0, min(1, lightness))
             chroma = _cusp(lightness, hue) * profile[1]
             value = _choose(
@@ -699,6 +745,8 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
                 second,
                 second_target,
                 settings["selectForeground"],
+                settings["apca"],
+                surface,
             )
             value["metadata"]["chromaCapped"] = chroma > profile[2]
             return value
@@ -711,14 +759,18 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
                 tp = (tp[0], tp[1], 0)
         target = settings["contrastTarget"]
         targets = settings["targets"]
-        subtle = tone(lb + direction * 0.04, fp, None, 1)
-        muted = tone(lb + direction * 0.10, fp, None, 1)
+        subtle = tone(lb + direction * 0.04, fp, None, 0 if settings["apca"] else 1)
+        muted = tone(lb + direction * 0.10, fp, None, 0 if settings["apca"] else 1)
         fill = tone(fp[0], fp, None, targets["fill"])
         if brand:
             fill["rgb"] = brand[theme]
         on_fill = settings["selectForeground"](fill["rgb"], targets["fill"])
         if brand:
-            ratio = _contrast(fill["rgb"], on_fill)
+            ratio = (
+                abs(_apca_contrast(on_fill, fill["rgb"]))
+                if settings["apca"]
+                else _contrast(fill["rgb"], on_fill)
+            )
             fill["metadata"] = {
                 "ratio": ratio,
                 "meetsTarget": ratio >= targets["fill"],
@@ -731,8 +783,12 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
             "subtle": subtle,
             "muted": muted,
             "fill": fill,
-            "fillHover": tone(fp[0] + direction * 0.025, fp, on_fill, targets["fillHover"]),
-            "fillActive": tone(fp[0] + direction * 0.05, fp, on_fill, targets["fillActive"]),
+            "fillHover": tone(
+                fp[0] + direction * 0.025, fp, on_fill, targets["fillHover"], surface=True
+            ),
+            "fillActive": tone(
+                fp[0] + direction * 0.05, fp, on_fill, targets["fillActive"], surface=True
+            ),
             "border": tone(lb + direction * 0.39, fp, background, targets["border"]),
             "text": tone(
                 tp[0], tp, background, targets["text"], subtle["rgb"], targets["textOnSubtle"]
@@ -747,6 +803,21 @@ def render(text, settings, prefix, bases, placement=None, digest=None):
                 "ratio": ratio,
                 "meetsTarget": ratio >= targets[name],
             }
+        if settings["apca"]:
+            for name, item in meta.items():
+                if name in ("fill", "fillHover", "fillActive"):
+                    front, back = on_fill, colors[name]["rgb"]
+                elif name == "textOnSubtle":
+                    front, back = colors["text"]["rgb"], subtle["rgb"]
+                else:
+                    front, back = colors[name]["rgb"], background
+                value = _apca_contrast(front, back)
+                item.update(
+                    model="apca",
+                    value=value,
+                    ratio=_contrast(front, back),
+                    meetsTarget=abs(value) >= targets[name],
+                )
         result[theme] = {
             **{k: _formats(v["rgb"]) for k, v in colors.items()},
             "background": base,

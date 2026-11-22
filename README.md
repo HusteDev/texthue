@@ -111,6 +111,14 @@ registry import method, and pass the returned pins to the next assignment call.
 A registry from a different configuration is rejected. Previously pinned labels
 retain their placements even when absent from the new batch.
 
+Select APCA with `contrastModel: 'apca'`, Python's `contrast_model="apca"`, or
+Go's `WithContrastModel("apca")`. The default target in this mode is 60 Lc.
+Targets from 0 through 106 apply to the magnitude of signed Lc. Each APCA
+relationship reports its signed `value` and whether it meets its target.
+Positive Lc indicates darker foreground text. The separate `ratio` field
+records the WCAG 2 ratio for the same final pair. A text color can pass on the
+theme background and fail on the subtle surface, so check both relationships.
+
 For a translucent surface over a known opaque backdrop, use
 `compositeOver(source, alpha, backdrop)` in JavaScript,
 `composite_over(source, alpha, backdrop)` in Python, or `CompositeOver` in Go.

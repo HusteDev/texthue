@@ -71,6 +71,7 @@ type NormalizeOptions struct {
 }
 
 type Options struct {
+	ContrastModel    string              `json:"contrastModel,omitempty"`
 	Overrides        map[string]Override `json:"overrides,omitempty"`
 	Palette          []PaletteEntry      `json:"palette,omitempty"`
 	Foregrounds      []string            `json:"foregrounds,omitempty"`
@@ -133,6 +134,8 @@ type Color struct {
 // ContrastResult reports the measured contrast of one color pair and any
 // adjustments made to reach the target.
 type ContrastResult struct {
+	Model string   `json:"model,omitempty"`
+	Value *float64 `json:"value,omitempty"`
 	// Ratio is the WCAG contrast ratio of the final RGB pair, at full precision.
 	Ratio float64 `json:"ratio"`
 	// MeetsTarget reports whether Ratio is at least the configured target.

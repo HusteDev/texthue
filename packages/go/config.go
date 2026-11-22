@@ -74,7 +74,7 @@ func (r *Resolver) expandedOptions() map[string]any {
 		target, ok := r.targets[role]
 		if !ok {
 			target = r.target
-			if role == "border" {
+			if role == "border" && !r.apca {
 				target = math.Min(3, target)
 			}
 		}
@@ -86,6 +86,9 @@ func (r *Resolver) expandedOptions() map[string]any {
 		"backgrounds": backgrounds, "contrastTarget": r.target, "contrastTargets": targets,
 		"normalize": NormalizeOptions{Unicode: defaultString(r.normalize.Unicode, "none"),
 			Case: defaultString(r.normalize.Case, "none"), Whitespace: defaultString(r.normalize.Whitespace, "none")}}
+	if r.apca {
+		result["contrastModel"] = "apca"
+	}
 	if len(r.brand.palette) > 0 {
 		palette := make([]PaletteEntry, 0, len(r.brand.palette))
 		for _, e := range r.brand.palette {

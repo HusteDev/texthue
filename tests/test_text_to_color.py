@@ -324,6 +324,20 @@ console.log(JSON.stringify([compareAssignments(side(old),side(next),texts)]));
                     "options": {"hueRange": [270, 120], "excludeHues": [[355, 20], [75, 90]]},
                 }
             )
+        for lc in (0, 45, 60, 75, 90, 106):
+            for extra in (
+                {},
+                {"overrides": {"apca": "#777777"}, "foregrounds": ["#777777"]},
+                {"palette": [{"id": "a", "light": "#ffff00"}, {"id": "b", "light": "#cccccc"}]},
+                {"contrastTargets": {"text": 0, "textOnSubtle": 75}},
+                {"contrastTargets": {"text": 75, "textOnSubtle": 0}},
+            ):
+                cases.append(
+                    {
+                        "text": "apca",
+                        "options": {"contrastModel": "apca", "contrastTarget": lc, **extra},
+                    }
+                )
         for i in range(32):
             a, b = sorted((rng.random(), rng.random()))
             cases.append(

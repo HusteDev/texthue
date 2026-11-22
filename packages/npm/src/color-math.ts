@@ -228,8 +228,8 @@ export function oklchFormat(rgb:Triple) {
  * @returns Final RGB bytes with contrast metadata.
  * @throws {Error} If no lightness candidate passes for a fill. The endpoints guarantee this cannot happen for valid targets.
  */
-export function chooseColor(lightness: number, chroma: number, hue: number, background: Triple | null, target: number, second?: Triple, secondTarget = target, selectForeground: (rgb:Triple, target:number)=>Triple = foreground): ChosenColor {
-  const measure = (rgb: Triple) => Math.min(contrast(rgb, background ?? selectForeground(rgb,target)), second ? contrast(rgb, second) * (target / secondTarget) : Infinity);
+export function chooseColor(lightness: number, chroma: number, hue: number, background: Triple | null, target: number, second?: Triple, secondTarget = target, selectForeground: (rgb:Triple, target:number)=>Triple = foreground, score?: (rgb:Triple)=>number): ChosenColor {
+  const measure = score ?? ((rgb: Triple) => Math.min(contrast(rgb, background ?? selectForeground(rgb,target)), second ? contrast(rgb, second) * (target / secondTarget) : Infinity));
   const initial = fitColor(lightness, chroma, hue);
   let chosen = initial;
   let ratio = measure(initial.rgb);

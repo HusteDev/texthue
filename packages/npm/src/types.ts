@@ -46,6 +46,7 @@ export interface NormalizeOptions {
   whitespace?: 'none'|'trim'|'collapse';
 }
 export interface TextColorOptions {
+  contrastModel?: 'wcag2'|'apca';
   overrides?: Readonly<Record<string,string | {light:string;dark:string}>>;
   palette?: readonly {id:string;light?:string;dark?:string}[];
   foregrounds?: readonly string[];
@@ -95,6 +96,9 @@ export interface Color {
 
 /** Contrast measurement for one color pair and a record of any adjustments made to reach the target. */
 export interface ContrastResult {
+  /** Signed Lc when APCA is selected. ratio always measures WCAG 2 contrast. */
+  value?: number;
+  model?: 'apca'|'wcag2';
   /** WCAG contrast ratio of the final RGB pair, at full computational precision. */
   ratio: number;
   /** Whether `ratio` is at least the configured target. */
@@ -162,6 +166,8 @@ export interface ResolvedProfile { lightness: Range; chromaCap: number; chromaSc
 
 /** Options after validation, with defaults applied and backgrounds parsed to RGB bytes. */
 export interface ResolvedOptions {
+  contrastModel: 'wcag2'|'apca';
+  measure: (text:Triple, background:Triple)=>number;
   exportOptions: () => Record<string,unknown>;
   brand: (name:string,digest:DataView)=>{light:Triple;dark:Triple;source:'palette'|'override'}|undefined;
   selectForeground: (rgb:Triple, target:number)=>Triple;

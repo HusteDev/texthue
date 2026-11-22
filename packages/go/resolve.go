@@ -102,9 +102,17 @@ func resolveOptions(options *Options) (string, float64, [2]resolvedTheme, error)
 	if !utf8.ValidString(options.Namespace) || uint64(len(options.Namespace)) > math.MaxUint32 {
 		return "", 0, themes, invalid("namespace")
 	}
+	low, high := 1.0, 21.0
+	switch options.ContrastModel {
+	case "", "wcag2":
+	case "apca":
+		target, low, high = 60, 0, 106
+	default:
+		return "", 0, themes, invalid("contrastModel")
+	}
 	if options.ContrastTarget != nil {
 		target = *options.ContrastTarget
-		if math.IsNaN(target) || math.IsInf(target, 0) || target < 1 || target > 21 {
+		if math.IsNaN(target) || math.IsInf(target, 0) || target < low || target > high {
 			return "", 0, themes, invalid("contrastTarget")
 		}
 	}
@@ -114,7 +122,7 @@ func resolveOptions(options *Options) (string, float64, [2]resolvedTheme, error)
 		default:
 			return "", 0, themes, invalid("contrastTargets")
 		}
-		if math.IsNaN(value) || value < 1 || value > 21 {
+		if math.IsNaN(value) || value < low || value > high {
 			return "", 0, themes, invalid("contrastTargets")
 		}
 	}
@@ -197,6 +205,9 @@ func (src *Options) apply(dst *Options) {
 func WithNamespace(value string) Option { return optionFunc(func(o *Options) { o.Namespace = value }) }
 func WithPreset(value string) Option    { return optionFunc(func(o *Options) { o.Preset = value }) }
 func WithSeed(value uint32) Option      { return optionFunc(func(o *Options) { o.Seed = value }) }
+func WithContrastModel(model string) Option {
+	return optionFunc(func(o *Options) { o.ContrastModel = model })
+}
 func WithContrastTarget(value float64) Option {
 	return optionFunc(func(o *Options) { o.ContrastTarget = &value })
 }
@@ -249,7 +260,7 @@ func compileForegrounds(options Options) (func(rgb8, float64) rgb8, error) {
 	return func(rgb rgb8, target float64) rgb8 {
 		selected, best := colors[0], -1.0
 		for _, candidate := range colors {
-			ratio := contrast(rgb, candidate)
+			ratio := options.score(candidate, rgb)
 			if first && ratio >= target {
 				return candidate
 			}
@@ -262,6 +273,7 @@ func compileForegrounds(options Options) (func(rgb8, float64) rgb8, error) {
 }
 
 type Resolver struct {
+	apca             bool
 	replay           replayInputs
 	brand            brandConfig
 	selectForeground func(rgb8, float64) rgb8
@@ -313,7 +325,7 @@ func NewResolver(options ...Option) (*Resolver, error) {
 	prefix = binary.BigEndian.AppendUint32(prefix, raw.Seed)
 	prefix = binary.BigEndian.AppendUint32(prefix, uint32(len(namespace)))
 	prefix = append(prefix, namespace...)
-	return &Resolver{replay: replayFrom(raw), brand: brand, selectForeground: selectForeground, domain: domain, normalize: normalization, prefix: prefix, target: target, targets: maps.Clone(raw.ContrastTargets), profiles: profiles,
+	return &Resolver{apca: raw.ContrastModel == "apca", replay: replayFrom(raw), brand: brand, selectForeground: selectForeground, domain: domain, normalize: normalization, prefix: prefix, target: target, targets: maps.Clone(raw.ContrastTargets), profiles: profiles,
 		bases: [2]Color{formats(profiles[0].background), formats(profiles[1].background)}}, nil
 }
 
@@ -370,7 +382,7 @@ func (r *Resolver) render(digest []byte, placement *Assignment, name string) Col
 		if value, ok := r.targets[role]; ok {
 			return value
 		}
-		if role == "border" {
+		if role == "border" && !r.apca {
 			return math.Min(3, target)
 		}
 		return target
@@ -417,10 +429,10 @@ func (r *Resolver) render(digest []byte, placement *Assignment, name string) Col
 				theme.text.cap = 0
 			}
 		}
-		tone := func(l, scale, cap float64, backdrop *rgb8, required float64, second ...surfaceConstraint) (rgb8, ContrastResult) {
+		tone := func(l, scale, cap float64, backdrop *rgb8, required float64, surface bool, second ...surfaceConstraint) (rgb8, ContrastResult) {
 			l = math.Max(0, math.Min(1, l))
 			c := cusp(l, hue) * scale
-			rgb, meta := chooseForeground(l, math.Min(c, cap), hue, backdrop, required, r.selectForeground, second...)
+			rgb, meta := chooseForeground(l, math.Min(c, cap), hue, backdrop, required, r.selectForeground, r.apca, surface, second...)
 			meta.ChromaCapped = c > cap
 			return rgb, meta
 		}
@@ -430,30 +442,53 @@ func (r *Resolver) render(digest []byte, placement *Assignment, name string) Col
 		}
 		base := r.bases[i]
 		lb := math.Round(base.OKLCH.L*4096) / 4096
-		subtle, _ := tone(lb+direction*.04, fillC, theme.fill.cap, nil, 1)
-		muted, _ := tone(lb+direction*.10, fillC, theme.fill.cap, nil, 1)
-		fill, fillMeta := tone(fillL, fillC, theme.fill.cap, nil, required("fill"))
+		unconstrained := 1.0
+		if r.apca {
+			unconstrained = 0
+		}
+		subtle, _ := tone(lb+direction*.04, fillC, theme.fill.cap, nil, unconstrained, true)
+		muted, _ := tone(lb+direction*.10, fillC, theme.fill.cap, nil, unconstrained, true)
+		fill, fillMeta := tone(fillL, fillC, theme.fill.cap, nil, required("fill"), true)
 		if brand != nil {
 			fill = brand[i]
 		}
 		onFill := r.selectForeground(fill, required("fill"))
 		if brand != nil {
 			ratio := contrast(fill, onFill)
+			if r.apca {
+				ratio = math.Abs(apcaContrast(onFill, fill))
+			}
 			fillMeta = ContrastResult{Ratio: ratio, MeetsTarget: ratio >= required("fill")}
 			if !fillMeta.MeetsTarget {
 				fillMeta.Fallback = Ptr("palette-constraint")
 			}
 		}
-		hover, hoverMeta := tone(fillL+direction*.025, fillC, theme.fill.cap, &onFill, required("fillHover"))
-		active, activeMeta := tone(fillL+direction*.05, fillC, theme.fill.cap, &onFill, required("fillActive"))
-		border, borderMeta := tone(lb+direction*.39, fillC, theme.fill.cap, &theme.background, required("border"))
-		text, textMeta := tone(textL, textC, theme.text.cap, &theme.background, required("text"), surfaceConstraint{subtle, required("textOnSubtle")})
-		strong, strongMeta := tone(textL+direction*.10, textC, theme.text.cap, &theme.background, required("strong"))
+		hover, hoverMeta := tone(fillL+direction*.025, fillC, theme.fill.cap, &onFill, required("fillHover"), true)
+		active, activeMeta := tone(fillL+direction*.05, fillC, theme.fill.cap, &onFill, required("fillActive"), true)
+		border, borderMeta := tone(lb+direction*.39, fillC, theme.fill.cap, &theme.background, required("border"), false)
+		text, textMeta := tone(textL, textC, theme.text.cap, &theme.background, required("text"), false, surfaceConstraint{subtle, required("textOnSubtle")})
+		strong, strongMeta := tone(textL+direction*.10, textC, theme.text.cap, &theme.background, required("strong"), false)
 		subtleMeta := textMeta
 		textMeta.Ratio = contrast(text, theme.background)
 		textMeta.MeetsTarget = textMeta.Ratio >= required("text")
 		subtleMeta.Ratio = contrast(text, subtle)
 		subtleMeta.MeetsTarget = subtleMeta.Ratio >= required("textOnSubtle")
+		if r.apca {
+			record := func(meta *ContrastResult, role string, front, back rgb8) {
+				value := apcaContrast(front, back)
+				meta.Model = "apca"
+				meta.Value = &value
+				meta.Ratio = contrast(front, back)
+				meta.MeetsTarget = math.Abs(value) >= required(role)
+			}
+			record(&fillMeta, "fill", onFill, fill)
+			record(&hoverMeta, "fillHover", onFill, hover)
+			record(&activeMeta, "fillActive", onFill, active)
+			record(&textMeta, "text", text, theme.background)
+			record(&subtleMeta, "textOnSubtle", text, subtle)
+			record(&borderMeta, "border", border, theme.background)
+			record(&strongMeta, "strong", strong, theme.background)
+		}
 		themes[i] = ThemeColors{Background: base, Subtle: formats(subtle), Muted: formats(muted), Fill: formats(fill),
 			OnFill: formats(onFill), FillHover: formats(hover), FillActive: formats(active), Border: formats(border), Text: formats(text), Strong: formats(strong),
 			Contrast: ThemeContrast{Target: target, Fill: fillMeta, FillHover: hoverMeta, FillActive: activeMeta, Border: borderMeta, Text: textMeta, TextOnSubtle: subtleMeta, Strong: strongMeta}}
@@ -468,3 +503,10 @@ func (r *Resolver) render(digest []byte, placement *Assignment, name string) Col
 
 // WithColorBackgrounds uses the hex renditions of two opaque colors as theme backgrounds.
 func WithColorBackgrounds(light, dark Color) Option { return WithBackgrounds(light.Hex, dark.Hex) }
+
+func (o Options) score(text, bg rgb8) float64 {
+	if o.ContrastModel == "apca" {
+		return math.Abs(apcaContrast(text, bg))
+	}
+	return contrast(text, bg)
+}

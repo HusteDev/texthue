@@ -222,8 +222,33 @@ type surfaceConstraint struct {
 	target float64
 }
 
-func chooseForeground(l, c, h float64, background *rgb8, target float64, selectColor func(rgb8, float64) rgb8, second ...surfaceConstraint) (rgb8, ContrastResult) {
+func chooseForeground(l, c, h float64, background *rgb8, target float64, selectColor func(rgb8, float64) rgb8, apca, surface bool, second ...surfaceConstraint) (rgb8, ContrastResult) {
+	primaryTarget := target
+	if apca && target == 0 && len(second) > 0 {
+		target = second[0].target
+	}
 	measure := func(rgb rgb8) float64 {
+		if apca {
+			var back rgb8
+			if background != nil {
+				back = *background
+			} else {
+				back = selectColor(rgb, primaryTarget)
+			}
+			front := rgb
+			if surface {
+				front, back = back, front
+			}
+			primary := math.Abs(apcaContrast(front, back))
+			if len(second) == 0 || second[0].target == 0 {
+				return primary
+			}
+			secondary := math.Abs(apcaContrast(rgb, second[0].rgb))
+			if primaryTarget == 0 {
+				return secondary
+			}
+			return math.Min(primary, secondary*(primaryTarget/second[0].target))
+		}
 		if background != nil {
 			ratio := contrast(rgb, *background)
 			if len(second) > 0 {

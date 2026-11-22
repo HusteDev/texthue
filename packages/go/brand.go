@@ -94,7 +94,7 @@ func compileBrand(raw Options, normal NormalizeOptions, target float64, selectFg
 		}
 		passing := true
 		for _, c := range colors {
-			if contrast(c, selectFg(c, target)) < target {
+			if raw.score(selectFg(c, target), c) < target {
 				passing = false
 			}
 		}

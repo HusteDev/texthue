@@ -175,7 +175,13 @@ function compileHueDomain(allowed:unknown, excluded:unknown) {
 }
 
 function optionsValue(options: unknown): ResolvedOptions {
-  const source = record(options, ['overrides','palette','foregrounds','foregroundPolicy','preset','hueRange','excludeHues','normalize','namespace', 'seed', 'backgrounds', 'contrastTarget', 'contrastTargets', 'profiles'], 'options');
+  const source = record(options, ['contrastModel','overrides','palette','foregrounds','foregroundPolicy','preset','hueRange','excludeHues','normalize','namespace', 'seed', 'backgrounds', 'contrastTarget', 'contrastTargets', 'profiles'], 'options');
+  const contrastModel = own(source,'contrastModel','wcag2');
+  if (contrastModel !== 'wcag2' && contrastModel !== 'apca') fail('INVALID_OPTIONS','Unknown contrast model');
+  const apca = contrastModel === 'apca';
+  const measure = apca ? apcaContrast : contrast;
+  const validTarget = (target:unknown):target is number =>
+    finite(target) && target >= (apca ? 0 : 1) && target <= (apca ? 106 : 21);
   const candidates = own(source,'foregrounds',['#000000','#ffffff']);
   const policy = own(source,'foregroundPolicy','best');
   if (!Array.isArray(candidates) || candidates.length === 0 || !['best','first-passing'].some(v => v === policy)) {
@@ -188,7 +194,7 @@ function optionsValue(options: unknown): ResolvedOptions {
   const selectForeground = (rgb:Triple,target:number):Triple => {
     let selected:Triple = [0,0,0], best = -1;
     for (const candidate of foregrounds) {
-      const ratio = contrast(rgb,candidate);
+      const ratio = Math.abs(measure(candidate,rgb));
       if (policy === 'first-passing' && ratio >= target) return candidate;
       if (ratio > best) { best = ratio; selected = candidate; }
     }
@@ -213,16 +219,16 @@ function optionsValue(options: unknown): ResolvedOptions {
     return value;
   };
   const namespace = textValue(own(source, 'namespace', ''), 'namespace', 'INVALID_OPTIONS');
-  const contrastTarget = own(source, 'contrastTarget', preset === 'controls' ? 7 : 4.5);
-  if (!finite(contrastTarget) || contrastTarget < 1 || contrastTarget > 21) {
-    fail('INVALID_OPTIONS', 'contrastTarget must be a finite number from 1 through 21');
+  const contrastTarget = own(source, 'contrastTarget', apca ? 60 : preset === 'controls' ? 7 : 4.5);
+  if (!validTarget(contrastTarget)) {
+    fail('INVALID_OPTIONS', 'contrastTarget outside the selected model range');
   }
   const roles = ['fill','fillHover','fillActive','border','text','textOnSubtle','strong'] as const;
   const overrides = record(own(source,'contrastTargets',{}), roles, 'contrastTargets');
   const targets = {} as ResolvedOptions['targets'];
   for (const role of roles) {
-    const target = own(overrides,role,role === 'border' ? Math.min(3,contrastTarget) : contrastTarget);
-    if (!finite(target) || target < 1 || target > 21) fail('INVALID_OPTIONS', `invalid contrastTargets.${role}`);
+    const target = own(overrides,role,role === 'border' && !apca ? Math.min(3,contrastTarget) : contrastTarget);
+    if (!validTarget(target)) fail('INVALID_OPTIONS', `invalid contrastTargets.${role}`);
     targets[role] = target;
   }
   const backgroundsSource = record(own(source, 'backgrounds', {}), ['light', 'dark'], 'backgrounds');
@@ -277,7 +283,7 @@ function optionsValue(options: unknown): ResolvedOptions {
     if (ids.has(id)) fail('INVALID_OPTIONS','Duplicate palette ID');
     ids.add(id);
     const light = parseBrandHex(own(entry,'light',entry.dark)), dark = parseBrandHex(own(entry,'dark',entry.light));
-    const passing = [light,dark].every(rgb => contrast(rgb,selectForeground(rgb,targets.fill)) >= targets.fill);
+    const passing = [light,dark].every(rgb => Math.abs(measure(selectForeground(rgb,targets.fill),rgb)) >= targets.fill);
     return {name:id,id:new TextEncoder().encode(id),light,dark,passing};
   });
   const brand:ResolvedOptions['brand'] = (name,digest) => {
@@ -298,7 +304,7 @@ function optionsValue(options: unknown): ResolvedOptions {
   const exportOptions = () => ({
     preset, seed, namespace, hueRange, excludeHues: exclusions,
     normalize: {unicode:form, case:casing, whitespace:space},
-    contrastTarget, contrastTargets:targets, profiles,
+    ...(apca ? {contrastModel} : {}), contrastTarget, contrastTargets:targets, profiles,
     backgrounds:{light:hexFormat(backgrounds.light),dark:hexFormat(backgrounds.dark)},
     foregroundPolicy:policy, foregrounds:foregrounds.map(hexFormat),
     overrides:Object.fromEntries([...pairs].map(([name,pair]) => [originalNames.get(name) ?? name,{light:hexFormat(pair.light),dark:hexFormat(pair.dark)}])),
@@ -306,7 +312,7 @@ function optionsValue(options: unknown): ResolvedOptions {
       id:entry.name,light:hexFormat(entry.light),dark:hexFormat(entry.dark)
     }))} : {})
   });
-  return { exportOptions, brand, selectForeground, hueDomain, normalize, targets, seed, namespace:normalize(namespace), backgrounds, contrastTarget, profiles };
+  return { contrastModel, measure, exportOptions, brand, selectForeground, hueDomain, normalize, targets, seed, namespace:normalize(namespace), backgrounds, contrastTarget, profiles };
 }
 
 /**
@@ -513,35 +519,50 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
       fillProfile.l = Math.round(fixed.oklch.l * 4096) / 4096;
       if (fixed.oklch.c === 0) {fillProfile.cap = 0; textProfile.cap = 0;}
     }
-    const tone = (l: number, profile: typeof fillProfile, backdrop: Triple | null, target: number, second?: Triple, secondTarget = target) => {
+    const tone = (l: number, profile: typeof fillProfile, backdrop: Triple | null, target: number, second?: Triple, secondTarget = target, surface = false) => {
       const lightness = Math.max(0, Math.min(1, l));
       const chroma = cusp(lightness, hue) * profile.scale;
-      const result = chooseColor(lightness, Math.min(chroma, profile.cap), hue, backdrop, target, second, secondTarget, settings.selectForeground);
+      // Each active relationship must pass. Scale the second score to the first
+      // target for bisection; a zero target drops that relationship entirely.
+      const threshold = target || (second ? secondTarget : 0);
+      const apcaScore = (rgb:Triple) => {
+        const primary = backdrop && !surface ? settings.measure(rgb,backdrop) :
+          settings.measure(backdrop ?? settings.selectForeground(rgb,target),rgb);
+        if (!second || secondTarget === 0) return Math.abs(primary);
+        const secondary = Math.abs(settings.measure(rgb,second));
+        return target === 0 ? secondary : Math.min(Math.abs(primary),secondary*(target/secondTarget));
+      };
+      const result = chooseColor(lightness, Math.min(chroma, profile.cap), hue, backdrop, threshold, second, secondTarget, settings.selectForeground,
+        settings.contrastModel === 'apca' ? apcaScore : undefined);
       result.metadata.chromaCapped = chroma > profile.cap;
       return result;
     };
     const target = settings.contrastTarget, targets = settings.targets;
     const fill = once(() => {
-    const chosen = tone(fillProfile.l, fillProfile, null, targets.fill);
-    if (brand) chosen.rgb = brand[theme];
-
-    if (brand) {
-      const ratio = contrast(chosen.rgb,settings.selectForeground(chosen.rgb,targets.fill));
-      chosen.metadata = {ratio,meetsTarget:ratio >= targets.fill,lightnessAdjusted:false,chromaReduced:false,chromaCapped:false,
-        fallback:ratio < targets.fill ? 'palette-constraint' : null};
-    }
+      const chosen = tone(fillProfile.l, fillProfile, null, targets.fill);
+      if (brand) {
+        chosen.rgb = brand[theme];
+        const foreground = settings.selectForeground(chosen.rgb,targets.fill);
+        const meetsTarget = Math.abs(settings.measure(foreground,chosen.rgb)) >= targets.fill;
+        chosen.metadata = {ratio:contrast(foreground,chosen.rgb),meetsTarget,lightnessAdjusted:false,
+          chromaReduced:false,chromaCapped:false,fallback:meetsTarget ? null : 'palette-constraint'};
+      }
       return chosen;
     });
     const onFill = once(() => settings.selectForeground(fill().rgb, targets.fill));
-    const subtle = once(() => tone(lb + direction*0.04, fillProfile, null, 1));
-    const muted = once(() => tone(lb + direction*0.10, fillProfile, null, 1));
-    const fillHover = once(() => tone(fillProfile.l + direction*0.025, fillProfile, onFill(), targets.fillHover));
-    const fillActive = once(() => tone(fillProfile.l + direction*0.05, fillProfile, onFill(), targets.fillActive));
+    const subtle = once(() => tone(lb + direction*0.04, fillProfile, null, settings.contrastModel === 'apca' ? 0 : 1));
+    const muted = once(() => tone(lb + direction*0.10, fillProfile, null, settings.contrastModel === 'apca' ? 0 : 1));
+    const fillHover = once(() => tone(fillProfile.l + direction*0.025, fillProfile, onFill(), targets.fillHover, undefined, targets.fillHover, true));
+    const fillActive = once(() => tone(fillProfile.l + direction*0.05, fillProfile, onFill(), targets.fillActive, undefined, targets.fillActive, true));
     const border = once(() => tone(lb + direction*0.39, fillProfile, background, targets.border));
     const text = once(() => tone(textProfile.l, textProfile, background, targets.text, subtle().rgb, targets.textOnSubtle));
     const strong = once(() => tone(textProfile.l + direction*0.10, textProfile, background, targets.strong));
-    const relationship = (color: ChosenColor, backdrop: Triple, required: number) => {
+    const relationship = (color: ChosenColor, backdrop: Triple, required: number, surface = false) => {
       const ratio = contrast(color.rgb, backdrop);
+      if (settings.contrastModel === 'apca') {
+        const value = surface ? settings.measure(backdrop,color.rgb) : settings.measure(color.rgb,backdrop);
+        return {...color.metadata,model:'apca' as const,value,ratio,meetsTarget:Math.abs(value)>=required};
+      }
       return {...color.metadata, ratio, meetsTarget: ratio >= required};
     };
     if (only) {
@@ -560,8 +581,8 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
             case 'border': requirePair(role, border().metadata.meetsTarget); break;
             case 'strong': requirePair(role, strong().metadata.meetsTarget); break;
             case 'text':
-              requirePair(role, contrast(text().rgb, background) >= targets.text);
-              requirePair('textOnSubtle', contrast(text().rgb, subtle().rgb) >= targets.textOnSubtle);
+              requirePair(role, Math.abs(settings.measure(text().rgb, background)) >= targets.text);
+              requirePair('textOnSubtle', Math.abs(settings.measure(text().rgb, subtle().rgb)) >= targets.textOnSubtle);
               break;
           }
         }
@@ -582,8 +603,8 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
     themes[theme] = {background: structuredClone(base), subtle: formats(subtle().rgb), muted: formats(muted().rgb),
       fill: formats(fill().rgb), onFill: formats(onFill()), fillHover: formats(fillHover().rgb), fillActive: formats(fillActive().rgb),
       border: formats(border().rgb), text: formats(text().rgb), strong: formats(strong().rgb),
-      contrast: {target, fill: fill().metadata, fillHover: fillHover().metadata, fillActive: fillActive().metadata, border: border().metadata,
-        text: relationship(text(),background,targets.text), textOnSubtle: relationship(text(),subtle().rgb,targets.textOnSubtle), strong: strong().metadata}};
+      contrast: {target, fill: relationship(fill(),onFill(),targets.fill,true), fillHover: relationship(fillHover(),onFill(),targets.fillHover,true), fillActive: relationship(fillActive(),onFill(),targets.fillActive,true), border: relationship(border(),background,targets.border),
+        text: relationship(text(),background,targets.text), textOnSubtle: relationship(text(),subtle().rgb,targets.textOnSubtle), strong: relationship(strong(),background,targets.strong)}};
 
   }
   if (only) return output;

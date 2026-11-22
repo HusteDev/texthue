@@ -144,3 +144,51 @@ test('signed APCA matches pinned reference on opaque sRGB pairs', async () => {
     assert.ok(Math.abs(measureApca({rgb:{r,g,b}},{rgb:{r:br,g:bg,b:bb}})-expected)<1e-10);
   }
 });
+
+test('APCA resolver measures final pairs with the text first and verifies strict text targets', async () => {
+  const {measureApca,importConfig} = await import('../packages/npm/dist/index.js');
+  for (const target of [0,45,60,75,90,106]) {
+    const r = createResolver({contrastModel:'apca',contrastTarget:target});
+    const result = r.resolve('APCA');
+    assert.deepEqual(importConfig(r.exportConfig()).resolve('APCA'),result);
+    for (const name of ['light','dark']) {
+      const t = result[name];
+      for (const [pair,text,bg] of [
+        ['fill',t.onFill,t.fill],['fillHover',t.onFill,t.fillHover],['fillActive',t.onFill,t.fillActive],
+        ['border',t.border,t.background],['text',t.text,t.background],['textOnSubtle',t.text,t.subtle],
+        ['strong',t.strong,t.background]
+      ]) {
+        const measured = measureApca(text,bg);
+        assert.equal(t.contrast[pair].model,'apca');
+        assert.equal(t.contrast[pair].value,measured);
+        assert.equal(t.contrast[pair].meetsTarget,Math.abs(measured)>=target);
+        assert.ok(t.contrast[pair].ratio >= 1 && t.contrast[pair].ratio <= 21);
+      }
+      if (t.contrast.text.meetsTarget && t.contrast.textOnSubtle.meetsTarget)
+        assert.equal(r.hex('APCA',{theme:name,role:'text',strict:true}),t.text.hex);
+      else assert.throws(()=>r.hex('APCA',{theme:name,role:'text',strict:true}),{code:'UNMET_CONSTRAINT'});
+    }
+  }
+  const impossible = createResolver({contrastModel:'apca',contrastTarget:106,overrides:{fixed:'#777777'},foregrounds:['#777777']});
+  assert.equal(impossible.resolve('fixed').light.contrast.fill.fallback,'palette-constraint');
+  assert.throws(()=>impossible.hex('fixed',{theme:'light',role:'fill',strict:true}),{code:'UNMET_CONSTRAINT'});
+  for (const targets of [{text:0,textOnSubtle:75},{text:75,textOnSubtle:0}]) {
+    const light = createResolver({contrastModel:'apca',contrastTargets:targets}).resolve('APCA').light;
+    assert.equal(light.contrast.text.meetsTarget,true);
+    assert.equal(light.contrast.textOnSubtle.meetsTarget,true);
+  }
+  assert.throws(()=>createResolver({contrastModel:'apca',contrastTarget:107}),{code:'INVALID_OPTIONS'});
+});
+
+test('APCA approved palette and foreground preference use Lc thresholds', () => {
+  const resolver = createResolver({
+    contrastModel:'apca',contrastTarget:60,foregroundPolicy:'first-passing',
+    foregrounds:['#777777','#000000'],
+    palette:[{id:'gray',light:'#888888'},{id:'white',light:'#ffffff'}]
+  });
+  const theme = resolver.resolve('approved').light;
+  assert.equal(theme.fill.hex,'#ffffff');
+  assert.equal(theme.onFill.hex,'#777777');
+  assert.ok(theme.contrast.fill.value>=60);
+  assert.equal(theme.contrast.fill.meetsTarget,true);
+});

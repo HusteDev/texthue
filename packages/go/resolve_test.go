@@ -443,3 +443,11 @@ func TestAPCAReference(t *testing.T) {
 		}
 	}
 }
+
+func TestContrastModelJSON(t *testing.T) {
+	for _, data := range []string{`{"contrastModel":""}`, `{"contrastModel":[]}`, `{"contrastModel":"apca","contrastTarget":107}`} {
+		if _, err := ParseOptions([]byte(data)); err == nil {
+			t.Fatalf("accepted %s", data)
+		}
+	}
+}

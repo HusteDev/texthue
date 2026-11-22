@@ -49,6 +49,7 @@ _ALIASES = {
     "foreground_policy": "foregroundPolicy",
     "hue_range": "hueRange",
     "exclude_hues": "excludeHues",
+    "contrast_model": "contrastModel",
     "contrast_target": "contrastTarget",
     "contrast_targets": "contrastTargets",
     "fill_hover": "fillHover",
