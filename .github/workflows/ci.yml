@@ -136,6 +136,13 @@ jobs:
           sdk: '3.8.1'
       - run: dart pub get --enforce-lockfile
       - run: python ../../tools/verify.py --port dart
+      - name: Compare both theme fills and placements with JavaScript
+        working-directory: .
+        run: |
+          npm ci
+          npm run build
+          node tools/measure-separation.mjs --cases > "$RUNNER_TEMP/separation.json"
+          dart run packages/dart/tool/check_assignment.dart "$RUNNER_TEMP/separation.json"
       - run: python ../../tools/check-dart-publication.py
       - name: Measure dart performance
         shell: bash
