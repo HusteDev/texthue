@@ -3,6 +3,18 @@ import test from 'node:test';
 import {createResolver} from '../packages/npm/dist/index.js';
 import {contrastWork,rendererWork} from '../tools/renderer-work.mjs';
 
+test('P3 projections run only the requested format conversions', async () => {
+  const resolver = createResolver({gamut:'display-p3'});
+  const counts = await rendererWork(() => {
+    for (const formats of [['hex','rgb'], ['css','p3'], ['hsl'], ['oklch']]) {
+      resolver.project('sample', {themes:['light'], roles:['fill'], formats});
+    }
+  }, ['hslFormat','oklchFormat','p3Fallback']);
+  assert.equal(counts.hslFormat, 1);
+  assert.equal(counts.oklchFormat, 1);
+  assert.equal(counts.p3Fallback, 2);
+});
+
 test('single-label assignment renders the selected palette once', async () => {
   const resolver = createResolver();
   const single = await rendererWork(() => resolver.resolve('item:0'));

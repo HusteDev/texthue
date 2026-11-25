@@ -2,7 +2,7 @@ import {Session} from 'node:inspector/promises';
 import {createResolver} from '../packages/npm/dist/index.js';
 
 // Read V8 entry counts for the production functions without instrumenting shipped code.
-export async function rendererWork(measure) {
+export async function rendererWork(measure, extraColorFunctions = []) {
   const session = new Session();
   session.connect();
   try {
@@ -17,7 +17,10 @@ export async function rendererWork(measure) {
       if (!fn) throw new Error(`Missing coverage for ${module}.${name}`);
       return fn.ranges[0].count;
     }
-    return {fits:calls('color-math','fitColor'), cusps:calls('color-math','cusp'), hashes:calls('sha256','sha256')};
+    return {
+      fits:calls('color-math','fitColor'), cusps:calls('color-math','cusp'), hashes:calls('sha256','sha256'),
+      ...Object.fromEntries(extraColorFunctions.map(name => [name,calls('color-math',name)])),
+    };
   } finally {
     session.disconnect();
   }
