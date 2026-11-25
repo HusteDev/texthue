@@ -12,6 +12,14 @@ cases.push({texts:['four','five','two','one'],pinned});
 cases.push({texts:['pinned','free'],pinned:{
   pinned:{hueFraction:0.5,ring:Number.MAX_SAFE_INTEGER,moved:true}
 }});
+// Pins exercise exact warp knots that cannot all be represented by digest words.
+const knots = Array.from({length:12}, (_, index) => [`knot-${index}`, index / 12]);
+knots.push(['before-wrap', 1 - 2 ** -32]);
+cases.push({
+  texts: knots.map(([label]) => label),
+  pinned: Object.fromEntries(knots.map(([label,hueFraction]) =>
+    [label,{hueFraction,ring:0,moved:false}])),
+});
 const vectors = cases.map(item => {
   const {assignments,colors,report} = assignTextColors(item.texts,item.options,item.pinned);
   return {...item,assignments,report,lightFills:Object.fromEntries(

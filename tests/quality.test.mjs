@@ -20,6 +20,18 @@ test('uncapped rendered tones retain at least 55 percent of available sRGB chrom
   }
 });
 
+test('pinned warp knots reproduce each anchor and wrap continuously at one', () => {
+  const resolver = createResolver();
+  const at = hueFraction => resolver.assign(['sample'], {
+    pinned: {sample: {hueFraction, ring: 0, moved: false}},
+  }).colors.sample.hue;
+  for (let index = 0; index < 12; index++) {
+    assert.ok(Math.abs(at(index / 12) - anchors[index]) < 1e-12);
+  }
+  const before = at(1 - 2 ** -32);
+  assert.ok(before < anchors[0] && anchors[0] - before < 1e-6);
+});
+
 test('default hash assignments distribute 4,000 labels across the twelve hue warp segments', () => {
   const resolver = createResolver();
   const counts = Array(anchors.length - 1).fill(0);

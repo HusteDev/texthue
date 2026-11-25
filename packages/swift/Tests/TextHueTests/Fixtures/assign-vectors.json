@@ -702,5 +702,182 @@
       "pinned": "#7aedda",
       "free": "#5abac9"
     }
+  },
+  {
+    "texts": [
+      "knot-0",
+      "knot-1",
+      "knot-2",
+      "knot-3",
+      "knot-4",
+      "knot-5",
+      "knot-6",
+      "knot-7",
+      "knot-8",
+      "knot-9",
+      "knot-10",
+      "knot-11",
+      "before-wrap"
+    ],
+    "pinned": {
+      "knot-0": {
+        "hueFraction": 0,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-1": {
+        "hueFraction": 0.08333333333333333,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-2": {
+        "hueFraction": 0.16666666666666666,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-3": {
+        "hueFraction": 0.25,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-4": {
+        "hueFraction": 0.3333333333333333,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-5": {
+        "hueFraction": 0.4166666666666667,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-6": {
+        "hueFraction": 0.5,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-7": {
+        "hueFraction": 0.5833333333333334,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-8": {
+        "hueFraction": 0.6666666666666666,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-9": {
+        "hueFraction": 0.75,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-10": {
+        "hueFraction": 0.8333333333333334,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-11": {
+        "hueFraction": 0.9166666666666666,
+        "ring": 0,
+        "moved": false
+      },
+      "before-wrap": {
+        "hueFraction": 0.9999999997671694,
+        "ring": 0,
+        "moved": false
+      }
+    },
+    "assignments": {
+      "knot-0": {
+        "hueFraction": 0,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-1": {
+        "hueFraction": 0.08333333333333333,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-2": {
+        "hueFraction": 0.16666666666666666,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-3": {
+        "hueFraction": 0.25,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-4": {
+        "hueFraction": 0.3333333333333333,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-5": {
+        "hueFraction": 0.4166666666666667,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-6": {
+        "hueFraction": 0.5,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-7": {
+        "hueFraction": 0.5833333333333334,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-8": {
+        "hueFraction": 0.6666666666666666,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-9": {
+        "hueFraction": 0.75,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-10": {
+        "hueFraction": 0.8333333333333334,
+        "ring": 0,
+        "moved": false
+      },
+      "knot-11": {
+        "hueFraction": 0.9166666666666666,
+        "ring": 0,
+        "moved": false
+      },
+      "before-wrap": {
+        "hueFraction": 0.9999999997671694,
+        "ring": 0,
+        "moved": false
+      }
+    },
+    "report": {
+      "minDistance": 0.029597983873484175,
+      "closestPairs": [
+        [
+          "before-wrap",
+          "knot-0"
+        ]
+      ],
+      "withinRingCapacity": true,
+      "distinctFills": true
+    },
+    "lightFills": {
+      "before-wrap": "#f1a5b0",
+      "knot-11": "#e9a5d2",
+      "knot-5": "#67b883",
+      "knot-9": "#b7a0e2",
+      "knot-4": "#87c162",
+      "knot-8": "#8db1e4",
+      "knot-3": "#adb163",
+      "knot-6": "#62c0b0",
+      "knot-0": "#e49ea7",
+      "knot-7": "#5ec5e5",
+      "knot-1": "#e99364",
+      "knot-2": "#e9b152",
+      "knot-10": "#e5a4ee"
+    }
   }
 ]
