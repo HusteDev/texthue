@@ -5,12 +5,26 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { contrast, fitColor, foreground, formats, oklchToLinear } from '../packages/npm/dist/color-math.js';
+import { chooseColor, contrast, fitColor, foreground, formats, oklchToLinear } from '../packages/npm/dist/color-math.js';
 import { resolveTextColors, TextColorError, VERSION } from '../packages/npm/dist/index.js';
 
 const fixture = JSON.parse(await readFile(new URL('../conformance/vectors.json', import.meta.url), 'utf8'));
 /** Extracts a `Color`'s RGB bytes as a triple. */
 const rgb = color => [color.rgb.r, color.rgb.g, color.rgb.b];
+
+test('7:1 neutral fill repair chooses the nearest passing side and breaks an exact tie lower', () => {
+  // The passing boundaries are grid points 1907 and 2737. Check the adjacent
+  // failing bytes too, so the midpoint exercises a real quantized contrast tie.
+  for (const [point, passes] of [[1907, true], [1908, false], [2736, false], [2737, true]]) {
+    const { rgb } = fitColor(point / 4096, 0, 0);
+    assert.equal(contrast(rgb, foreground(rgb)) >= 7, passes);
+  }
+  for (const [start, expected] of [[2321, 1907], [2322, 1907], [2323, 2737]]) {
+    const result = chooseColor(start / 4096, 0, 0, null, 7);
+    assert.equal(result.fitted.lightness, expected / 4096);
+    assert.equal(result.metadata.meetsTarget, true);
+  }
+});
 
 test('frozen v1 fixture file matches its pinned SHA-256 digest', async () => {
   const manifest = await readFile(new URL('../conformance/DIGESTS', import.meta.url), 'utf8');
