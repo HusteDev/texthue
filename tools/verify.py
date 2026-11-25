@@ -1,4 +1,4 @@
-"""Run every local verification check for all three libraries.
+"""Verify the primary libraries and available parity runners, or select a package with --port.
 
 Compiles the npm package, type-checks the TypeScript examples, runs the
 JavaScript, Python, and Go test suites and examples, checks the frozen
@@ -183,7 +183,7 @@ def main():
     )
     run("frozen vector regeneration check", ["node", "tools/build-vectors.mjs", "--check"], env=env)
     run(
-        "Python conformance and three-language parity",
+        "Python conformance and registered-runner parity",
         [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"],
         env=env,
         # Generated parity runs registered toolchains sequentially. Each native
