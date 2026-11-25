@@ -39,7 +39,7 @@ function run() {
     const input = {baseline, labels:field('labels').split(/\r?\n/).filter(Boolean), options:JSON.parse(field('options')),
       theme:field('theme'), vision:field('vision'), optimizeVision:document.getElementById('optimize-vision').checked,
       minimumDistance:document.getElementById('minimum-distance').valueAsNumber, markers:document.getElementById('markers').checked, registry:field('registry') && JSON.parse(field('registry'))};
-    const active = new Worker('./worker.mjs', {type:'module'});
+    const active = new Worker(new URL('./worker.mjs', import.meta.url), {type:'module'});
     worker = active;
     status.textContent = 'Computing palette…';
     active.onerror = event => { if (worker === active) status.textContent = event.message; };
