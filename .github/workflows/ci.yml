@@ -256,7 +256,11 @@ jobs:
           swift test --package-path ../.. --force-resolved-versions
           python3 ../../tools/verify.py --port swift
           python3 ../../tools/check-swift-tag.py
-      - run: python tools/verify.py
+      - name: Verify using the runner's JDK 17 for Kotlin parity
+        shell: bash
+        run: |
+          jdk="JAVA_HOME_17_${RUNNER_ARCH}"
+          JAVA_HOME="${!jdk:?JDK 17 is required}" python tools/verify.py
       - name: Measure primary performance
         if: matrix.os == 'ubuntu-24.04' && matrix.node == '22'
         shell: bash
@@ -326,7 +330,7 @@ jobs:
       - name: JavaScript coverage
         run: npm run coverage
       - name: Python coverage
-        run: npm run coverage:python
+        run: JAVA_HOME="${JAVA_HOME_17_X64:?JDK 17 is required}" npm run coverage:python
       - name: Go coverage
         run: npm run coverage:go
       - name: Upload JavaScript coverage

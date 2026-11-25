@@ -159,7 +159,7 @@ jobs:
             *) exit 1 ;;
           esac
       - if: steps.bundle.outputs.state == 'absent'
-        run: python tools/verify.py
+        run: JAVA_HOME="${JAVA_HOME_17_X64:?JDK 17 is required}" python tools/verify.py
       - if: steps.bundle.outputs.state == 'absent'
         run: python tools/build-packages.py
       - name: Pack and verify React and Tailwind adapters
