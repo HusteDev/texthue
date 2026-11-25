@@ -72,10 +72,16 @@ extension Gamut {
     }
 
     func cusp(lightness: Double, hue: Double) -> Double {
-        lightness == 0 || lightness == 1 ? 0 : limit(lightness, 0.4, hue, steps: 20)
+        #if TEXTHUE_COUNT_WORK
+        RendererWork.current.cusps += 1
+        #endif
+        return lightness == 0 || lightness == 1 ? 0 : limit(lightness, 0.4, hue, steps: 20)
     }
 
     func fit(lightness l: Double, chroma c: Double, hue h: Double) -> FittedColor {
+        #if TEXTHUE_COUNT_WORK
+        RendererWork.current.fits += 1
+        #endif
         if l == 0 || l == 1 {
             return FittedColor(bytes: Array(repeating: UInt8(l * 255), count: 3), lightness: l, chroma: 0)
         }

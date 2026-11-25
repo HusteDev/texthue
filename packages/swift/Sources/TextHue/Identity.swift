@@ -6,6 +6,9 @@ import Crypto
 #endif
 
 func identityDigest(_ text: String, namespace: String, seed: UInt32) throws -> [UInt8] {
+    #if TEXTHUE_COUNT_WORK
+    RendererWork.current.hashes += 1
+    #endif
     let scope = Data(namespace.utf8)
     guard let length = UInt32(exactly: scope.count) else { throw RenderError.invalidOptions }
     var hash = SHA256()

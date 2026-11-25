@@ -12,6 +12,20 @@ for (scenario, target, light) in [
     options.contrastTarget = target
     options.backgrounds = ["light": light]
     let renderer = try Renderer(options: options)
+    #if TEXTHUE_COUNT_WORK
+    let counts = RendererWork.current
+    counts.fits = 0
+    counts.cusps = 0
+    counts.hashes = 0
+    for i in 0..<100 { _ = try renderer.resolve("item:\(i)") }
+    let fitLimits = ["default": 1600, "aaa": 5732, "maximum": 13325, "gray": 3068,
+                     "impossible": 12252, "apca": 11133, "p3": 1600]
+    guard let limit = fitLimits[scenario], (1600...limit).contains(counts.fits),
+          counts.cusps == 1600, counts.hashes == 100 else {
+        fatalError("\(scenario): \(counts.fits) fits, \(counts.cusps) cusps, \(counts.hashes) hashes")
+    }
+    print(#"{"scenario":"\#(scenario)","fits":\#(counts.fits),"cusps":\#(counts.cusps),"hashes":\#(counts.hashes)}"#)
+    #else
     var samples: [Double] = []
     for i in -20..<100 {
         let label = "item:\(i)"
@@ -25,8 +39,10 @@ for (scenario, target, light) in [
     samples.sort()
     let median = (samples[49] + samples[50]) / 2
     print(#"{"scenario":"\#(scenario)","medianUs":\#(median),"p95Us":\#(samples[94])}"#)
+    #endif
 }
 
+#if !TEXTHUE_COUNT_WORK
 let labels = (0..<40).map { "item:\($0)" }
 let renderer = try Renderer()
 var samples: [Double] = []
@@ -39,3 +55,4 @@ for i in -5..<20 {
 }
 samples.sort()
 print(#"{"scenario":"assign40","medianUs":\#((samples[9] + samples[10]) / 2),"p95Us":\#(samples[18])}"#)
+#endif

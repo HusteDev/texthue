@@ -163,6 +163,8 @@ can benefit from compilation during earlier scenarios.
 
 ### Swift renderer
 
+From the repository root, run `swift run --package-path packages/swift -c release -Xswiftc -DTEXTHUE_COUNT_WORK TextHueBenchmark` for the counting build. On the 100-label corpus, Swift matched the C# fit, cusp, and identity hash counts in all seven scenarios. CI checks those budgets and uploads the result in `swift-work.txt`. The normal timing run omits the counting flag.
+
 From `packages/swift`, run `swift run --force-resolved-versions -c release TextHueBenchmark`.
 The measurements below used Swift 6.1.3 on x86-64 Linux in Docker. Each row
 times 100 individual two-theme resolutions after 20 warm-up labels.
