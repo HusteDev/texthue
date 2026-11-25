@@ -2,6 +2,7 @@
 
 import argparse
 import functools
+import hashlib
 import mimetypes
 import shutil
 import tempfile
@@ -23,6 +24,24 @@ def stage(destination):
             raise FileNotFoundError(f"Run npm run build before staging: missing {entry}")
     for module in compiled.glob("*.js"):
         shutil.copy2(module, runtime / module.name)
+    # Keep legacy URLs available for cached HTML. New pages load the entire
+    # module graph from one content-addressed directory, including the worker.
+    modules = sorted((destination / "site").glob("*.mjs")) + sorted(runtime.glob("*.js"))
+    digest = hashlib.sha256()
+    for module in modules:
+        digest.update(module.relative_to(destination).as_posix().encode() + b"\0")
+        digest.update(hashlib.sha256(module.read_bytes()).digest())
+    assets = Path("assets") / digest.hexdigest()[:20]
+    for module in modules:
+        target = destination / assets / module.relative_to(destination)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(module, target)
+    entry = destination / "site/index.html"
+    html = entry.read_text(encoding="utf-8")
+    entry.write_text(
+        html.replace("import('./app.mjs')", f"import('../{assets.as_posix()}/site/app.mjs')"),
+        encoding="utf-8",
+    )
     (destination / "index.html").write_text(
         '<!doctype html><html lang="en"><meta charset="utf-8">'
         '<title>TextHue palette inspector</title><meta http-equiv="refresh" content="0;url=site/">'

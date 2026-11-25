@@ -23,7 +23,19 @@ for (const [gamut, model, metric] of [
 const output = rows.join('\n') + '\n';
 if (process.argv[2] === '--check') {
   const frozen = await readFile(new URL('../conformance/tone-repair-v1.tsv', import.meta.url), 'utf8');
-  if (frozen.replaceAll('\r\n','\n') !== output) throw new Error('Tone repair fixtures differ');
+  const expected = frozen.trimEnd().split(/\r?\n/);
+  if (expected.length !== rows.length) throw new Error('Tone repair row count differs');
+  for (const [index, row] of rows.entries()) {
+    const fields = expected[index].split('\t');
+    const actual = row.split('\t');
+    const matches = actual.every((value, column) =>
+      // Match the cross-language conformance tolerance for chroma and contrast.
+      column === 9 || column === 10
+        ? Math.abs(Number(value) - Number(fields[column])) <= 1e-12
+        : value === fields[column]
+    );
+    if (fields.length !== actual.length || !matches) throw new Error('Tone repair differs at row ' + (index + 1));
+  }
 } else {
   process.stdout.write(output);
 }
