@@ -28,3 +28,22 @@ test('changing a replayed preset updates inherited targets and chroma but retain
     assert.deepEqual(edited,expected);
   }
 });
+
+test('fixed and anchored brand fills survive configuration and registry replay', () => {
+  const input = {labels:['research','design','engineering'],theme:'light',vision:'normal'};
+  const fixedOptions = editOptions({}, {example:'studio'});
+  const fixed = inspect({...input,options:fixedOptions});
+  const hash = (result,label) => result.rows.find(row=>row.label === label).swatches[0];
+  assert.equal(hash(fixed,'research'),'#577445');
+  assert.equal(hash(fixed,'design'),'#577445');
+  const options = editOptions(fixedOptions,{paletteMode:'anchors'});
+  const result = inspect({...input,options});
+  assert.notEqual(hash(result,'research'),hash(result,'design'));
+  assert.ok(!options.palette.some(entry=>entry.light === hash(result,'research')));
+  const replay = inspect({...input,options:result.config,registry:result.registry});
+  assert.deepEqual(replay.rows,result.rows);
+  const reordered = inspect({...input,options:{...options,palette:[...options.palette].reverse()}});
+  assert.deepEqual(reordered.rows,result.rows);
+  assert.deepEqual(editOptions(options,{paletteMode:'fixed'}),fixedOptions);
+  assert.equal(hash(inspect({...input,options:{...options,overrides:{design:'#445566'}}}),'design'),'#445566');
+});

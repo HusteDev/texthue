@@ -49,6 +49,7 @@ export interface TextColorOptions {
   gamut?: 'srgb'|'display-p3';
   contrastModel?: 'wcag2'|'apca';
   overrides?: Readonly<Record<string,string | {light:string;dark:string}>>;
+  paletteMode?: 'fixed'|'anchors';
   palette?: readonly {id:string;light?:string;dark?:string}[];
   foregrounds?: readonly string[];
   foregroundPolicy?: 'best'|'first-passing';
@@ -180,6 +181,7 @@ export interface ResolvedOptions {
   contrastModel: 'wcag2'|'apca';
   measure: (text:Triple, background:Triple)=>number;
   exportOptions: () => Record<string,unknown>;
+  anchor: (fraction:number,theme:'light'|'dark')=>{hue:number; cap:number}|undefined;
   brand: (name:string,digest:DataView)=>{light:Triple;dark:Triple;source:'palette'|'override'}|undefined;
   selectForeground: (rgb:Triple, target:number)=>Triple;
   formatForeground: (rgb:Triple)=>Color;

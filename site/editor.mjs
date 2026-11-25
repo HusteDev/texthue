@@ -32,10 +32,12 @@ export const brandExamples = {
   none: [],
 };
 
-export function editOptions(input, {preset, entry, remove, example}) {
+export function editOptions(input, {preset, entry, remove, example, paletteMode}) {
   const source = input && Object.hasOwn(input, 'schema') ? editableReplay(input) : input;
   createResolver(source);
   const options = {...source};
+  if (paletteMode === 'anchors') options.paletteMode = paletteMode;
+  if (paletteMode === 'fixed') delete options.paletteMode;
   if (preset) options.preset = preset;
   if (example !== undefined) {
     if (!Object.hasOwn(brandExamples,example)) throw new Error('Unknown brand example');

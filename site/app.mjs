@@ -33,6 +33,7 @@ const fieldHelp = {
   options: ['JSON settings control how colors are generated. Leave {} for the defaults, or paste a downloaded configuration and select Generate Palette.', 'Resolver-configuration#replay-a-configuration'],
   'config-file': ['Opening a configuration fills the options box and recalculates the table immediately.', 'Resolver-configuration#replay-a-configuration'],
   preset: ['Labels gives tags a moderate amount of color. Controls uses the same color range and raises the default WCAG contrast target from 4.5 to 7. Chart uses more saturated fills. Subdued uses less saturated fills. Mono generates grays. Apply preset updates the options and regenerates the swatches.', 'Resolver-configuration#all-tuning-controls'],
+  'brand-mode': ['Fixed brand palette uses the supplied fills exactly. Brand anchors generate related colors around the supplied hues, with lightness and chroma drawn from the label hash. Choose a brand example or enter your own colors.', 'Resolver-configuration#fixed-brand-palette-and-brand-anchors'],
   'brand-example': ['Choose an example to replace the brand entries and regenerate the palette. Each entry has a stable ID and separate light and dark fills. Try the duo with three or more labels to see colors repeat, then try the eight-color set. Select Clear palette to return to generated hues.', 'Read-the-palette-inspector'],
   'brand-id': ['Give this brand color a reusable name. Use the same ID to update or remove the entry.', 'Resolver-configuration#brand-palettes-and-overrides'],
   'brand-light': ['The fill for this brand entry on the light theme. Select Add or update color to apply it.', 'Resolver-configuration#brand-palettes-and-overrides'],
@@ -145,6 +146,7 @@ function run() {
       if (data.error) { status.textContent = data.error; return; }
       const {rows, diagnostics, findings, config, registry, migration} = data.result;
       status.textContent = rows.length + ' distinct labels';
+      document.getElementById('brand-mode').value = config.options.paletteMode ?? 'fixed';
       results.replaceChildren();
       sharePalette(results, input);
       if (migration) details(results,'Changes from comparison baseline',migration,'Compare this run with the saved baseline to see which labels, placements, or theme colors changed.');
@@ -248,6 +250,7 @@ function applyEdit(change) {
   }
 }
 document.getElementById('apply-preset').onclick = () => applyEdit({preset:document.getElementById('preset').value});
+document.getElementById('brand-mode').onchange = event => applyEdit({paletteMode:event.target.value});
 document.getElementById('brand-example').onchange = event => {
   if (event.target.value) applyEdit({example:event.target.value});
   event.target.value = '';
@@ -294,8 +297,9 @@ function selectExample(parameter, id) {
 const preset = selectExample('preset', 'preset');
 const example = selectExample('brand', 'brand-example');
 const vision = selectExample('vision', 'vision');
-if (preset || example) {
-  document.getElementById('options').value = JSON.stringify(editOptions({}, {preset, example}), null, 2);
+const paletteMode = selectExample('mode', 'brand-mode');
+if (preset || example || paletteMode) {
+  document.getElementById('options').value = JSON.stringify(editOptions({}, {preset, example, paletteMode}), null, 2);
 }
 if (vision) {
   document.getElementById('labels').value = ['Design', 'Research', 'Platform', 'Support', 'Finance', 'Operations'].join('\n');

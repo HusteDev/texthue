@@ -178,7 +178,7 @@ function compileHueDomain(allowed:unknown, excluded:unknown) {
 }
 
 function optionsValue(options: unknown): ResolvedOptions {
-  const source = record(options, ['gamut','contrastModel','overrides','palette','foregrounds','foregroundPolicy','preset','hueRange','excludeHues','normalize','namespace', 'seed', 'backgrounds', 'contrastTarget', 'contrastTargets', 'profiles'], 'options');
+  const source = record(options, ['gamut','contrastModel','overrides','palette','paletteMode','foregrounds','foregroundPolicy','preset','hueRange','excludeHues','normalize','namespace', 'seed', 'backgrounds', 'contrastTarget', 'contrastTargets', 'profiles'], 'options');
   const contrastModel = own(source,'contrastModel','wcag2');
   if (contrastModel !== 'wcag2' && contrastModel !== 'apca') fail('INVALID_OPTIONS','Unknown contrast model');
   const apca = contrastModel === 'apca';
@@ -288,6 +288,8 @@ function optionsValue(options: unknown): ResolvedOptions {
     originalNames.set(name,key);
     pairs.set(name,{light:parseBrandHex(pair.light),dark:parseBrandHex(pair.dark)});
   }
+  const paletteMode = own(source,'paletteMode','fixed');
+  if (paletteMode !== 'fixed' && paletteMode !== 'anchors') fail('INVALID_OPTIONS','Unknown palette mode');
   const rawPalette = own(source,'palette',[]);
   if (!Array.isArray(rawPalette) || (Object.hasOwn(source,'palette') && !rawPalette.length)) fail('INVALID_OPTIONS','Empty palette');
   const ids = new Set<string>();
@@ -300,9 +302,21 @@ function optionsValue(options: unknown): ResolvedOptions {
     const passing = [light,dark].map(canonical).every(rgb => Math.abs(measure(selectForeground(rgb,targets.fill),rgb)) >= targets.fill);
     return {name:id,id:new TextEncoder().encode(id),light,dark,passing};
   });
+  const anchorColors = paletteMode === 'anchors' ? [...palette].sort((a,b)=>compareBytes(a.id,b.id))
+    .map(entry=>({light:formats(entry.light).oklch,dark:formats(entry.dark).oklch})) : [];
+  const anchor:ResolvedOptions['anchor'] = (fraction,theme) => {
+    if (!anchorColors.length) return undefined;
+    const position = fraction * anchorColors.length;
+    const color = anchorColors[Math.floor(position)]?.[theme];
+    if (!color) throw new RangeError('Invalid anchor placement');
+    // Each anchor owns an equal interval. Its local position varies hue by up to 15 degrees.
+    const hue = hueDomain((color.h + (position % 1 - 0.5) * 30 + 360) % 360);
+    return {hue,cap:color.c * 1.25};
+  };
   const brand:ResolvedOptions['brand'] = (name,digest) => {
     const pinned = pairs.get(name);
     if (pinned) return {...pinned,source:'override'};
+    if (paletteMode === 'anchors') return undefined;
     let best = '';
     let winner: (typeof palette)[number] | undefined;
     for (const entry of palette) {
@@ -322,11 +336,12 @@ function optionsValue(options: unknown): ResolvedOptions {
     backgrounds:{light:hexFormat(backgrounds.light),dark:hexFormat(backgrounds.dark)},
     foregroundPolicy:policy, foregrounds:foregrounds.map(hexFormat),
     overrides:Object.fromEntries([...pairs].map(([name,pair]) => [originalNames.get(name) ?? name,{light:hexFormat(pair.light),dark:hexFormat(pair.dark)}])),
+    ...(paletteMode === 'anchors' ? {paletteMode} : {}),
     ...(palette.length ? {palette:[...palette].sort((a,b)=>compareBytes(a.id,b.id)).map(entry=>({
       id:entry.name,light:hexFormat(entry.light),dark:hexFormat(entry.dark)
     }))} : {})
   });
-  return { gamut, canonical, contrastModel, measure, exportOptions, brand, selectForeground, formatForeground, hueDomain, excludesHue, normalize, targets, seed, namespace:normalize(namespace), backgrounds, contrastTarget, profiles };
+  return { gamut, canonical, contrastModel, measure, exportOptions, anchor, brand, selectForeground, formatForeground, hueDomain, excludesHue, normalize, targets, seed, namespace:normalize(namespace), backgrounds, contrastTarget, profiles };
 }
 
 /**
@@ -490,7 +505,8 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
   const themes = {} as Record<'light' | 'dark', ThemeColors>;
   for (const theme of ['light', 'dark'] as const) {
     if (only?.themes && !only.themes.includes(theme)) continue;
-    const hue = brand ? snappedHue(brand[theme]) : naturalHue;
+    const guide = brand ? undefined : settings.anchor(hueFraction,theme);
+    const hue = brand ? snappedHue(brand[theme]) : guide?.hue ?? naturalHue;
     const direction = theme === 'light' ? -1 : 1;
     const {channels: background, luminance: backgroundY, color: base, lightness: lb} = bases[theme];
     const sample = (role: 'fill' | 'text') => {
@@ -501,7 +517,7 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
       const segment = Math.floor(hue / 30);
       const correction = Number(bias[segment]) + (Number(bias[(segment+1)%12]) - Number(bias[segment])) * (hue/30-segment);
       return { sampled, l: Math.max(0, Math.min(1, sampled + correction + offset)),
-        scale: (profile.chromaScale[0] + (profile.chromaScale[1]-profile.chromaScale[0])*fractions[2]) * (ring < 3 ? 1 : 0.6), cap: profile.chromaCap };
+        scale: (profile.chromaScale[0] + (profile.chromaScale[1]-profile.chromaScale[0])*fractions[2]) * (ring < 3 ? 1 : 0.6), cap: guide ? Math.min(guide.cap,profile.chromaCap) : profile.chromaCap };
     };
     const fillProfile = sample('fill'), textProfile = sample('text');
     if (brand) {
@@ -648,5 +664,5 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
 
   }
   if (only) return output;
-  return { version: VERSION, source:brand?.source ?? (placement ? 'assigned' : 'hash'), hueFraction:brand ? fixedIdentity(brand.light).fraction : hueFraction, hue:brand ? snappedHue(brand.light) : naturalHue, light: themes.light, dark: themes.dark };
+  return { version: VERSION, source:brand?.source ?? (placement ? 'assigned' : 'hash'), hueFraction:brand ? fixedIdentity(brand.light).fraction : hueFraction, hue:brand ? snappedHue(brand.light) : settings.anchor(hueFraction,'light')?.hue ?? naturalHue, light: themes.light, dark: themes.dark };
 }
