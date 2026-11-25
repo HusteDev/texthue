@@ -108,11 +108,19 @@ internal static class GamutFit
         return low;
     }
 
-    internal static double Cusp(this Gamut gamut, double l, double h) =>
-        l == 0 || l == 1 ? 0 : Limit(gamut, l, 0.4, h, 20);
+    internal static double Cusp(this Gamut gamut, double l, double h)
+    {
+#if TEXTHUE_COUNT_WORK
+        RendererWork.Cusps++;
+#endif
+        return l == 0 || l == 1 ? 0 : Limit(gamut, l, 0.4, h, 20);
+    }
 
     internal static FittedColor Fit(this Gamut gamut, double l, double c, double h)
     {
+#if TEXTHUE_COUNT_WORK
+        RendererWork.Fits++;
+#endif
         if (l == 0 || l == 1)
         {
             byte value = (byte)(l * 255);

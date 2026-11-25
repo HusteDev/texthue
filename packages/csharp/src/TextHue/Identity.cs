@@ -19,6 +19,9 @@ internal static class Identity
         hash.AppendData(header);
         hash.AppendData(scopeBytes);
         hash.AppendData(Utf8.GetBytes(text));
+#if TEXTHUE_COUNT_WORK
+        RendererWork.Hashes++;
+#endif
         return hash.GetHashAndReset();
     }
 

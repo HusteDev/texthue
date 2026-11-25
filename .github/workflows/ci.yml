@@ -123,6 +123,7 @@ jobs:
         run: |
           mkdir -p benchmark-results
           dotnet run -c Release --project packages/csharp/benchmarks/Renderer > benchmark-results/dotnet.txt
+          dotnet run -c WorkCounts -p:DefineConstants=TEXTHUE_COUNT_WORK --project packages/csharp/benchmarks/Renderer > benchmark-results/dotnet-work.txt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: benchmarks-dotnet-${{ runner.os }}-${{ runner.arch }}

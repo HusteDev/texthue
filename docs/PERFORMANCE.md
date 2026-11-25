@@ -110,6 +110,8 @@ For only the Rust corpus percentiles and a smoke test of each Criterion case, ru
 
 ### C# renderer
 
+Run `dotnet run -c WorkCounts -p:DefineConstants=TEXTHUE_COUNT_WORK --project packages/csharp/benchmarks/Renderer` for operation counts. Across 100 labels, the default, AAA, maximum, gray, and impossible scenarios used 1,600, 5,732, 13,325, 3,068, and 12,252 fits respectively. Each used 1,600 cusp evaluations and 100 identity hashes. CI uploads the seven checked scenarios in `dotnet-work.txt`. The separate build configuration keeps counter instrumentation out of the Release package.
+
 Run `dotnet run -c Release --project packages/csharp/benchmarks/Renderer` from
 the root. The benchmark times individual two-theme `Renderer.Resolve` calls on
 the same 100 labels after 20 warm-up labels per scenario. Resolver construction
