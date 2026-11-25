@@ -259,16 +259,15 @@ return 100 * (raw + 0.027)
 
 ### Lightness search
 
-For a fill, select the black or white foreground with greater contrast. An exact tie selects black. Measure the fill against that foreground. For an text, measure it against its declared theme background.
+For a fill, select the black or white foreground with greater contrast. An exact tie selects black. Measure the fill against that foreground. For text, score both the background and subtle relationships as described in the tonal scale.
 
 ```text
 initial = fit(originalLightness, requestedChroma, identityHue)
 if measured ratio >= target: return initial
 
-for an text only:
-    if neither black nor white reaches the target against the background:
-        select whichever has greater contrast; ties select black
-        return it with meetsTarget=false and fallback="unattainable-contrast"
+if both black and white fail the tone's relationship score:
+    select the endpoint with the higher score, choosing black on a tie
+    return it with meetsTarget=false and fallback="unattainable-contrast"
 
 for endpoint in [0, 4096]:
     pass = endpoint
@@ -282,7 +281,7 @@ for endpoint in [0, 4096]:
 choose the retained candidate closest to originalLightness, ties lower
 ```
 
-Recompute the black/white foreground for every fill candidate. Chroma fitting runs at the new lightness; do not reuse an earlier reduced chroma. Endpoints guarantee a passing candidate for every valid fill target. For an text, the precheck establishes whether any sRGB color can meet its target; black and white give the extremal luminances. No further chroma or hue search is performed.
+Recompute the black/white foreground for every fill candidate. Chroma fitting runs at the new lightness; do not reuse an earlier reduced chroma. No further chroma or hue search is performed.
 
 The full sampled initial lightness is checked before searching the 1/4096 grid. This rule defines a deterministic nearby adjustment; it does not claim a continuous mathematical optimum. Compare distances and contrast at computational precision without epsilon or display rounding. An exact threshold passes.
 

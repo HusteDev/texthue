@@ -225,18 +225,16 @@ export function oklchFormat(rgb:Triple, matrix:Matrix=RGB_TO_XYZ) {
 /**
  * Selects the final color for one role, enforcing the contrast target.
  *
- * The sampled color is fitted first. If it fails the target, an text whose
- * background cannot reach the target with any sRGB color falls back to the
- * better of black and white and reports `unattainable-contrast`. Otherwise a
- * search over lightness values `k / 1000` for `k = 0..1000` picks the passing
- * candidate nearest to the sampled lightness; an exact distance tie chooses
- * the lower lightness. Fill candidates are re-paired with their own black or
- * white foreground at each step.
+ * Fit the sampled color, then score its quantized channels. If it fails,
+ * score black and white using the same relationships. If both fail, return
+ * the higher-scoring endpoint with an unattainable-contrast diagnostic.
+ * Otherwise bisect each passing side on the 1/4096 lightness grid. Keep
+ * the evaluated passing candidate nearest the sample, breaking ties lower.
  *
  * @param lightness - Sampled OKLCH lightness.
  * @param chroma - Sampled OKLCH chroma; every candidate is fitted from this value.
  * @param hue - Identity hue in degrees.
- * @param background - Theme background for an text, or `null` for a fill.
+ * @param background - Fixed comparison color, or `null` to select a foreground for each candidate.
  * @param target - Required WCAG contrast ratio.
  * @returns Final RGB bytes with contrast metadata.
  * @throws {Error} If no lightness candidate passes for a fill. The endpoints guarantee this cannot happen for valid targets.
