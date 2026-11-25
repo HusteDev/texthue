@@ -8,6 +8,18 @@ The swatches below show how the same labels render across themes and how collect
 
 ![Light and dark label colors, collection assignments, and tonal roles](docs/assets/gallery.svg)
 
+Use `resolveTextColors` for a label whose color should stay fixed as other labels appear. Use `assignTextColors` when you know the whole set and want to separate similar fills.
+
+```js
+import { assignTextColors, resolveTextColors } from 'texthue';
+
+const label = 'item:633';
+const independent = resolveTextColors(label);
+const collection = assignTextColors(['item:33', label]);
+console.log(independent.light.fill.hex);              // #a8c763
+console.log(collection.colors[label].light.fill.hex); // #6fd274
+```
+
 ## Libraries
 
 The repository contains eight language implementations plus three JavaScript ecosystem packages: the [WebAssembly binding](packages/wasm/README.md), [React hooks](packages/react/README.md), and [Tailwind adapter](packages/tailwind/README.md).
