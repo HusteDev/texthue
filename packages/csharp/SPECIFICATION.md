@@ -373,6 +373,8 @@ M6 (cube-root LMS -> OKLab)
 
 Normalize labels and deduplicate their UTF-8 identities. Reserve caller-pinned placements and fixed brand colors first. Process remaining identities in ascending lexicographic order of their SHA-256 digest bytes. Let `n` count the union of requested and pinned identities. For a nonempty collection, the required hue-fraction spacing within each ring is `clamp(1/n, 1/24, 1/12)`. Fractions wrap modulo one.
 
+A pinned placement has a finite `hueFraction` in [0, 1), an integer `ring` from 0 through 9,007,199,254,740,991 inclusive, and a boolean `moved`. The upper bound is the largest safe integer in JavaScript and applies to both direct assignment and registry replay.
+
 Starting at ring zero, try the natural hash fraction, then offsets of −1, +1, −2, +2 and so on in units of one quarter of the spacing. Try 385 positions per ring. Take the first position whose circular distance from every occupied fraction on that ring is at least the spacing.
 
 Render the tentative placement. For each occupied identity, compute the Euclidean OKLab distance between the two rendered light fills and between the two rendered dark fills, using their sRGB bytes. The placement score is the minimum of all those distances, or positive infinity for an empty registry. Keep the tentative placement if its score is at least 0.04.
