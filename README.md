@@ -1,22 +1,16 @@
 # TextHue
 
+TextHue turns a text label into repeatable colors for light and dark themes. Use it for issue labels, avatars, or chart categories. An individual label keeps its colors across calls. When several labels appear together, collection assignment can move their colors farther apart.
+
+[Try the live palette inspector](https://hustedev.github.io/texthue/site/) · [Choose an assignment method](docs/GUIDE.md) · [Run the inspector locally](docs/GUIDE.md#preview-a-collection-in-the-palette-inspector)
+
+The swatches below show how the same labels render across themes and how collection assignment changes nearby colors.
+
 ![Light and dark label colors, collection assignments, and tonal roles](docs/assets/gallery.svg)
 
-```js
-import { assignTextColors, resolveTextColors } from 'texthue';
-
-const research = resolveTextColors('research');
-const issues = assignTextColors(['bug', 'question', 'feature']);
-console.log(research.light.fill.hex, issues.colors.bug.light.fill.hex);
-```
-
-Turn exact text into repeatable colors for labels, projects, categories, charts, avatars, and other application data. The same text and options produce the same colors in JavaScript, TypeScript, Python, and Go. Every result includes light and dark themes, readable fill/foreground pairs, a text color, and Hex, RGB, HSL, and OKLCH representations.
-
-TextHue is stateless. The JavaScript and Python packages have no runtime dependencies. Go uses golang.org/x/text for Unicode normalization and casing. It does not store inputs, contact a service, or require a user account. Each application decides what its input means.
-
-Compare your labels in the [palette inspector](docs/GUIDE.md#preview-a-collection-in-the-palette-inspector) or choose an API in the [task guide](docs/GUIDE.md).
-
 ## Libraries
+
+TextHue is stateless. The JavaScript and Python packages have no runtime dependencies. Go uses `golang.org/x/text` for Unicode normalization and casing. The libraries run in your application without an account or service.
 
 | Platform | Package | Implementation and documentation |
 | --- | --- | --- |
@@ -50,7 +44,9 @@ python -m pip install texthue
 go get github.com/HusteDev/texthue/packages/go
 ```
 
-## Quick examples
+## Resolve your first label
+
+Each example resolves the same label, then reads its fill color for a light and a dark background. The hex values match across the three libraries.
 
 ```typescript
 import { resolveTextColors } from 'texthue';
