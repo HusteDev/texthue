@@ -1,5 +1,5 @@
 import { type AssignmentOptions, assignCollection, type Placement } from './assignment.js';
-import { fingerprint } from './fingerprint.js';
+import { fingerprint } from './config-digest.js';
 import { compileRenderer, fail, record, textValue, VERSION } from './renderer.js';
 import type { TextColorOptions } from './types.js';
 

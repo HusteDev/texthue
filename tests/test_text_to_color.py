@@ -1,4 +1,4 @@
-"""Python conformance suite and three-language parity test.
+"""Python conformance suite and registered-runner parity tests.
 
 Run from the project root: python -m unittest discover -s tests -p 'test_*.py'.
 The parity test invokes Node.js and Go, so both toolchains and a built npm
