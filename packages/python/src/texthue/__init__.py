@@ -101,8 +101,8 @@ def _native_options(value):
                 }
             output[name] = item if name == "overrides" else _native_options(item)
         return output
-    if isinstance(value, tuple):
-        return list(value)
+    if isinstance(value, (list, tuple)):
+        return [_native_options(item) for item in value]
     return value
 
 

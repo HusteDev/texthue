@@ -681,6 +681,11 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
             self.compare(go["assignments"], case["assignments"])
             self.compare(go["report"], case["report"])
 
+    def test_nested_native_ranges_match_json(self):
+        canonical = resolve_text_colors("tag", {"excludeHues": [[30, 60], [120, 140]]})
+        for arcs in ([(30, 60), (120, 140)], ((30, 60), (120, 140))):
+            self.assertEqual(resolve_text_colors("tag", exclude_hues=arcs), canonical)
+
     def test_normalized_namespaces(self):
         for raw, expected in NORMALIZED_NAMESPACES:
             self.assertEqual(

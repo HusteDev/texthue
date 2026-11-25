@@ -21,7 +21,7 @@ assert document["light"]["onFill"]["hex"] == colors.light.on_fill.hex
 
 ## API, types, and serialization
 
-`resolve_text_colors(text: str, options: TextColorOptions)` returns a frozen `ColorSet` dataclass. Omit `options` for defaults; an explicit empty dictionary also uses defaults. **`None` is invalid.** The function performs no I/O and needs no `await`. Inputs are not mutated and results are fresh dictionaries.
+`resolve_text_colors` returns a frozen `ColorSet` dataclass. Pass a typed options dictionary or Python keyword arguments. Omitting options or passing an empty dictionary selects the defaults. Passing `None` raises `TextColorError`.
 
 ```python
 import json
@@ -30,10 +30,10 @@ from texthue import ColorSet, TextColorOptions, VERSION, resolve_text_colors
 options: TextColorOptions = {"namespace": "projects", "contrastTarget": 4.5}
 colors: ColorSet = resolve_text_colors("project-id:42", options)
 print(VERSION)  # text-to-color-v1
-print(json.dumps(colors, ensure_ascii=False, indent=2))
+print(json.dumps(colors.to_dict(), ensure_ascii=False, indent=2))
 ```
 
-The returned structure is JSON-compatible and uses the same camelCase field names as the other libraries, including `onFill`, `contrastTarget`, and `meetsTarget`. Do not convert option keys to snake_case. Public types are `Backgrounds`, `Color`, `ColorProfile`, `ColorSet`, `ContrastResult`, `HSL`, `OKLCH`, `Profiles`, `Range`, `RGB`, `TextColorOptions`, `ThemeColors`, `ThemeContrast`, and `ThemeProfiles`. `__version__` is the package version; `VERSION` is the independent, frozen algorithm identifier. Range values are **two-item lists**, not tuples. Type annotations help callers but runtime validation remains authoritative.
+Python attributes use snake_case. The dictionary returned by `to_dict()` uses the shared camelCase field names, including `onFill` and `meetsTarget`. Typed option dictionaries use the shared spelling, such as `contrastTarget`. Keyword arguments accept Python spellings such as `contrast_target` and `exclude_hues=[(30, 60)]`. Ranges accept two-item lists or tuples. `__version__` identifies the package version and `VERSION` identifies the color algorithm.
 
 ## Every tuning parameter
 
@@ -56,7 +56,7 @@ options: TextColorOptions = {
     },
 }
 colors = resolve_text_colors("project:atlas", options)
-print(colors["light"]["contrast"], colors["dark"]["contrast"])
+print(colors.light.contrast, colors.dark.contrast)
 ```
 
 | Option | Default | Validation and effect |
@@ -74,17 +74,19 @@ print(colors["light"]["contrast"], colors["dark"]["contrast"])
 Omitted nested fields use defaults. A supplied range replaces both endpoints. Equal endpoints request a fixed value; `[0, 0]` chroma requests grayscale. Lightness is a preference that contrast enforcement can override; gamut fitting can lower chroma. A full resolution returns both themes and all standard formats. For a subset, call `Resolver().project("research", themes=["dark"], roles=["fill"], formats=["hex"])`.
 
 ```python
+from texthue import resolve_text_colors
+
 gray = resolve_text_colors("plain", {
     "profiles": {"light": {"fill": {"lightness": [0.75, 0.75], "chromaScale": [0, 0]}}},
 })
-assert gray["light"]["fill"]["oklch"]["c"] == 0
+assert gray.light.fill.oklch.c == 0
 
 impossible = resolve_text_colors("project:atlas", {
     "backgrounds": {"light": "#777777"}, "contrastTarget": 7,
 })
-status = impossible["light"]["contrast"]["text"]
-assert status["meetsTarget"] is False
-assert status["fallback"] == "unattainable-contrast"
+status = impossible.light.contrast.text
+assert status.meets_target is False
+assert status.fallback == "unattainable-contrast"
 ```
 
 Both `contrast.fill` and `contrast.text` contain `ratio`, `meetsTarget`, `lightnessAdjusted`, `chromaReduced`, and `fallback` (`None` or `"unattainable-contrast"`). Fill contrast is against its selected black/white `onFill`; text contrast is against the theme's `background`. An impossible text target returns the better black/white endpoint and reports failure. Color-pair contrast is not an assessment of an entire interface.
@@ -97,7 +99,7 @@ from texthue import TextColorError, resolve_text_colors
 
 stable = resolve_text_colors("project-id:42", {"namespace": "projects"})
 normalized = resolve_text_colors(unicodedata.normalize("NFC", "e\u0301"))
-print(stable["light"]["fill"]["hex"], normalized["light"]["fill"]["hex"])
+print(stable.light.fill.hex, normalized.light.fill.hex)
 
 try:
     resolve_text_colors("research", {"contrastTarget": 22})
@@ -105,7 +107,7 @@ except TextColorError as error:
     print(error.code)  # INVALID_OPTIONS
 ```
 
-`TextColorError` has code `INVALID_TEXT` or `INVALID_OPTIONS`. Non-string text, surrogate code points, unknown keys, `None`, non-finite numbers, booleans used as numbers, invalid ranges, and shorthand/alpha hex colors are rejected. Empty strings and embedded NUL are accepted. The function never trims, normalizes, or case-folds text; do any desired canonicalization consistently before calling it. Namespace is a domain separator, not a secret. Stable non-secret identifiers are preferable to rotating tokens, and colors are neither unique IDs nor anonymization.
+`TextColorError` has code `INVALID_TEXT` or `INVALID_OPTIONS`. Non-string text, surrogate code points, unknown keys, `None`, non-finite numbers, booleans used as numbers, invalid ranges, and shorthand/alpha hex colors are rejected. Empty strings and embedded NUL are accepted. By default the resolver preserves exact text. Set the normalize option to apply Unicode normalization, lowercase mapping, or whitespace handling to labels and namespaces. Namespace is a domain separator, not a secret. Stable non-secret identifiers are preferable to rotating tokens, and colors are neither unique IDs nor anonymization.
 
 ## Algorithm and cross-language contract
 
