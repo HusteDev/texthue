@@ -283,6 +283,7 @@ func chooseForeground(l, c, h float64, background *encodedRGB, target float64, s
 			fallback = ptr("unattainable-contrast")
 		} else {
 			bestDistance := math.Inf(1)
+			endpointStep := 0
 			for _, endpoint := range []int{0, 4096} {
 				pass := endpoint
 				fail := int(math.Ceil(l * 4096))
@@ -307,10 +308,27 @@ func chooseForeground(l, c, h float64, background *encodedRGB, target float64, s
 				distance := math.Abs(candidate.l - l)
 				if distance < bestDistance {
 					chosen, ratio, bestDistance = candidate, score, distance
+					endpointStep = 1
+					if endpoint == 0 {
+						endpointStep = -1
+					}
 				}
 			}
 			if math.IsInf(bestDistance, 1) {
 				panic("texthue: contrast search invariant failed")
+			}
+			ratio = measure(chosen.rgb)
+			grid := int(math.Round(chosen.l * 4096))
+			for steps := 0; ratio < target && steps < 64; steps++ {
+				grid += endpointStep
+				if grid < 0 || grid > 4096 {
+					break
+				}
+				chosen = fitIn(float64(grid)/4096, c, h, m)
+				ratio = measure(chosen.rgb)
+			}
+			if ratio < target {
+				panic("texthue: contrast repair lost its passing candidate")
 			}
 		}
 	}

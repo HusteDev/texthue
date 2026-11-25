@@ -289,6 +289,7 @@ def _choose(
             fallback = "unattainable-contrast"
         else:
             best_distance = math.inf
+            endpoint_step = 0
             for endpoint in (0, 4096):
                 passing = endpoint
                 failing = (
@@ -309,8 +310,21 @@ def _choose(
                 distance = abs(candidate["lightness"] - lightness)
                 if distance < best_distance:
                     chosen, ratio, best_distance = candidate, score, distance
+                    endpoint_step = -1 if endpoint == 0 else 1
             if best_distance == math.inf:
                 raise RuntimeError("Contrast search invariant failed")
+            ratio = measure(chosen["rgb"])
+            grid = round(chosen["lightness"] * 4096)
+            for _ in range(64):
+                if ratio >= target:
+                    break
+                grid += endpoint_step
+                if not 0 <= grid <= 4096:
+                    break
+                chosen = _fit(grid / 4096, chroma, hue, matrix)
+                ratio = measure(chosen["rgb"])
+            if ratio < target:
+                raise RuntimeError("Contrast repair lost its passing candidate")
     return {
         "rgb": chosen["rgb"],
         "fitted": chosen,

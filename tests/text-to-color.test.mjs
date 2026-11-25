@@ -26,6 +26,24 @@ test('7:1 neutral fill repair chooses the nearest passing side and breaks an exa
   }
 });
 
+test('contrast repair walks toward the passing endpoint when the selected bytes fail rechecking', () => {
+  function simulate(start, failures) {
+    const evaluated = new WeakSet();
+    let retries = 0;
+    let rechecking = false;
+    const score = bytes => {
+      if (evaluated.has(bytes)) rechecking = true;
+      evaluated.add(bytes);
+      if (rechecking && retries++ < failures) return 0;
+      return contrast(bytes, foreground(bytes));
+    };
+    return chooseColor(start / 4096, 0, 0, null, 7, undefined, 7, foreground, score);
+  }
+  assert.equal(simulate(2322, 1).fitted.lightness, 1906 / 4096);
+  assert.equal(simulate(2323, 64).fitted.lightness, 2801 / 4096);
+  assert.throws(() => simulate(2323, 65), /lost its passing candidate/);
+});
+
 test('frozen v1 fixture file matches its pinned SHA-256 digest', async () => {
   const manifest = await readFile(new URL('../conformance/DIGESTS', import.meta.url), 'utf8');
   const entries = [...manifest.matchAll(/^([0-9a-f]{64})[ \t]+vectors\.json\r?$/gm)];

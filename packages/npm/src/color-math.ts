@@ -255,6 +255,7 @@ export function chooseColor(lightness: number, chroma: number, hue: number, back
       fallback = 'unattainable-contrast';
     } else {
       let bestDistance = Infinity;
+      let endpointStep = 0;
       for (const endpoint of [0, 4096]) {
         let pass = endpoint;
         let fail = endpoint === 0 ? Math.ceil(lightness * 4096) : Math.floor(lightness * 4096);
@@ -278,9 +279,19 @@ export function chooseColor(lightness: number, chroma: number, hue: number, back
           chosen = candidate;
           ratio = score;
           bestDistance = distance;
+          endpointStep = endpoint === 0 ? -1 : 1;
         }
       }
       if (bestDistance === Infinity) throw new Error('Contrast search invariant failed');
+      ratio = measure(chosen.rgb);
+      let grid = Math.round(chosen.lightness * 4096);
+      for (let steps = 0; ratio < target && steps < 64; steps++) {
+        grid += endpointStep;
+        if (grid < 0 || grid > 4096) break;
+        chosen = fitColor(grid / 4096, chroma, hue,matrix);
+        ratio = measure(chosen.rgb);
+      }
+      if (ratio < target) throw new Error('Contrast repair lost its passing candidate');
     }
   }
   return {
