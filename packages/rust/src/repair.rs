@@ -52,6 +52,7 @@ impl Gamut {
             };
         }
         let mut best = initial;
+        let mut step = 0;
         let mut distance = f64::INFINITY;
         for endpoint in [black, white] {
             if endpoint.score < target {
@@ -78,8 +79,29 @@ impl Gamut {
             if delta < distance {
                 best = candidate;
                 distance = delta;
+                step = if endpoint.color.lightness == 0.0 {
+                    -1
+                } else {
+                    1
+                };
             }
         }
+        best.score = measure(best.color.bytes);
+        let mut grid = (best.color.lightness * 4096.0) as i32;
+        for _ in 0..64 {
+            if best.score >= target {
+                break;
+            }
+            grid += step;
+            if !(0..=4096).contains(&grid) {
+                break;
+            }
+            best = evaluate(f64::from(grid) / 4096.0);
+        }
+        assert!(
+            best.score >= target,
+            "contrast repair lost its passing candidate"
+        );
         best
     }
 }

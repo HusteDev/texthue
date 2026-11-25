@@ -24,6 +24,7 @@ extension Gamut {
         }
 
         var best = initial
+        var step = 0
         var distance = Double.infinity
         for endpoint in [black, white] where endpoint.score >= target {
             var candidate = endpoint
@@ -42,9 +43,19 @@ extension Gamut {
             let delta = abs(candidate.color.lightness - lightness)
             if delta < distance {
                 distance = delta
+                step = endpoint.color.lightness == 0 ? -1 : 1
                 best = candidate
             }
         }
+        best = RepairedTone(color: best.color, score: measure(best.color.bytes))
+        var grid = Int(best.color.lightness * 4096)
+        for _ in 0..<64 {
+            if best.score >= target { break }
+            grid += step
+            guard (0...4096).contains(grid) else { break }
+            best = evaluate(Double(grid) / 4096)
+        }
+        precondition(best.score >= target, "Contrast repair lost its passing candidate")
         return best
     }
 }

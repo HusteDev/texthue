@@ -6,6 +6,8 @@ import kotlin.math.floor
 
 internal data class RepairedTone(val color: FittedColor, val score: Double, val fallback: String? = null)
 
+private const val MAX_REPAIR_STEPS = 64
+
 internal fun repairTone(
     lightness: Double,
     chroma: Double,
@@ -30,6 +32,7 @@ internal fun repairTone(
     }
 
     var best: RepairedTone? = null
+    var step = 0
     var bestDistance = Double.POSITIVE_INFINITY
     for (endpoint in listOf(black, white)) {
         if (endpoint.score < target) continue
@@ -50,7 +53,28 @@ internal fun repairTone(
         if (distance < bestDistance) {
             best = candidate
             bestDistance = distance
+            step = if (endpoint.color.lightness == 0.0) -1 else 1
         }
     }
-    return checkNotNull(best)
+    return recheckTone(checkNotNull(best), step, target, measure, ::evaluate)
+}
+
+private fun recheckTone(
+    selected: RepairedTone,
+    step: Int,
+    target: Double,
+    measure: (IntArray) -> Double,
+    evaluate: (Double) -> RepairedTone,
+): RepairedTone {
+    var result = selected.copy(score = measure(selected.color.bytes))
+    var grid = (result.color.lightness * 4096).toInt()
+    var remaining = MAX_REPAIR_STEPS
+    while (remaining > 0 && result.score < target) {
+        grid += step
+        if (grid !in 0..4096) break
+        result = evaluate(grid / 4096.0)
+        remaining--
+    }
+    check(result.score >= target) { "Contrast repair lost its passing candidate" }
+    return result
 }

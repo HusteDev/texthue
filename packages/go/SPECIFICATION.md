@@ -279,6 +279,11 @@ for endpoint in [0, 4096]:
         move pass to mid on success, else move fail to mid
     retain evaluated passing candidate
 choose the retained candidate closest to originalLightness, ties lower
+recheck the score of its retained RGB bytes
+if the recheck fails:
+    move one grid point at a time toward that candidate's original endpoint
+    fit and score each point, stopping at the first passing candidate
+    stop at the endpoint or after 64 steps and report an invariant failure if none passes
 ```
 
 Recompute the black/white foreground for every fill candidate. Chroma fitting runs at the new lightness; do not reuse an earlier reduced chroma. No further chroma or hue search is performed.

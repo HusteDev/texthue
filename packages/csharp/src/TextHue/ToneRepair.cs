@@ -24,6 +24,7 @@ internal static class ToneRepair
         }
 
         var best = initial;
+        int step = 0;
         double distance = double.PositiveInfinity;
         foreach (var endpoint in new[] { black, white })
         {
@@ -47,8 +48,18 @@ internal static class ToneRepair
             {
                 best = candidate;
                 distance = delta;
+                step = endpoint.Color.Lightness == 0 ? -1 : 1;
             }
         }
+        best = best with { Score = measure(best.Color.Bytes) };
+        int grid = (int)(best.Color.Lightness * 4096);
+        for (int i = 0; i < 64 && best.Score < target; i++)
+        {
+            grid += step;
+            if (grid is < 0 or > 4096) break;
+            best = Evaluate(grid / 4096.0);
+        }
+        if (best.Score < target) throw new InvalidOperationException("Contrast repair lost its passing candidate");
         return best;
     }
 }

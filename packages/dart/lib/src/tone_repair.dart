@@ -24,6 +24,7 @@ extension ToneRepair on Gamut {
     }
 
     var best = initial;
+    var step = 0;
     var distance = double.infinity;
     for (final endpoint in [black, white]) {
       if (endpoint.score < target) continue;
@@ -45,7 +46,18 @@ extension ToneRepair on Gamut {
       if (delta < distance) {
         best = candidate;
         distance = delta;
+        step = endpoint.color.lightness == 0 ? -1 : 1;
       }
+    }
+    best = (color: best.color, score: measure(best.color.bytes), fallback: null);
+    var grid = (best.color.lightness * 4096).toInt();
+    for (var i = 0; i < 64 && best.score < target; i++) {
+      grid += step;
+      if (grid < 0 || grid > 4096) break;
+      best = evaluate(grid / 4096);
+    }
+    if (best.score < target) {
+      throw StateError('Contrast repair lost its passing candidate');
     }
     return best;
   }
