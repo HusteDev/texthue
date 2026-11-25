@@ -182,6 +182,7 @@ export interface ResolvedOptions {
   exportOptions: () => Record<string,unknown>;
   brand: (name:string,digest:DataView)=>{light:Triple;dark:Triple;source:'palette'|'override'}|undefined;
   selectForeground: (rgb:Triple, target:number)=>Triple;
+  formatForeground: (rgb:Triple)=>Color;
   hueDomain: (hue:number)=>number;
   normalize: (text:string)=>string;
   targets: Record<ContrastRole,number>;

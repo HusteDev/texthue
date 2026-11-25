@@ -196,6 +196,12 @@ function optionsValue(options: unknown): ResolvedOptions {
     return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)) as Triple;
   });
   const canonicalForegrounds = foregrounds.map(canonical);
+  const foregroundColors = new Map(canonicalForegrounds.map(rgb => [rgb, wide ? p3Formats(rgb) : formats(rgb)]));
+  const formatForeground = (rgb:Triple) => {
+    const color = foregroundColors.get(rgb);
+    if (!color) throw new Error('Selected foreground is missing from the compiled palette');
+    return structuredClone(color);
+  };
   const selectForeground = (rgb:Triple,target:number):Triple => {
     let selected:Triple = [0,0,0], best = -1;
     for (const candidate of canonicalForegrounds) {
@@ -317,7 +323,7 @@ function optionsValue(options: unknown): ResolvedOptions {
       id:entry.name,light:hexFormat(entry.light),dark:hexFormat(entry.dark)
     }))} : {})
   });
-  return { gamut, canonical, contrastModel, measure, exportOptions, brand, selectForeground, hueDomain, normalize, targets, seed, namespace:normalize(namespace), backgrounds, contrastTarget, profiles };
+  return { gamut, canonical, contrastModel, measure, exportOptions, brand, selectForeground, formatForeground, hueDomain, normalize, targets, seed, namespace:normalize(namespace), backgrounds, contrastTarget, profiles };
 }
 
 /**
@@ -616,7 +622,7 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
       continue;
     }
     themes[theme] = {background: structuredClone(base), subtle: display(subtle().rgb), muted: display(muted().rgb),
-      fill: display(fill().rgb), onFill: display(onFill()), fillHover: display(fillHover().rgb), fillActive: display(fillActive().rgb),
+      fill: display(fill().rgb), onFill: settings.formatForeground(onFill()), fillHover: display(fillHover().rgb), fillActive: display(fillActive().rgb),
       border: display(border().rgb), text: display(text().rgb), strong: display(strong().rgb),
       contrast: {target, fill: relationship(fill(),onFill(),targets.fill,true), fillHover: relationship(fillHover(),onFill(),targets.fillHover,true), fillActive: relationship(fillActive(),onFill(),targets.fillActive,true), border: relationship(border(),background,targets.border),
         text: relationship(text(),background,targets.text), textOnSubtle: relationship(text(),subtle().rgb,targets.textOnSubtle), strong: relationship(strong(),background,targets.strong)}};
