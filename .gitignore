@@ -14,4 +14,4 @@ artifacts/
 coverage/
 .coverage
 coverage.xml
-/packages/swift/.build/
+.build/
