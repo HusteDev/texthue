@@ -8,7 +8,7 @@ From a Rust consumer project, add the local checkout with `cargo add --path ../t
 
 From the crate directory, run `cargo run --locked --example labels`. The example calls `compiled.hex("apple", false, "fill")` for the light fill and `compiled.color("apple", true, "onFill")` for the dark foreground. Expected output is `#5ab95a #ffffff`. Run `cargo test --locked` to check the reference vectors included in the crate.
 
-Runtime dependencies are pinned to `sha2` 0.10.9 and `unicode-normalization` 0.1.24. Exact text is the default. Configure `Normalization` to apply NFC or NFKC, lowercasing, or whitespace handling before hashing.
+Runtime dependencies are pinned to `sha2` 0.11.1 and `unicode-normalization` 0.1.26. Exact text is the default. Configure `Normalization` to apply NFC or NFKC, lowercasing, or whitespace handling before hashing.
 
 Run `cargo bench --locked --bench renderer` from the crate directory to measure default, high-contrast and unattainable targets, plus ordered batches of 40 labels with either 40 or eight distinct values.
 

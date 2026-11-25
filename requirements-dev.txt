@@ -1,9 +1,9 @@
 # Development tooling only. TextHue has no Python runtime dependencies.
 setuptools==84.0.0
 wheel==0.48.0
-ruff==0.16.6
+ruff==0.17.5
 black==26.5.1
-coverage==7.16.0
+coverage==7.17.3
 pre-commit==4.7.0
 PyYAML==6.0.3
-coloraide==4.7.2
+coloraide==8.16

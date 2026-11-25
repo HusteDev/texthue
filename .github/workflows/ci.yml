@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
           cache: npm
@@ -41,7 +41,7 @@ jobs:
         run: |
           mkdir -p benchmark-results
           JAVA_HOME="$JAVA_HOME_17_X64" packages/kotlin/gradlew -q -p packages/kotlin benchmark > benchmark-results/kotlin.txt
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: benchmarks-kotlin-${{ runner.os }}-${{ runner.arch }}
           path: benchmark-results/
@@ -72,7 +72,7 @@ jobs:
         run: |
           mkdir -p benchmark-results
           cargo bench --locked --manifest-path packages/rust/Cargo.toml --bench renderer > benchmark-results/rust.txt
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: benchmarks-rust-${{ runner.os }}-${{ runner.arch }}
           path: benchmark-results/
@@ -123,7 +123,7 @@ jobs:
         run: |
           mkdir -p benchmark-results
           dotnet run -c Release --project packages/csharp/benchmarks/Renderer > benchmark-results/dotnet.txt
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: benchmarks-dotnet-${{ runner.os }}-${{ runner.arch }}
           path: benchmark-results/
@@ -163,7 +163,7 @@ jobs:
         run: |
           mkdir -p benchmark-results
           (cd packages/dart && dart run tool/benchmark.dart) > benchmark-results/dart.txt
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: benchmarks-dart-${{ runner.os }}-${{ runner.arch }}
           path: benchmark-results/
@@ -176,7 +176,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
           cache: npm
@@ -184,7 +184,7 @@ jobs:
         with:
           python-version: '3.13'
           cache: pip
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: '1.26'
           cache: false
@@ -224,14 +224,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
           cache: npm
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python }}
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: ${{ matrix.go }}
           cache: false
@@ -273,7 +273,7 @@ jobs:
           go -C packages/go test -run '^$' -bench '^BenchmarkResolverContrast$' -benchtime=100x > benchmark-results/go-resolve.txt
           go -C packages/go test -run '^$' -bench '^BenchmarkAssign40$' -benchtime=20x > benchmark-results/go-assign.txt
           swift run --package-path packages/swift --force-resolved-versions -c release TextHueBenchmark > benchmark-results/swift.txt
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: matrix.os == 'ubuntu-24.04' && matrix.node == '22'
         with:
           name: benchmarks-primary-${{ runner.os }}-${{ runner.arch }}
@@ -300,7 +300,7 @@ jobs:
       - run: python tools/build-packages.py
       - name: Select the minimum supported consumer runtime
         if: matrix.os == 'ubuntu-24.04' && matrix.node == '22'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '20.0.0'
       - name: Verify the compiled library on Node 20.0.0
@@ -314,7 +314,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
           cache: npm
@@ -322,7 +322,7 @@ jobs:
         with:
           python-version: '3.13'
           cache: pip
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: '1.25'
           cache: false
