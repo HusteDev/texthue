@@ -372,8 +372,9 @@ export function compileRenderer(options: TextColorOptions = {}) {
   header.setUint32(0, settings.seed);
   header.setUint32(4, namespace.length);
   const baseColor = (rgb:Triple) => {
-    const color = settings.gamut === 'srgb' ? formats(rgb) : p3Formats(settings.canonical(rgb));
-    return {color, lightness: Math.round(color.oklch.l * 4096) / 4096};
+    const channels = settings.canonical(rgb);
+    const color = settings.gamut === 'srgb' ? formats(channels) : p3Formats(channels);
+    return {channels, color, lightness: Math.round(color.oklch.l * 4096) / 4096};
   };
   const bases = {light:baseColor(settings.backgrounds.light),dark:baseColor(settings.backgrounds.dark)};
   const digestOf = (text: string) => {
@@ -436,7 +437,7 @@ function fixedIdentity(rgb:Triple) {
   return {hue,fraction};
 }
 
-type Bases = Record<Slot,{color: ThemeColors['background']; lightness: number}>;
+type Bases = Record<Slot,{channels: Triple; color: ThemeColors['background']; lightness: number}>;
 // Role dependencies share their computed color within one theme and identity.
 function once<T>(compute: () => T): () => T {
   let cached: T | undefined;
@@ -475,8 +476,7 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
     if (only?.themes && !only.themes.includes(theme)) continue;
     const hue = brand ? snappedHue(brand[theme]) : naturalHue;
     const direction = theme === 'light' ? -1 : 1;
-    const background = settings.canonical(settings.backgrounds[theme]);
-    const {color: base, lightness: lb} = bases[theme];
+    const {channels: background, color: base, lightness: lb} = bases[theme];
     const sample = (role: 'fill' | 'text') => {
       const profile = settings.profiles[theme][role];
       const sampled = profile.lightness[0] + (profile.lightness[1] - profile.lightness[0]) * fractions[1];
