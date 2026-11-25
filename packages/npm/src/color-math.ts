@@ -154,8 +154,10 @@ export function luminance(rgb: Triple, weights:Triple = [0.2126,0.7152,0.0722]):
  * @returns A ratio in `1..21`, at full computational precision.
  */
 export function contrast(first: Triple, second: Triple, weights?:Triple): number {
-  const a = luminance(first,weights);
-  const b = luminance(second,weights);
+  return contrastRatio(luminance(first,weights), luminance(second,weights));
+}
+
+export function contrastRatio(a: number, b: number): number {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 

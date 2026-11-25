@@ -10,7 +10,7 @@
 
 import type { Placement } from './assignment.js';
 import { compareBytes } from './bytes.js';
-import { apcaContrast, blendOver, chooseColor, contrast, cusp, formats, hexFormat, hslFormat, oklchFormat, P3_TO_XYZ, p3ApcaContrast, p3Channels, p3Contrast, p3Css, p3Fallback, p3Formats, rgbFormat, srgbToP3, XYZ_TO_P3 } from './color-math.js';
+import { apcaContrast, blendOver, chooseColor, contrast, contrastRatio, cusp, formats, hexFormat, hslFormat, luminance, oklchFormat, P3_TO_XYZ, p3ApcaContrast, p3Channels, p3Contrast, p3Css, p3Fallback, p3Formats, rgbFormat, srgbToP3, XYZ_TO_P3 } from './color-math.js';
 import { sha256 } from './sha256.js';
 import { anchors, biases } from './tables.js';
 import type { ChosenColor, Color, ColorSet, Range, ResolvedOptions, TextColorErrorCode, TextColorOptions, ThemeColors, Triple } from './types.js';
@@ -374,7 +374,7 @@ export function compileRenderer(options: TextColorOptions = {}) {
   const baseColor = (rgb:Triple) => {
     const channels = settings.canonical(rgb);
     const color = settings.gamut === 'srgb' ? formats(channels) : p3Formats(channels);
-    return {channels, color, lightness: Math.round(color.oklch.l * 4096) / 4096};
+    return {channels, color, luminance: luminance(channels,settings.gamut === 'display-p3' ? P3_TO_XYZ[1] : undefined), lightness: Math.round(color.oklch.l * 4096) / 4096};
   };
   const bases = {light:baseColor(settings.backgrounds.light),dark:baseColor(settings.backgrounds.dark)};
   const digestOf = (text: string) => {
@@ -437,7 +437,7 @@ function fixedIdentity(rgb:Triple) {
   return {hue,fraction};
 }
 
-type Bases = Record<Slot,{channels: Triple; color: ThemeColors['background']; lightness: number}>;
+type Bases = Record<Slot,{channels: Triple; luminance: number; color: ThemeColors['background']; lightness: number}>;
 // Role dependencies share their computed color within one theme and identity.
 function once<T>(compute: () => T): () => T {
   let cached: T | undefined;
@@ -476,7 +476,7 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
     if (only?.themes && !only.themes.includes(theme)) continue;
     const hue = brand ? snappedHue(brand[theme]) : naturalHue;
     const direction = theme === 'light' ? -1 : 1;
-    const {channels: background, color: base, lightness: lb} = bases[theme];
+    const {channels: background, luminance: backgroundY, color: base, lightness: lb} = bases[theme];
     const sample = (role: 'fill' | 'text') => {
       const profile = settings.profiles[theme][role];
       const sampled = profile.lightness[0] + (profile.lightness[1] - profile.lightness[0]) * fractions[1];
@@ -507,8 +507,20 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
         const secondary = Math.abs(settings.measure(rgb,second));
         return target === 0 ? secondary : Math.min(Math.abs(primary),secondary*(target/secondTarget));
       };
+      let score = settings.contrastModel === 'apca' || wide ? gamutScore : undefined;
+      if (settings.contrastModel === 'wcag2' && backdrop === background) {
+        const weights = wide ? P3_TO_XYZ[1] : undefined;
+        const secondY = second ? luminance(second,weights) : undefined;
+        score = rgb => {
+          const y = luminance(rgb,weights);
+          const primary = contrastRatio(y,backgroundY);
+          if (secondY === undefined || secondTarget === 0) return primary;
+          const secondary = contrastRatio(y,secondY);
+          return target === 0 ? secondary : Math.min(primary,secondary*(target/secondTarget));
+        };
+      }
       const result = chooseColor(lightness, Math.min(chroma, profile.cap), hue, backdrop, threshold, second, secondTarget, settings.selectForeground,
-        settings.contrastModel === 'apca' || wide ? gamutScore : undefined,matrix);
+        score,matrix);
       if (only?.formats?.includes('trace')) {
         const rawL = Math.max(0,Math.min(1,requestedL));
         const capped = Math.min(chroma,profile.cap);
