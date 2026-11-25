@@ -10,7 +10,7 @@
 
 import type { Placement } from './assignment.js';
 import { compareBytes } from './bytes.js';
-import { apcaContrast, blendOver, chooseColor, contrast, cusp, formats, hexFormat, hslFormat, oklchFormat, p3ApcaContrast, p3Contrast, p3Formats, rgbFormat, srgbToP3, XYZ_TO_P3 } from './color-math.js';
+import { apcaContrast, blendOver, chooseColor, contrast, cusp, formats, hexFormat, hslFormat, oklchFormat, p3ApcaContrast, p3Channels, p3Contrast, p3Css, p3Fallback, p3Formats, P3_TO_XYZ, rgbFormat, srgbToP3, XYZ_TO_P3 } from './color-math.js';
 import { sha256 } from './sha256.js';
 import { anchors, biases } from './tables.js';
 import type { ChosenColor, Color, ColorSet, Range, ResolvedOptions, TextColorErrorCode, TextColorOptions, ThemeColors, Triple } from './types.js';
@@ -574,23 +574,27 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
           }
         }
         const value:Partial<ThemeColors['background']> = {};
-        const rendered = once(()=>display(raw[role]()));
+        const native = once(raw[role]);
+        const fallback = once(() => p3Fallback(native()));
+        const srgb = () => wide ? fallback().rgb : native();
+        const channels = once(() => p3Channels(native()));
         for (const format of only.formats ?? formatNames) {
           if (format === 'trace') {
             if (role === 'background' || role === 'onFill') {
-              value.trace = {source:'supplied',hex:rendered().hex};
+              value.trace = {source:'supplied',hex:hexFormat(srgb())};
             } else {
               const traced = {subtle,muted,fill,fillHover,fillActive,border,text,strong}[role]().trace;
               if (traced) value.trace = traced;
             }
-          } else if (wide) {
-            Object.assign(value,{[format]:rendered()[format]});
           } else {
             switch(format) {
-              case 'hex': value.hex=hexFormat(raw[role]()); break;
-              case 'rgb': value.rgb=rgbFormat(raw[role]()); break;
-              case 'hsl': value.hsl=hslFormat(raw[role]()); break;
-              case 'oklch': value.oklch=oklchFormat(raw[role]()); break;
+              case 'hex': value.hex=hexFormat(srgb()); break;
+              case 'rgb': value.rgb=rgbFormat(srgb()); break;
+              case 'hsl': value.hsl=hslFormat(srgb()); break;
+              case 'oklch': value.oklch=oklchFormat(native(),wide ? P3_TO_XYZ : undefined); break;
+              case 'p3': value.p3=rgbFormat(channels()); break;
+              case 'css': value.css=p3Css(channels()); break;
+              case 'srgbClipped': value.srgbClipped=fallback().srgbClipped; break;
             }
           }
         }

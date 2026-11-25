@@ -32,7 +32,7 @@ export const XYZ_TO_P3: Matrix = [
     [-14852 / 17905, 63121 / 35810, 423 / 17905],
     [11844 / 330415, -50337 / 660830, 316169 / 330415],
 ];
-const P3_TO_XYZ: Matrix = [
+export const P3_TO_XYZ: Matrix = [
     [608311 / 1250200, 189793 / 714400, 198249 / 1000160],
     [35783 / 156275, 247089 / 357200, 198249 / 2500400],
     [0 / 1, 32229 / 714400, 5220557 / 5000800],
@@ -339,9 +339,13 @@ export function p3ApcaContrast(text:Triple,background:Triple):number {
   return apcaContrast(text,background,[0.2289829594805780,0.6917492625852380,0.0792677779341829]);
 }
 
+export const p3Channels = (rgb:Triple) => rgb.map(v=>round6(v/255)) as Triple;
+export const p3Css = (channels:Triple) => `color(display-p3 ${channels.join(' ')})`;
+
 export function p3Formats(rgb:Triple):Color {
   const fallback = p3Fallback(rgb);
-  const channels = rgb.map(v=>round6(v/255)) as Triple;
-  return {...formats(fallback.rgb),p3:rgbFormat(channels),css:`color(display-p3 ${channels.join(' ')})`,
-    srgbClipped:fallback.srgbClipped,oklch:oklchFormat(rgb,P3_TO_XYZ)};
+  const channels = p3Channels(rgb);
+  return {hex:hexFormat(fallback.rgb),rgb:rgbFormat(fallback.rgb),hsl:hslFormat(fallback.rgb),
+    oklch:oklchFormat(rgb,P3_TO_XYZ),p3:rgbFormat(channels),css:p3Css(channels),
+    srgbClipped:fallback.srgbClipped};
 }
