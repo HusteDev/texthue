@@ -68,7 +68,11 @@ def conformance = tasks.register('conformance', Exec) {
             '--classpath', sourceSets.test.runtimeClasspath.asPath
     }
 }
-tasks.named('check') { dependsOn conformance }
+// The Kotlin test sources are executable fixture runners invoked by check-kotlin.py.
+tasks.named('test') {
+    dependsOn conformance
+    failOnNoDiscoveredTests = false
+}
 tasks.named('publishLibraryPublicationToStagingRepository') { dependsOn tasks.named('check') }
 
 detekt {
