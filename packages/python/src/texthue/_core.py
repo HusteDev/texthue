@@ -685,6 +685,9 @@ def compile_settings(options):
         + namespace_bytes
     )
     bases = {theme: settings["formats"](rgb) for theme, rgb in settings["backgrounds"].items()}
+    settings["background_lightness"] = {
+        theme: math.floor(base["oklch"]["l"] * 4096 + 0.5) / 4096 for theme, base in bases.items()
+    }
     return settings, prefix, bases
 
 
@@ -750,7 +753,7 @@ def render(
     for theme in themes:
         background = settings["backgrounds"][theme]
         base = bases[theme]
-        lb = math.floor(base["oklch"]["l"] * 4096 + 0.5) / 4096
+        lb = settings["background_lightness"][theme]
         hue = snapped(brand[theme]) if brand else natural_hue
         direction = -1 if theme == "light" else 1
 

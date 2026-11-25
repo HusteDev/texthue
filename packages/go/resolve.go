@@ -298,6 +298,7 @@ type Resolver struct {
 	targets          map[string]float64
 	profiles         [2]resolvedTheme
 	bases            [2]Color
+	baseLightness    [2]float64
 }
 
 func NewResolver(options ...Option) (*Resolver, error) {
@@ -343,8 +344,12 @@ func NewResolver(options ...Option) (*Resolver, error) {
 	prefix = binary.BigEndian.AppendUint32(prefix, raw.Seed)
 	prefix = binary.BigEndian.AppendUint32(prefix, uint32(len(namespace)))
 	prefix = append(prefix, namespace...)
-	return &Resolver{wide: wide, apca: raw.ContrastModel == "apca", replay: replayFrom(raw), brand: brand, selectForeground: selectForeground, domain: domain, normalize: normalization, prefix: prefix, target: target, targets: maps.Clone(raw.ContrastTargets), profiles: profiles,
-		bases: [2]Color{rendition(canonicalRGB(profiles[0].background, wide), wide), rendition(canonicalRGB(profiles[1].background, wide), wide)}}, nil
+	r := &Resolver{wide: wide, apca: raw.ContrastModel == "apca", replay: replayFrom(raw), brand: brand, selectForeground: selectForeground, domain: domain, normalize: normalization, prefix: prefix, target: target, targets: maps.Clone(raw.ContrastTargets), profiles: profiles}
+	for i, profile := range profiles {
+		r.bases[i] = rendition(canonicalRGB(profile.background, wide), wide)
+		r.baseLightness[i] = math.Round(r.bases[i].OKLCH.L*4096) / 4096
+	}
+	return r, nil
 }
 
 func (r *Resolver) Batch(texts []string) ([]ColorSet, error) {
@@ -506,7 +511,7 @@ func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string
 		if r.wide {
 			base = display(theme.background)
 		}
-		lb := math.Round(base.OKLCH.L*4096) / 4096
+		lb := r.baseLightness[i]
 		unconstrained := 1.0
 		if r.apca {
 			unconstrained = 0
