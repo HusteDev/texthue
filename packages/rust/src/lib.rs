@@ -14,7 +14,7 @@ pub use renderer::{
     ThemeProfile,
 };
 mod color;
-pub use color::{Color, Hsl, Oklch};
+pub use color::{Color, CssFormat, Hsl, Oklch};
 mod repair;
 pub use repair::RepairedTone;
 mod gamut;

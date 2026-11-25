@@ -4,6 +4,8 @@ Resolve a label into ten sRGB roles for each theme with `Renderer::resolve`. Eac
 
 For Display-P3, construct `Renderer { gamut: Gamut::DisplayP3, ..Renderer::default() }` with `texthue::{Gamut, Renderer}` in scope. Each role exposes native channels in `p3` and a CSS color in `css`. Its hex value represents the sRGB fallback, and `srgb_clipped` indicates whether that fallback required clipping.
 
+Use `color.to_css(texthue::CssFormat::Hsl)` for an HSL string with percentage units. `CssFormat::DisplayP3` preserves native P3 channels and converts sRGB renditions to Display P3.
+
 From a Rust consumer project, add the local checkout with `cargo add --path ../texthue/packages/rust`, adjusting the path to your checkout. The [labels example](examples/labels.rs) uses namespace `project` and seed `42` and prints the light fill and dark foreground for `apple`.
 
 From the crate directory, run `cargo run --locked --example labels`. The example calls `compiled.hex("apple", false, "fill")` for the light fill and `compiled.color("apple", true, "onFill")` for the dark foreground. Expected output is `#5ab95a #ffffff`. Run `cargo test --locked` to check the reference vectors included in the crate.

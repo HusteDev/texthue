@@ -106,7 +106,43 @@ fn coordinates(rgb: [f64; 3], matrix: &[[f64; 3]; 3]) -> Oklch {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CssFormat {
+    Hex,
+    Rgb,
+    Hsl,
+    Oklch,
+    DisplayP3,
+}
+
 impl Color {
+    /// Format the rendered color for use as a CSS property value.
+    pub fn to_css(&self, format: CssFormat) -> String {
+        match format {
+            CssFormat::Hex => self.hex.clone(),
+            CssFormat::Rgb => {
+                let [r, g, b] = self.rgb;
+                format!("rgb({r} {g} {b})")
+            }
+            CssFormat::Hsl => {
+                let Hsl { h, s, l } = self.hsl;
+                format!("hsl({h} {s}% {l}%)")
+            }
+            CssFormat::Oklch => {
+                let Oklch { l, c, h } = self.oklch;
+                format!("oklch({l} {c} {h})")
+            }
+            CssFormat::DisplayP3 => {
+                let [r, g, b] = self.p3.unwrap_or_else(|| {
+                    crate::Gamut::DisplayP3
+                        .channels_from_srgb(self.rgb)
+                        .map(round6)
+                });
+                format!("color(display-p3 {r} {g} {b})")
+            }
+        }
+    }
+
     /// Build a native Display-P3 rendition and its clipped sRGB fallback.
     pub fn from_display_p3(bytes: [u8; 3]) -> Self {
         Self::from_p3_channels(bytes.map(|v| f64::from(v) / 255.0))
@@ -131,6 +167,26 @@ mod tests {
     use super::*;
     use serde::Deserialize;
     use serde_json::Value;
+
+    #[test]
+    fn css_formats() {
+        let red = Color::from([255, 0, 0]);
+        assert_eq!(red.to_css(CssFormat::Hex), "#ff0000");
+        assert_eq!(red.to_css(CssFormat::Rgb), "rgb(255 0 0)");
+        assert_eq!(red.to_css(CssFormat::Hsl), "hsl(0 100% 50%)");
+        assert_eq!(
+            red.to_css(CssFormat::Oklch),
+            "oklch(0.627955 0.257683 29.23388)"
+        );
+        assert_eq!(
+            red.to_css(CssFormat::DisplayP3),
+            "color(display-p3 0.917488 0.200287 0.138561)"
+        );
+        assert_eq!(
+            Color::from_display_p3([255, 0, 0]).to_css(CssFormat::DisplayP3),
+            "color(display-p3 1 0 0)"
+        );
+    }
 
     #[test]
     fn shared_role_formats() {
