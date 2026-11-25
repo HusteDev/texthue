@@ -1,5 +1,7 @@
 # Choosing and preserving label colors
 
+New to the terminology? Look up [independent labels](GLOSSARY.md#independent-label-hash), [collection assignment](GLOSSARY.md#collection-assignment-assigned), or a [registry](GLOSSARY.md#registry).
+
 | Workflow | Inputs | What happens when another label appears? | API |
 | --- | --- | --- | --- |
 | Independent identity | One label and stable options | Existing output stays fixed | `resolveTextColors(label, options)` |
