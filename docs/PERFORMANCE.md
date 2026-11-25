@@ -128,6 +128,8 @@ palettes. These measurements cover the Windows .NET 9 Release build.
 
 ### Kotlin/JVM renderer
 
+Run `packages/kotlin/gradlew -q -p packages/kotlin countRendererWork` to measure work across 100 labels per scenario. The counting source set compiles the same renderer with counters in place of the normal inline hooks. Kotlin matched the C#, Dart, and Swift counts in all seven scenarios. CI checks these budgets and uploads `kotlin-work.txt`.
+
 Build the JAR with `packages/kotlin/gradlew -p packages/kotlin jar`, then run
 `packages/kotlin/gradlew -q -p packages/kotlin benchmark`.
 The Windows run used Android Studio's Kotlin compiler and bundled JVM.

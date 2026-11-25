@@ -6,8 +6,7 @@ import com.hustedev.texthue.Resolver
 data class Scenario(val name: String, val target: Double, val light: String, val model: ContrastModel = ContrastModel.WCAG2,
     val gamut: Gamut = Gamut.SRGB)
 
-fun main() {
-    for (scenario in listOf(
+val scenarios = listOf(
         Scenario("default", 4.5, "#ffffff"),
         Scenario("aaa", 7.0, "#ffffff"),
         Scenario("maximum", 21.0, "#ffffff"),
@@ -15,7 +14,10 @@ fun main() {
         Scenario("impossible", 21.0, "#777777"),
         Scenario("p3", 4.5, "#ffffff", gamut = Gamut.DISPLAY_P3),
         Scenario("apca", 75.0, "#ffffff", ContrastModel.APCA),
-    )) {
+)
+
+fun main() {
+    for (scenario in scenarios) {
         val resolver = Resolver(gamut = scenario.gamut, contrastModel = scenario.model, contrastTarget = scenario.target,
             backgrounds = Backgrounds(light = scenario.light))
         val samples = DoubleArray(100)

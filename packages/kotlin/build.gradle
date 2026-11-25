@@ -94,6 +94,18 @@ sourceSets {
     }
 }
 configurations.benchmarkImplementation.extendsFrom configurations.implementation
+sourceSets {
+    workCounts {
+        kotlin.srcDirs 'src/main/kotlin', 'src/benchmark/kotlin', 'src/workCounts/kotlin'
+        kotlin.exclude '**/ReleaseWork.kt'
+    }
+}
+configurations.workCountsImplementation.extendsFrom configurations.implementation
+tasks.register('countRendererWork', JavaExec) {
+    dependsOn tasks.named('workCountsClasses')
+    classpath = sourceSets.workCounts.runtimeClasspath
+    mainClass = 'WorkBenchmarkKt'
+}
 tasks.register('benchmark', JavaExec) {
     dependsOn tasks.named('benchmarkClasses')
     classpath = sourceSets.benchmark.runtimeClasspath

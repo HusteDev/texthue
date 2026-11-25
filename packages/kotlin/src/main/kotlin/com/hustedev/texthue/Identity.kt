@@ -17,6 +17,7 @@ internal object Identity {
     }
 
     fun digest(text: String, namespace: String = "", seed: UInt = 0u): ByteArray {
+        countHash()
         val scope = utf8(namespace, "namespace")
         val header = ByteBuffer.allocate(8).putInt(seed.toInt()).putInt(scope.remaining())
         return MessageDigest.getInstance("SHA-256").apply {

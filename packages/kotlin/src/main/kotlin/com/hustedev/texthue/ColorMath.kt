@@ -129,10 +129,13 @@ internal object ColorMath {
         return low
     }
 
-    fun cusp(l: Double, h: Double, gamut: Gamut): Double =
-        if (l == 0.0 || l == 1.0) 0.0 else limit(l, 0.4, h, gamut, 20)
+    fun cusp(l: Double, h: Double, gamut: Gamut): Double {
+        countCusp()
+        return if (l == 0.0 || l == 1.0) 0.0 else limit(l, 0.4, h, gamut, 20)
+    }
 
     fun fit(l: Double, c: Double, h: Double, gamut: Gamut): FittedColor {
+        countFit()
         if (l == 0.0 || l == 1.0) return FittedColor(IntArray(3) { (l * 255).toInt() }, 0.0, l)
         var retained = c
         var channels = linear(l, c, h, gamut)
