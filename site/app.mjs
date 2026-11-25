@@ -235,4 +235,23 @@ for (const [picker, destination] of [['config-file', 'options'], ['registry-file
   };
 }
 form.onsubmit = event => { event.preventDefault(); run(); };
+const query = new URLSearchParams(location.search);
+function selectExample(parameter, id) {
+  const value = query.get(parameter);
+  const select = document.getElementById(id);
+  if (value && Array.from(select.options).some(option => option.value === value)) {
+    select.value = value;
+    return value;
+  }
+}
+const preset = selectExample('preset', 'preset');
+const example = selectExample('brand', 'brand-example');
+const vision = selectExample('vision', 'vision');
+if (preset || example) {
+  document.getElementById('options').value = JSON.stringify(editOptions({}, {preset, example}), null, 2);
+}
+if (vision) {
+  document.getElementById('labels').value = ['Design', 'Research', 'Platform', 'Support', 'Finance', 'Operations'].join('\n');
+}
+
 run();

@@ -10,6 +10,7 @@ import threading
 import xml.etree.ElementTree as ET
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urljoin
 
 from playwright.sync_api import expect, sync_playwright
 
@@ -59,6 +60,11 @@ def check_markers(page):
 
 
 def exercise(page, url, clipboard):
+    page.goto(urljoin(url, "site/?preset=mono&brand=studio&vision=deutan"))
+    expect(page.get_by_role("status")).to_have_text("6 distinct labels")
+    options = json.loads(page.locator("#options").input_value())
+    assert options["preset"] == "mono" and len(options["palette"]) == 4
+    expect(page.locator("#vision")).to_have_value("deutan")
     page.goto(url)
     status = page.get_by_role("status")
     expect(status).to_have_text("3 distinct labels")
