@@ -115,6 +115,13 @@ The top-level result also has `version` (the algorithm identifier) and `hue` (th
 
 ## Assigning a collection
 
+| Method | Inputs | Effect of adding a label |
+| --- | --- | --- |
+| Hash | One label and fixed options | Existing labels keep their colors. Nearby colors can occur. |
+| Brand palette | One label and a fixed set of named palette entries | Existing labels keep their entry. Multiple labels can share an entry. |
+| Collection assignment | All labels shown together | Existing labels can move to improve separation. Reordering the same set preserves placements. |
+| Registry | New labels and saved placements from the same configuration | Pinned labels keep their placements. New labels use the remaining space. |
+
 Use a configured resolver when the labels appear together. Assignment sorts normalized labels by digest, checks spacing around the hue circle, and uses additional lightness rings when the first ring fills. Persist the returned assignments to extend the collection later.
 
 ```typescript
