@@ -122,10 +122,7 @@ func (r *Resolver) selectedColor(text, theme, role string, strict, hexOnly bool)
 		if hexOnly {
 			return Color{Hex: r.bases[index].Hex}, nil
 		}
-		if r.wide {
-			return rendition(canonicalRGB(r.profiles[index].background, true), true), nil
-		}
-		return r.bases[index], nil
+		return r.background(index), nil
 	}
 	colors := r.renderTones(r.digest(name), nil, name, false, &roleSelection{theme: index, role: role, hexOnly: hexOnly})
 	t := colors.Light

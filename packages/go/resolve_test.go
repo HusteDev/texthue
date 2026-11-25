@@ -23,6 +23,31 @@ func TestContrastRepairGridTie(t *testing.T) {
 	}
 }
 
+func TestCompiledP3BackgroundIsolation(t *testing.T) {
+	r, err := NewResolver(WithGamut("display-p3"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := r.Resolve("first")
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := first.Light.Background
+	wantP3, wantClipped := *base.P3, *base.SRGBClipped
+	base.P3.R = -1
+	*base.SRGBClipped = !wantClipped
+	next, err := r.Color("second", "light", "background")
+	if err != nil || *next.P3 != wantP3 || *next.SRGBClipped != wantClipped {
+		t.Fatalf("full result mutated compiled background: %+v, %v", next, err)
+	}
+	next.P3.G = -1
+	*next.SRGBClipped = !wantClipped
+	last, err := r.Resolve("third")
+	if err != nil || *last.Light.Background.P3 != wantP3 || *last.Light.Background.SRGBClipped != wantClipped {
+		t.Fatalf("selected color mutated compiled background: %+v, %v", last.Light.Background, err)
+	}
+}
+
 func TestDisplayP3CSSVariables(t *testing.T) {
 	colors, err := Resolve("badge", WithGamut("display-p3"))
 	if err != nil {

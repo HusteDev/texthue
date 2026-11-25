@@ -352,6 +352,16 @@ func NewResolver(options ...Option) (*Resolver, error) {
 	return r, nil
 }
 
+// background returns the compiled rendition with caller-owned optional fields.
+func (r *Resolver) background(index int) Color {
+	base := r.bases[index]
+	if base.P3 != nil {
+		p3, clipped := *base.P3, *base.SRGBClipped
+		base.P3, base.SRGBClipped = &p3, &clipped
+	}
+	return base
+}
+
 func (r *Resolver) Batch(texts []string) ([]ColorSet, error) {
 	result := make([]ColorSet, len(texts))
 	seen := make(map[string]ColorSet)
@@ -507,10 +517,7 @@ func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string
 		if i == 1 {
 			direction = 1
 		}
-		base := r.bases[i]
-		if r.wide {
-			base = display(theme.background)
-		}
+		base := r.background(i)
 		lb := r.baseLightness[i]
 		unconstrained := 1.0
 		if r.apca {
