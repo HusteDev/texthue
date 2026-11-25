@@ -90,7 +90,7 @@ func (r *Resolver) Assign(texts []string, pinned map[string]Assignment) (Collect
 	sort.Slice(names, func(i, j int) bool { return bytes.Compare(digests[names[i]], digests[names[j]]) < 0 })
 	size := len(names)
 	for name, p := range pinned {
-		if !utf8.ValidString(name) || math.IsNaN(p.HueFraction) || p.HueFraction < 0 || p.HueFraction >= 1 || p.Ring < 0 {
+		if !utf8.ValidString(name) || !p.valid() {
 			return Collection{}, invalid("pinned")
 		}
 		key := r.normalize.transform(name)

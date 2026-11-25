@@ -28,16 +28,9 @@ def assign_collection(texts, pinned, compiled):
     names = {key(text) for text in texts}
     entries = sorted((hashlib.sha256(prefix + name.encode()).digest(), name) for name in names)
     assignments = {}
-    for name, value in pinned.items():
+    for name, p in pinned.items():
         name = key(name)
-        p = value if isinstance(value, Assignment) else Assignment.from_dict(value)
-        if (
-            name in assignments
-            or not 0 <= p.hue_fraction < 1
-            or type(p.ring) is not int
-            or p.ring < 0
-            or type(p.moved) is not bool
-        ):
+        if name in assignments:
             raise _core.TextColorError("INVALID_OPTIONS", "Invalid pinned placement")
         assignments[name] = p
     for digest, name in entries:

@@ -176,6 +176,21 @@ class ConformanceTests(unittest.TestCase):
                 self.assertEqual(result["fitted"]["lightness"], expected / 4096)
                 self.assertTrue(result["metadata"]["meetsTarget"])
 
+    def test_assign_requires_replayable_pins(self):
+        from texthue import Resolver
+
+        resolver = Resolver()
+        pin = {"hueFraction": 0.5, "ring": 2**53 - 1, "moved": False}
+        resolver.assign(["a"], pinned={"a": pin})
+        for invalid in (
+            dict(pin, ring=2**53),
+            dict(pin, hueFraction=False),
+            {},
+            dict(pin, extra=1),
+        ):
+            with self.subTest(pin=invalid), self.assertRaises(TextColorError):
+                resolver.assign(["a"], pinned={"a": invalid})
+
     def test_precision_trace(self):
         from texthue import Resolver
 

@@ -220,7 +220,8 @@ class Resolver:
         }
 
     def assign(self, texts: Iterable[str], *, pinned=None):
-        return assign_collection(texts, pinned or {}, self._compiled)
+        placements = _registry_assignments({} if pinned is None else pinned)
+        return assign_collection(texts, placements, self._compiled)
 
     def batch(self, texts: Iterable[str]) -> list[ColorSet]:
         cache = {}

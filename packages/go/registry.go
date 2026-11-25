@@ -8,6 +8,10 @@ import (
 
 const registrySchema = "texthue-registry-v1"
 
+func (p Assignment) valid() bool {
+	return p.HueFraction >= 0 && p.HueFraction < 1 && p.Ring >= 0 && uint64(p.Ring) <= 1<<53-1
+}
+
 func (r *Resolver) registryFingerprint() (string, error) {
 	payload, err := r.configPayload()
 	if err != nil {
@@ -26,8 +30,7 @@ func (r *Resolver) ExportRegistry(assignments map[string]Assignment) ([]byte, er
 		assignments = map[string]Assignment{}
 	}
 	for name, p := range assignments {
-		if !utf8.ValidString(name) || math.IsNaN(p.HueFraction) || p.HueFraction < 0 ||
-			p.HueFraction >= 1 || p.Ring < 0 || uint64(p.Ring) > 1<<53-1 {
+		if !utf8.ValidString(name) || !p.valid() {
 			return nil, invalid("registry placement")
 		}
 	}
