@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:texthue/texthue.dart';
+import 'package:texthue/src/work_counts.dart' as work;
 
 void main() {
   for (final (scenario, target, light) in [
@@ -17,6 +18,35 @@ void main() {
             scenario == 'apca' ? ContrastModel.apca : ContrastModel.wcag2,
         contrastTarget: target,
         lightBackground: light);
+    if (work.enabled) {
+      const fitLimits = {
+        'default': 1600,
+        'aaa': 5732,
+        'maximum': 13325,
+        'gray': 3068,
+        'impossible': 12252,
+        'apca': 11133,
+        'p3': 1600,
+      };
+      work.fits = work.cusps = work.hashes = 0;
+      for (var i = 0; i < 100; i++) {
+        renderer.resolve('item:$i');
+      }
+      if (work.fits < 1600 ||
+          work.fits > fitLimits[scenario]! ||
+          work.cusps != 1600 ||
+          work.hashes != 100) {
+        throw StateError(
+            '$scenario used ${work.fits} fits, ${work.cusps} cusps, and ${work.hashes} hashes');
+      }
+      print(jsonEncode({
+        'scenario': scenario,
+        'fits': work.fits,
+        'cusps': work.cusps,
+        'hashes': work.hashes
+      }));
+      continue;
+    }
     final timer = Stopwatch();
     final samples = <double>[];
     for (var i = -20; i < 100; i++) {
@@ -42,6 +72,7 @@ void main() {
       'p95Us': samples[94],
     }));
   }
+  if (work.enabled) return;
   final labels = List.generate(40, (i) => 'item:$i');
   final renderer = Renderer();
   final samples = <double>[];

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'work_counts.dart' as work;
 
 void validateUtf16(String value) {
   for (var i = 0; i < value.length; i++) {
@@ -35,6 +36,7 @@ Uint8List identityDigest(String text, {String namespace = '', int seed = 0}) {
     ..add(header.buffer.asUint8List())
     ..add(scope)
     ..add(_strictUtf8(text));
+  if (work.enabled) work.hashes++;
   return Uint8List.fromList(sha256.convert(frame.takeBytes()).bytes);
 }
 

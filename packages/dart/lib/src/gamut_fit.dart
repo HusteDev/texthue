@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'contrast.dart';
+import 'work_counts.dart' as work;
 
 const rgbToXYZ = <List<double>>[
   [506752 / 1228815, 87881 / 245763, 12673 / 70218],
@@ -86,10 +87,13 @@ extension GamutFit on Gamut {
     return low;
   }
 
-  double cusp(double l, double h) =>
-      l == 0 || l == 1 ? 0 : _limit(l, 0.4, h, 20);
+  double cusp(double l, double h) {
+    if (work.enabled) work.cusps++;
+    return l == 0 || l == 1 ? 0 : _limit(l, 0.4, h, 20);
+  }
 
   FittedColor fit(double l, double c, double h) {
+    if (work.enabled) work.fits++;
     if (l == 0 || l == 1) {
       return (
         bytes: List<int>.filled(3, (l * 255).toInt()),

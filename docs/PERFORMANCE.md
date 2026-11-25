@@ -143,6 +143,8 @@ affect comparisons between rows. Android device timing requires a separate run.
 
 ### Dart renderer
 
+Run `dart run '-Dtexthue.countWork=true' tool/benchmark.dart` in `packages/dart` for the separate counting pass. Across 100 labels, the default, AAA, maximum, gray, and impossible scenarios used 1,600, 5,732, 13,325, 3,068, and 12,252 fits respectively. Each used 1,600 cusp evaluations and 100 identity hashes. CI checks these budgets and uploads the counts in `dart-work.txt`.
+
 From `packages/dart`, run `dart pub get --enforce-lockfile` and
 `dart tool/benchmark.dart`. On Windows x64 with Dart 3.12.2 in JIT mode,
 each row measures 100 individual two-theme resolutions after 20 warm-up

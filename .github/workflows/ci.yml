@@ -163,6 +163,7 @@ jobs:
         run: |
           mkdir -p benchmark-results
           (cd packages/dart && dart run tool/benchmark.dart) > benchmark-results/dart.txt
+          (cd packages/dart && dart run -Dtexthue.countWork=true tool/benchmark.dart) > benchmark-results/dart-work.txt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: benchmarks-dart-${{ runner.os }}-${{ runner.arch }}
