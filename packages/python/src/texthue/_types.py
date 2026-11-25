@@ -9,7 +9,7 @@ from typing import TypedDict
 
 from ._models import Color
 
-#: An ordered ``[minimum, maximum]`` pair of preferred bounds as a two-item list.
+#: An ordered pair of bounds supplied as a two-item list or tuple.
 #: Equal endpoints request a fixed value. Contrast enforcement may move lightness
 #: outside the range, and gamut fitting may reduce chroma below its minimum.
 Range = list[float] | tuple[float, float]
@@ -20,8 +20,10 @@ class ColorProfile(TypedDict, total=False):
 
     #: Both endpoints in ``0..1``.
     lightness: Range
-    #: Both endpoints in ``0..0.4``. ``[0, 0]`` requests grayscale.
+    #: Fraction of the available gamut chroma, with both endpoints in ``0..1``.
+    #: Equal zero endpoints request grayscale.
     chromaScale: Range
+    #: Absolute OKLCH chroma ceiling in ``0..0.4``.
     chromaCap: float
 
 
@@ -57,23 +59,24 @@ class TextColorOptions(TypedDict, total=False):
     ``None`` values and unknown keys are invalid at every level.
     """
 
-    #: Domain separator mixed into the hash. Default ``""``. Exact Unicode text; not a secret.
     overrides: dict[str, str | dict[str, str]]
     palette: list[dict[str, str]]
     foregrounds: list[str]
     foregroundPolicy: str
     preset: str
     hueRange: Range
-    excludeHues: list[Range]
+    excludeHues: list[Range] | tuple[Range, ...]
     normalize: dict[str, str]
     seed: int
+    #: Domain separator mixed into the hash. Defaults to the empty string.
     namespace: str
     #: Theme backgrounds used for text contrast.
     backgrounds: Backgrounds
-    #: WCAG contrast ratio required for both pairs in both themes; ``1..21`` inclusive. Default ``4.5``.
+    #: Targets for individual contrast relationships.
     contrastTargets: dict[str, float]
     gamut: str
     contrastModel: str
+    #: Global target. WCAG uses 1 through 21 (default 4.5), APCA uses 0 through 106 (default 60).
     contrastTarget: float
     #: Per-theme, per-role lightness and chroma preferences.
     profiles: Profiles
