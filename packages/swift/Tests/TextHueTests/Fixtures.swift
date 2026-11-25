@@ -10,4 +10,3 @@ func fixtureData(_ name: String) throws -> Data {
 func fixture<T: Decodable>(_ name: String, as type: T.Type) throws -> T {
     try JSONDecoder().decode(type, from: fixtureData(name))
 }
-

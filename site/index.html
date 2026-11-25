@@ -3,7 +3,10 @@
 <title>TextHue palette inspector</title>
 <style>
 :root{font:1rem/1.55 "Source Sans 3",system-ui,sans-serif;color:#172a32;background:#f7f6f2}main{max-width:66rem;margin:auto;padding:2rem 1rem}h1,h2{line-height:1.15}form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr));gap:1rem}label{display:grid;align-content:start;gap:.3rem}textarea,select,button{font:inherit;padding:.45rem}textarea{resize:vertical}td,th{padding:.55rem;text-align:left;border-bottom:1px solid #b7c0bd}table{border-collapse:collapse}section{overflow:auto}pre{white-space:pre-wrap}button{cursor:pointer}
+
+.hint{font-weight:normal;font-size:.9rem;background:#eaf0ed;color:#172a32;padding:.4rem .65rem;border-radius:.3rem;max-width:36rem;text-align:left}.help-button{border:1px solid currentColor;background:transparent;color:#245361;border-radius:50%;font:bold .8rem/1 system-ui;padding:.28rem .4rem}.help-button:focus-visible{outline:3px solid #176897;outline-offset:2px}
 </style><main><h1>TextHue palette inspector</h1>
+<p>Enter one label per line and select <strong>Inspect palette</strong>. Each row below shows three ways to color the same label. Try adding a label and compare the swatches. Use the question marks for definitions.</p>
 <form><label>Labels, one per line<textarea id="labels" rows="5">research
 design
 engineering</textarea></label><label>Resolver options or exported configuration (JSON)<textarea id="options" rows="5">{}</textarea></label>
