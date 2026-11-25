@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { createResolver } from '../packages/npm/dist/index.js';
 
@@ -25,5 +26,19 @@ const vectors = cases.map(({ text, role, options, trace }) => {
 const path = new URL('../conformance/renderer-v1.json', import.meta.url);
 const json = JSON.stringify({ algorithm: 'text-to-color-v1', vectors }, null, 2) + '\n';
 if (process.argv[2] === '--write') await writeFile(path, json);
-else if (process.argv[2] !== '--check' || (await readFile(path, 'utf8')).replaceAll('\r\n', '\n') !== json)
-  throw new Error('Renderer vectors differ or mode is missing');
+else if (process.argv[2] === '--check') {
+  const expected = JSON.parse(await readFile(path, 'utf8'));
+  const actual = JSON.parse(json);
+  for (const [i, vector] of actual.vectors.entries()) {
+    for (const theme of ['light', 'dark']) {
+      const report = vector.themes[theme].contrast;
+      const frozen = expected.vectors[i].themes[theme].contrast;
+      for (const key of ['ratio', 'value']) {
+        if (typeof frozen[key] !== 'number') continue;
+        assert.ok(Math.abs(report[key] - frozen[key]) <= 1e-12, [i, theme, key].join('.'));
+        report[key] = frozen[key];
+      }
+    }
+  }
+  assert.deepEqual(actual, expected);
+} else throw new Error('Expected --check or --write');

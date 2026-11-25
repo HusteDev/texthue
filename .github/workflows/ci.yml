@@ -256,11 +256,12 @@ jobs:
           swift test --package-path ../.. --force-resolved-versions
           python3 ../../tools/verify.py --port swift
           python3 ../../tools/check-swift-tag.py
-      - name: Verify using the runner's JDK 17 for Kotlin parity
-        shell: bash
-        run: |
-          jdk="JAVA_HOME_17_${RUNNER_ARCH}"
-          JAVA_HOME="${!jdk:?JDK 17 is required}" python tools/verify.py
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Verify with JDK 17
+        run: python tools/verify.py
       - name: Measure primary performance
         if: matrix.os == 'ubuntu-24.04' && matrix.node == '22'
         shell: bash
