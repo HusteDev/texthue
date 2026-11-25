@@ -9,6 +9,25 @@ data class DisplayP3(val r: Double, val g: Double, val b: Double)
 data class Color(val hex: String, val rgb: Rgb, val hsl: Hsl, val oklch: Oklch,
                  val p3: DisplayP3? = null, val css: String? = null, val srgbClipped: Boolean? = null)
 
+enum class CssFormat { HEX, RGB, HSL, OKLCH, DISPLAY_P3 }
+
+private fun cssNumber(value: Double): String =
+    java.math.BigDecimal.valueOf(value).stripTrailingZeros().toPlainString()
+
+private fun displayP3Css(channels: List<Double>) =
+    channels.joinToString(" ", "color(display-p3 ", ")", transform = ::cssNumber)
+
+/** Serialize a rendered color using CSS Color 4 notation. */
+fun Color.toCss(format: CssFormat = CssFormat.HEX): String = when (format) {
+    CssFormat.HEX -> hex
+    CssFormat.RGB -> "rgb(${rgb.r} ${rgb.g} ${rgb.b})"
+    CssFormat.HSL -> "hsl(${cssNumber(hsl.h)} ${cssNumber(hsl.s)}% ${cssNumber(hsl.l)}%)"
+    CssFormat.OKLCH -> "oklch(${cssNumber(oklch.l)} ${cssNumber(oklch.c)} ${cssNumber(oklch.h)})"
+    CssFormat.DISPLAY_P3 -> css ?: displayP3Css(
+        ColorMath.srgbToP3(intArrayOf(rgb.r, rgb.g, rgb.b)).map { round6(it / 255.0) }
+    )
+}
+
 internal fun round6(value: Double) = floor(value * 1e6 + 0.5) / 1e6
 
 internal fun renderedColor(bytes: IntArray, gamut: Gamut = Gamut.SRGB): Color {
@@ -46,9 +65,7 @@ fun compositeOver(source: String, alpha: Double, backdrop: String): Color {
 internal fun renderedP3(bytes: DoubleArray): Color {
     val (fallback, clipped) = ColorMath.p3Fallback(bytes)
     val channels = bytes.map { round6(it / 255.0) }
-    val css = channels.joinToString(" ", "color(display-p3 ", ")") {
-        java.math.BigDecimal.valueOf(it).stripTrailingZeros().toPlainString()
-    }
+    val css = displayP3Css(channels)
     return renderedColor(fallback).copy(oklch = ColorMath.oklch(bytes, Gamut.DISPLAY_P3),
         p3 = DisplayP3(channels[0], channels[1], channels[2]), css = css, srgbClipped = clipped)
 }

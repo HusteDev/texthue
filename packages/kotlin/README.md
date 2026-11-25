@@ -20,6 +20,8 @@ fun main() {
 
 Batch results follow input order. The resolver shares work for duplicate normalized labels within one batch. Exact-text hashing is the default. To treat canonically equivalent spellings as one identity, pass `normalization = Normalization(unicode = UnicodeForm.NFC)` when constructing the resolver.
 
+Import `com.hustedev.texthue.toCss` and `com.hustedev.texthue.CssFormat` to format a rendered color. For example, `resolver.color("apple").toCss(CssFormat.HSL)` returns an HSL string with percentage units. Use `CssFormat.DISPLAY_P3` to retain native wide-gamut channels or convert an sRGB color to Display P3.
+
 ## Consume the JVM package
 
 From the repository root, run `packages/kotlin/gradlew -p packages/kotlin publishLibraryPublicationToStagingRepository` with a JDK. This creates a Maven repository under `packages/kotlin/build/repository` with the library JAR, source JAR, POM and Gradle module metadata.
