@@ -35,7 +35,7 @@ void main(List<String> args) {
   Map<String, Placement> placements(Map values) => {
         for (final e in values.entries)
           e.key: (
-            hueFraction: e.value['hueFraction'],
+            hueFraction: (e.value['hueFraction'] as num).toDouble(),
             ring: e.value['ring'],
             moved: e.value['moved']
           )
