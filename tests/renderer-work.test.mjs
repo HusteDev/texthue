@@ -3,6 +3,25 @@ import test from 'node:test';
 import {createResolver} from '../packages/npm/dist/index.js';
 import {contrastWork,rendererWork} from '../tools/renderer-work.mjs';
 
+test('individual tones stay within the conversion and contrast-repair budgets', async () => {
+  for (const [label,target,adjusted] of [['item:0',4.5,false],['item:8',7,true],['item:13',7,true]]) {
+    const resolver = createResolver({contrastTarget:target});
+    const full = resolver.resolve(label).dark;
+    assert.equal(full.contrast.fill.lightnessAdjusted,adjusted);
+    assert.equal(full.contrast.fill.meetsTarget,true);
+    const counts = await rendererWork(() => {
+      assert.equal(resolver.hex(label,{theme:'dark',role:'fill'}),full.fill.hex);
+    },['oklchToLinear']);
+    assert.equal(counts.cusps,1);
+    if (adjusted) {
+      assert.ok(counts.fits > 1 && counts.fits <= 26, `${counts.fits} fits for a repaired tone`);
+    } else {
+      assert.equal(counts.fits,1);
+      assert.equal(counts.oklchToLinear,21);
+    }
+  }
+});
+
 test('P3 projections run only the requested format conversions', async () => {
   const resolver = createResolver({gamut:'display-p3'});
   const counts = await rendererWork(() => {
