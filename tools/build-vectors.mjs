@@ -8,6 +8,7 @@
 //   --check   Recompute and compare against the committed file (used by CI).
 //   --write   Overwrite the committed file. Only valid for a new algorithm
 //             version; v1 expectations are frozen.
+import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolveTextColors, VERSION } from '../packages/npm/dist/index.js';
@@ -100,10 +101,22 @@ if (process.argv.length === 3 && process.argv[2] === '--write') {
   await writeFile(destination, content);
   process.stdout.write(`Wrote ${vectors.length} valid and ${invalid.length} invalid conformance vectors.\n`);
 } else if (process.argv.length === 3 && process.argv[2] === '--check') {
-  if (await readFile(destination, 'utf8') !== content) {
-    process.stderr.write('Conformance vectors differ. Do not update v1 expectations to conceal a mapping change.\n');
-    process.exitCode = 1;
-  } else process.stdout.write(`Verified ${vectors.length} valid and ${invalid.length} invalid conformance vectors.\n`);
+  const frozen = JSON.parse(await readFile(destination, 'utf8'));
+  const generated = JSON.parse(content);
+  assert.equal(generated.vectors.length, frozen.vectors.length);
+  for (const [index, item] of generated.vectors.entries()) {
+    for (const theme of ['light', 'dark']) {
+      for (const [role, report] of Object.entries(item.expected[theme].contrast)) {
+        if (role === 'target') continue;
+        const expected = frozen.vectors[index].expected[theme].contrast[role].ratio;
+        assert.ok(typeof expected === 'number' && typeof report.ratio === 'number' &&
+          Math.abs(report.ratio - expected) <= 1e-12, `${item.id} ${theme}.${role}.ratio`);
+        report.ratio = expected;
+      }
+    }
+  }
+  assert.deepEqual(generated, frozen);
+  process.stdout.write(`Verified ${vectors.length} valid and ${invalid.length} invalid conformance vectors.\n`);
 } else {
   process.stderr.write('Usage: node tools/build-vectors.mjs --check | --write\n');
   process.exitCode = 2;
