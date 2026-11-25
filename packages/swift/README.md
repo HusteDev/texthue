@@ -4,6 +4,8 @@ Resolve a label into ten sRGB roles for each of two themes. Each role includes h
 
 Pass `strict: true` to `renderer.hex` to throw `RenderError.unmetConstraint` when the selected role misses a contrast target. Selecting text checks it against both the background and the subtle surface.
 
+Use `color.toCSS(.hsl)` for HSL with percentages or `color.toCSS(.displayP3)` for a Display P3 rendition. Calling `color.toCSS()` returns the sRGB hex value.
+
 ## Use from a local Swift package
 
 The repository root exports the `TextHue` SwiftPM library. A sibling checkout

@@ -2,6 +2,17 @@ import XCTest
 @testable import TextHue
 
 final class ColorTests: XCTestCase {
+    func testCSSFormats() {
+        let rgb = RGB(r: 255, g: 0, b: 0)
+        let red = Color(rgb: rgb)
+        XCTAssertEqual(red.toCSS(), "#ff0000")
+        XCTAssertEqual(red.toCSS(.rgb), "rgb(255 0 0)")
+        XCTAssertEqual(red.toCSS(.hsl), "hsl(0 100% 50%)")
+        XCTAssertEqual(red.toCSS(.oklch), "oklch(0.627955 0.257683 29.23388)")
+        XCTAssertEqual(red.toCSS(.displayP3), "color(display-p3 0.917488 0.200287 0.138561)")
+        XCTAssertEqual(Color(bytes: rgb, gamut: .displayP3).toCSS(.displayP3), "color(display-p3 1 0 0)")
+    }
+
     func testFrozenRoleFormats() throws {
         struct Theme: Decodable {
             let background, subtle, muted, fill, onFill, fillHover, fillActive, border, text, strong: Color

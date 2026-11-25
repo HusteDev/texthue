@@ -31,6 +31,8 @@ func multiply(_ matrix: [[Double]], _ v: [Double]) -> [Double] {
 
 public struct DisplayP3: Codable, Equatable { public let r, g, b: Double }
 
+public enum CSSFormat { case hex, rgb, hsl, oklch, displayP3 }
+
 public struct Color: Codable, Equatable {
     public let hex: String
     public let rgb: RGB
@@ -54,6 +56,28 @@ public struct Color: Codable, Equatable {
         [1.9779985324311684, -2.42859224204858, 0.450593709617411],
         [0.0259040424655478, 0.7827717124575296, -0.8086757549230774],
     ]
+
+    private static func cssNumber(_ value: Double) -> String {
+        var text = String(format: "%.6f", locale: Locale(identifier: "en_US_POSIX"), value)
+        while text.last == "0" { text.removeLast() }
+        if text.last == "." { text.removeLast() }
+        return text == "-0" ? "0" : text
+    }
+
+    private static func displayP3CSS(_ channels: [Double]) -> String {
+        "color(display-p3 " + channels.map(cssNumber).joined(separator: " ") + ")"
+    }
+
+    public func toCSS(_ format: CSSFormat = .hex) -> String {
+        switch format {
+        case .hex: return hex
+        case .rgb: return "rgb(\(rgb.r) \(rgb.g) \(rgb.b))"
+        case .hsl: return "hsl(\(Self.cssNumber(hsl.h)) \(Self.cssNumber(hsl.s))% \(Self.cssNumber(hsl.l))%)"
+        case .oklch: return "oklch(\(Self.cssNumber(oklch.l)) \(Self.cssNumber(oklch.c)) \(Self.cssNumber(oklch.h)))"
+        case .displayP3:
+            return css ?? Self.displayP3CSS(Gamut.displayP3.canonicalChannels(sRGB: [rgb.r, rgb.g, rgb.b]).map { $0 / 255 })
+        }
+    }
 
     static func hexString(_ bytes: [UInt8]) -> String {
         "#" + bytes.map { String(format: "%02x", $0) }.joined()
@@ -82,14 +106,7 @@ public struct Color: Codable, Equatable {
             srgbClipped = fallback.clipped
             let channels = nativeValues.map(round6)
             p3 = DisplayP3(r: channels[0], g: channels[1], b: channels[2])
-            let decimals = channels.map { channel in
-                let units = Int((channel * 1_000_000).rounded())
-                if units == 0 || units == 1_000_000 { return String(units / 1_000_000) }
-                var digits = String(units + 1_000_000).dropFirst()
-                while digits.last == "0" { digits = digits.dropLast() }
-                return "0." + digits
-            }
-            css = "color(display-p3 " + decimals.joined(separator: " ") + ")"
+            css = Self.displayP3CSS(channels)
         } else {
             rgb = RGB(r: UInt8(encoded[0]), g: UInt8(encoded[1]), b: UInt8(encoded[2]))
             srgbClipped = nil
