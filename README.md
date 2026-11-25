@@ -2,7 +2,7 @@
 
 TextHue turns a text label into repeatable colors for light and dark themes. Use it for issue labels, avatars, or chart categories. An individual label keeps its colors across calls. When several labels appear together, collection assignment can move their colors farther apart.
 
-[Try the live palette inspector](https://hustedev.github.io/texthue/site/) · [Choose an assignment method](docs/GUIDE.md) · [Run the inspector locally](docs/GUIDE.md#preview-a-collection-in-the-palette-inspector)
+[Try the live palette inspector](https://hustedev.github.io/texthue/site/?preview=2) · [Choose an assignment method](docs/GUIDE.md) · [Run the inspector locally](docs/GUIDE.md#preview-a-collection-in-the-palette-inspector)
 
 The swatches below show how the same labels render across themes and how collection assignment changes nearby colors.
 
