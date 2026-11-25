@@ -12,6 +12,56 @@ function append(parent, tag, value) {
   parent.append(element);
   return element;
 }
+function addHelp(parent, term, definition) {
+  const button = append(parent, 'button', '?');
+  button.type = 'button';
+  button.className = 'help-button';
+  button.setAttribute('aria-label', 'Help for ' + term);
+  const hint = append(parent, 'span', definition);
+  hint.className = 'hint';
+  hint.id = 'hint-' + (++helpCount);
+  button.setAttribute('aria-controls', hint.id);
+  let pinned = false;
+  function show(open) {
+    hint.hidden = !open;
+    button.setAttribute('aria-expanded', String(open));
+  }
+  show(false);
+  button.onpointerenter = e => { if (e.pointerType === 'mouse') show(true); };
+  parent.onpointerleave = () => { if (!pinned && document.activeElement !== button) show(false); };
+  button.onfocus = () => show(true);
+  button.onblur = () => { pinned = false; show(false); };
+  button.onclick = () => { pinned = !pinned; show(pinned); };
+  button.onkeydown = e => {
+    if (e.key === 'Escape') { pinned = false; show(false); }
+  };
+}
+let helpCount = 0;
+const fieldHelp = {
+  labels: 'Each distinct label gets a row. Add a name, then select Inspect palette to see its colors.',
+  options: 'JSON settings control how colors are generated. Leave {} for the defaults, or paste a downloaded configuration and select Inspect palette.',
+  'config-file': 'Opening a configuration fills the options box and recalculates the table immediately.',
+  preset: 'Choose a starting configuration for your use case. Apply preset updates the options box and recalculates the swatches.',
+  'brand-id': 'Give this brand color a reusable name. Use the same ID to update or remove the entry.',
+  'brand-light': 'The fill for this brand entry on the light theme. Select Add or update color to apply it.',
+  'brand-dark': 'The fill for this brand entry on the dark theme. Select Add or update color to apply it.',
+  theme: 'Select Inspect palette to view the fills and background contrast for the light or dark theme.',
+  vision: 'Preview typical vision or simulate deutan (green), protan (red), or tritan (blue) color vision differences. Inspect the swatches and closest pairs.',
+  'optimize-vision': 'Score new placements for separation in both typical vision and the selected simulation. Existing saved placements keep their assignments.',
+  markers: 'Add a shape beside each label so color is only one way to recognize it.',
+  'minimum-distance': 'OKLab distance measures how different two colors look. Larger values mean more separation. Raise this threshold and inspect Pairs below minimum distance to find similar colors.',
+  registry: 'A registry remembers label placements across edits. Paste a downloaded registry and inspect the Registry column when you add another label.',
+  'registry-file': 'Opening a saved registry fills the registry box and recalculates the palette immediately.'
+};
+for (const [id, definition] of Object.entries(fieldHelp)) {
+  const input = document.getElementById(id);
+  const label = input.closest('label');
+  const title = label.textContent.replace(input.textContent, '').trim() || label.textContent.trim();
+  const group = document.createElement('div');
+  label.before(group);
+  group.append(label);
+  addHelp(group, title, definition);
+}
 function details(parent, title, data) {
   const group = append(parent, 'details');
   append(group, 'summary', title);
@@ -39,7 +89,7 @@ function run() {
     const input = {baseline, labels:field('labels').split(/\r?\n/).filter(Boolean), options:JSON.parse(field('options')),
       theme:field('theme'), vision:field('vision'), optimizeVision:document.getElementById('optimize-vision').checked,
       minimumDistance:document.getElementById('minimum-distance').valueAsNumber, markers:document.getElementById('markers').checked, registry:field('registry') && JSON.parse(field('registry'))};
-    const active = new Worker('./worker.mjs', {type:'module'});
+    const active = new Worker(new URL('./worker.mjs', import.meta.url), {type:'module'});
     worker = active;
     status.textContent = 'Computing palette…';
     active.onerror = event => { if (worker === active) status.textContent = event.message; };
@@ -65,8 +115,18 @@ function run() {
         }
       };
       const table = append(results, 'table');
+      append(table, 'caption', 'Palette comparison');
       const head = append(table, 'tr');
-      for (const title of ['Label','Hash','Assigned','Registry','Registry fill / background (sRGB)']) append(head,'th',title);
+      for (const title of ['Label','Hash','Assigned','Registry','Registry fill / background (sRGB)']) {
+        const cell = append(head,'th',title);
+        const meaning = {
+          Hash:'Color calculated from the label alone. Adding another label preserves this value.',
+          Assigned:'Color chosen with the other labels in this set to improve separation.',
+          Registry:'Color from the persistent placement. Download the registry to reuse this assignment later.',
+          'Registry fill / background (sRGB)':'Contrast ratio between the registry fill and the theme background in sRGB. Higher values indicate more luminance contrast.'
+        }[title];
+        if (meaning) addHelp(cell,title,meaning);
+      }
       if (config.options.gamut === 'display-p3') append(head,'th','Registry fill / background (Display-P3)');
       for (const row of rows) {
         const line = append(table, 'tr');
