@@ -104,6 +104,13 @@ public sealed class Color
         return XyzToOklab(x, y, z);
     }
 
+    internal static double EmittedHue(Rgb bytes, Gamut gamut)
+    {
+        if (gamut != Gamut.DisplayP3) return Coordinates(ToOklab(bytes), false).H;
+        var xyz = GamutFit.P3ToXyz(new(bytes.R / 255.0, bytes.G / 255.0, bytes.B / 255.0));
+        return Coordinates(XyzToOklab(xyz.X, xyz.Y, xyz.Z), false).H;
+    }
+
     private static (double L, double A, double B) XyzToOklab(double x, double y, double z)
     {
         double l = Math.Cbrt(0.819022437996703 * x + 0.3619062600528904 * y - 0.1288737815209879 * z);

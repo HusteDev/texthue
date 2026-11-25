@@ -518,7 +518,7 @@ func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string
 			if backdrop == &theme.background && !r.apca {
 				baseY = &r.baseY[i]
 			}
-			chosen, meta := chooseForeground(l, math.Min(c, cap), hue, backdrop, required, r.selectForeground, r.apca, surface, r.wide, baseY, second...)
+			chosen, meta := chooseForeground(l, math.Min(c, cap), hue, backdrop, required, r.selectForeground, r.apca, surface, r.wide, baseY, r.domain.exclusions, second...)
 			meta.ChromaCapped = c > cap
 			if trace {
 				requested = math.Max(0, math.Min(1, requested))

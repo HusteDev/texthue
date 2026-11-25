@@ -2,6 +2,22 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createResolver, resolveTextColors } from '../packages/npm/dist/index.js';
 
+test('generated chromatic roles respect hue exclusions after RGB quantization', () => {
+  const resolver = createResolver({excludeHues:[[30,60]]});
+  for (const label of ['audit:59','audit:478','audit:756']) {
+    const palette = resolver.resolve(label);
+    for (const theme of ['light','dark']) {
+      for (const role of ['subtle','muted','fill','fillHover','fillActive','border','text','strong']) {
+        const color = palette[theme][role];
+        const {r,g,b} = color.rgb;
+        if (r === g && g === b) continue;
+        assert.ok(color.oklch.h < 30 || color.oklch.h >= 60,
+          `${label} ${theme}.${role} emitted ${color.hex} at ${color.oklch.h} degrees`);
+      }
+    }
+  }
+});
+
 test('compiled settings and returned colors have independent lifetimes', () => {
   const options = { backgrounds: { light: '#abcdef' } };
   const resolver = createResolver(options);

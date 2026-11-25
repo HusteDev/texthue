@@ -6,6 +6,7 @@ internal sealed class HueDomain
 {
     private readonly List<HueArc> segments;
     private readonly double width;
+    private readonly HueArc[] exclusions;
 
     private static IEnumerable<HueArc> Split(HueArc arc)
     {
@@ -23,9 +24,9 @@ internal sealed class HueDomain
     {
         if (excluded.Count > 16) throw new ArgumentException("At most 16 hue exclusions are supported.", nameof(excluded));
         segments = Split(allowed).Where(s => s.Start < s.End).ToList();
-        foreach (var cut in excluded.SelectMany(Split))
+        exclusions = excluded.SelectMany(Split).Where(cut => cut.Start < cut.End).ToArray();
+        foreach (var cut in exclusions)
         {
-            if (cut.Start == cut.End) continue;
             var next = new List<HueArc>();
             foreach (var (lo, hi) in segments)
             {
@@ -37,6 +38,13 @@ internal sealed class HueDomain
         }
         width = segments.Sum(s => s.End - s.Start);
         if (width <= 0) throw new ArgumentException("No permitted hue remains.");
+    }
+
+    internal bool Excludes(Rgb bytes, Gamut gamut)
+    {
+        if (exclusions.Length == 0 || (bytes.R == bytes.G && bytes.G == bytes.B)) return false;
+        double hue = Color.EmittedHue(bytes, gamut);
+        return Array.Exists(exclusions, arc => arc.Start <= hue && hue < arc.End);
     }
 
     internal double Map(double hue)

@@ -590,6 +590,18 @@ impl Renderer {
                 if target == 0.0 { secondary } else { target },
                 |rgb| {
                     let rgb = rgb.map(|v| f64::from(v) / 255.0);
+                    if !self.exclude_hues.is_empty() && (rgb[0] != rgb[1] || rgb[1] != rgb[2]) {
+                        let hue = self.display(rgb).oklch.h;
+                        if self.exclude_hues.iter().any(|&(start, end)| {
+                            if start > end {
+                                hue >= start || hue < end
+                            } else {
+                                hue >= start && hue < end
+                            }
+                        }) {
+                            return f64::NEG_INFINITY;
+                        }
+                    }
                     let primary = match against {
                         Candidates => score(foreground(rgb, target), rgb),
                         Text(text) => score(text, rgb),

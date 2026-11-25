@@ -286,6 +286,8 @@ if the recheck fails:
     stop at the endpoint or after 64 steps and report an invariant failure if none passes
 ```
 
+When `excludeHues` is configured, check each generated chromatic candidate after quantization in the selected gamut. Reject the candidate if its reported OKLCH hue falls within an excluded arc, including the start and excluding the end. An arc crossing zero covers both sides of the wrap. Equal RGB channels represent a neutral and have no hue constraint. Supplied backgrounds, approved fills and foreground candidates retain their supplied colors.
+
 Recompute the black/white foreground for every fill candidate. Chroma fitting runs at the new lightness; do not reuse an earlier reduced chroma. No further chroma or hue search is performed.
 
 The full sampled initial lightness is checked before searching the 1/4096 grid. This rule defines a deterministic nearby adjustment; it does not claim a continuous mathematical optimum. Compare distances and contrast at computational precision without epsilon or display rounding. An exact threshold passes.

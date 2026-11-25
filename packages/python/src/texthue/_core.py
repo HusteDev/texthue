@@ -241,6 +241,7 @@ def _choose(
     surface=False,
     wide=False,
     background_y=None,
+    exclusions=(),
 ):
     """Fit the sampled tone, then repair failing contrast on the 1/4096 lightness grid.
 
@@ -260,6 +261,10 @@ def _choose(
     )
 
     def measure(rgb):
+        if exclusions and not rgb[0] == rgb[1] == rgb[2]:
+            emitted = _oklch(rgb, _P3_TO_XYZ if wide else _RGB_TO_XYZ)["h"]
+            if any(lo <= emitted < hi for lo, hi in exclusions):
+                return -math.inf
         if background_y is not None:
             y = _luminance(rgb, weights)
             ratio = _contrast_ratio(y, background_y)
@@ -447,8 +452,11 @@ def _hue_domain(allowed, excluded):
     if not isinstance(excluded, list) or len(excluded) > 16:
         raise TextColorError("INVALID_OPTIONS", "invalid excluded hues")
     segments = split(allowed)
+    exclusions = []
     for interval in excluded:
         for a, b in split(interval):
+            if a < b:
+                exclusions.append((a, b))
             segments = [
                 part
                 for lo, hi in segments
@@ -469,7 +477,7 @@ def _hue_domain(allowed, excluded):
             distance -= hi - lo
         return segments[0][0]
 
-    return remap
+    return remap, exclusions
 
 
 def _options(options):
@@ -644,7 +652,9 @@ def _options(options):
             return "palette", palette[ident][1]
         return None, None
 
-    domain = _hue_domain(source.get("hueRange", [0, 360]), source.get("excludeHues", []))
+    domain, exclusions = _hue_domain(
+        source.get("hueRange", [0, 360]), source.get("excludeHues", [])
+    )
 
     def hex_color(rgb):
         return "#" + bytes(rgb).hex()
@@ -693,6 +703,7 @@ def _options(options):
         "foreground_formats": foreground_formats,
         "namespace": normalize(namespace),
         "hueDomain": domain,
+        "excludedArcs": exclusions,
         "normalize": normalize,
         "seed": int(seed),
         "targets": targets,
@@ -840,6 +851,7 @@ def render(
                 surface,
                 settings["wide"],
                 background_y if backdrop is theme_background and not settings["apca"] else None,
+                settings["excludedArcs"],
             )
             if trace:
                 raw = lightness if requested is None else max(0, min(1, requested))

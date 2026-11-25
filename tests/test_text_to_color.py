@@ -129,6 +129,8 @@ def generated_cases():
                 "options": {"hueRange": [270, 120], "excludeHues": [[355, 20], [75, 90]]},
             }
         )
+    for label in ("audit:59", "audit:478", "audit:756"):
+        cases.append({"text": label, "options": {"excludeHues": [[30, 60]]}})
     for lc in (0, 45, 60, 75, 90, 106):
         for extra in (
             {},

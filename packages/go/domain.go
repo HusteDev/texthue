@@ -3,8 +3,9 @@ package texthue
 import "math"
 
 type hueDomain struct {
-	arcs  []Range
-	width float64
+	arcs       []Range
+	width      float64
+	exclusions []Range
 }
 
 func compileHueDomain(allowed *Range, excluded []Range) (hueDomain, error) {
@@ -30,12 +31,16 @@ func compileHueDomain(allowed *Range, excluded []Range) (hueDomain, error) {
 	if len(excluded) > 16 {
 		return hueDomain{}, invalid("excludeHues")
 	}
+	var exclusions []Range
 	for _, interval := range excluded {
 		cuts, err := split(interval)
 		if err != nil {
 			return hueDomain{}, err
 		}
 		for _, cut := range cuts {
+			if cut[0] < cut[1] {
+				exclusions = append(exclusions, cut)
+			}
 			next := []Range{}
 			for _, arc := range arcs {
 				for _, piece := range []Range{{arc[0], math.Min(arc[1], cut[0])}, {math.Max(arc[0], cut[1]), arc[1]}} {
@@ -54,7 +59,7 @@ func compileHueDomain(allowed *Range, excluded []Range) (hueDomain, error) {
 	if width == 0 {
 		return hueDomain{}, invalid("empty hue domain")
 	}
-	return hueDomain{arcs, width}, nil
+	return hueDomain{arcs, width, exclusions}, nil
 }
 
 func (d hueDomain) mapHue(h float64) float64 {

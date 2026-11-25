@@ -1,6 +1,7 @@
 struct HueDomain {
     private let segments: [(Double, Double)]
     private let width: Double
+    private let exclusions: [[Double]]
 
     init(allowed: [Double], excluded: [[Double]]) throws {
         func split(_ arc: [Double]) throws -> [(Double, Double)] {
@@ -23,8 +24,17 @@ struct HueDomain {
             }
         }
         segments = remaining
+        exclusions = excluded
         width = remaining.reduce(0) { $0 + $1.1 - $1.0 }
         guard width > 0 else { throw RenderError.invalidOptions }
+    }
+
+    func excludes(_ bytes: [Double], gamut: Gamut) -> Bool {
+        guard !exclusions.isEmpty, bytes[0] != bytes[1] || bytes[1] != bytes[2] else { return false }
+        let hue = Color(encoded: bytes, gamut: gamut).oklch.h
+        return exclusions.contains { arc in
+            arc[0] > arc[1] ? hue >= arc[0] || hue < arc[1] : hue >= arc[0] && hue < arc[1]
+        }
     }
 
     func map(_ hue: Double) -> Double {

@@ -184,6 +184,7 @@ export interface ResolvedOptions {
   selectForeground: (rgb:Triple, target:number)=>Triple;
   formatForeground: (rgb:Triple)=>Color;
   hueDomain: (hue:number)=>number;
+  excludesHue: ((hue:number)=>boolean) | undefined;
   normalize: (text:string)=>string;
   targets: Record<ContrastRole,number>;
   namespace: string;

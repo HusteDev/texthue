@@ -399,6 +399,11 @@ final class Renderer {
       final secondary = subtle == null ? 0.0 : target('textOnSubtle');
       final repaired = gamut
           .repair(l, c, hue, threshold == 0 ? secondary : threshold, (bytes) {
+        if (_hues.hasExclusions &&
+            (bytes[0] != bytes[1] || bytes[1] != bytes[2]) &&
+            _hues.excludes(_display(bytes).oklch.h)) {
+          return double.negativeInfinity;
+        }
         final primary = background == null
             ? score(foreground(bytes, threshold), bytes)
             : surface

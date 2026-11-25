@@ -9,11 +9,13 @@ data class HueArc(val start: Double, val end: Double) {
 internal class HueDomain(allowed: HueArc, excluded: List<HueArc>) {
     private val segments: List<HueArc>
     private val width: Double
+    private val exclusions: List<HueArc>
 
     init {
         require(excluded.size <= 16)
         var remaining = allowed.split().filter { it.start < it.end }
-        for (cut in excluded.flatMap { it.split() }) {
+        exclusions = excluded.flatMap { it.split() }.filter { it.start < it.end }
+        for (cut in exclusions) {
             remaining = buildList {
                 for (arc in remaining) {
                     val leftEnd = minOf(arc.end, cut.start)
@@ -26,6 +28,12 @@ internal class HueDomain(allowed: HueArc, excluded: List<HueArc>) {
         segments = remaining
         width = segments.fold(0.0) { sum, arc -> sum + arc.end - arc.start }
         require(width > 0.0) { "Empty hue domain" }
+    }
+
+    fun excludes(rgb: DoubleArray, gamut: Gamut): Boolean {
+        if (exclusions.isEmpty() || (rgb[0] == rgb[1] && rgb[1] == rgb[2])) return false
+        val hue = ColorMath.oklch(rgb, gamut).h
+        return exclusions.any { hue >= it.start && hue < it.end }
     }
 
     fun map(hue: Double): Double {

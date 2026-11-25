@@ -235,7 +235,7 @@ func wcagLuminance(rgb encodedRGB, wide bool) float64 {
 	return luminance(rgb)
 }
 
-func chooseForeground(l, c, h float64, background *encodedRGB, target float64, selectColor func(encodedRGB, float64) encodedRGB, apca, surface, wide bool, baseY *float64, second ...surfaceConstraint) (fitted, ContrastResult) {
+func chooseForeground(l, c, h float64, background *encodedRGB, target float64, selectColor func(encodedRGB, float64) encodedRGB, apca, surface, wide bool, baseY *float64, exclusions []Range, second ...surfaceConstraint) (fitted, ContrastResult) {
 	m := xyzToRGB
 	if wide {
 		m = xyzToP3
@@ -288,6 +288,24 @@ func chooseForeground(l, c, h float64, background *encodedRGB, target float64, s
 				return primary
 			}
 			return math.Min(primary, luminanceRatio(y, secondY)*(target/second[0].target))
+		}
+	}
+	if len(exclusions) > 0 {
+		contrastScore := measure
+		toXYZ := rgbToXYZ
+		if wide {
+			toXYZ = p3ToXYZ
+		}
+		measure = func(rgb encodedRGB) float64 {
+			if rgb[0] != rgb[1] || rgb[1] != rgb[2] {
+				hue := encodedOKLCH(rgb, toXYZ).H
+				for _, arc := range exclusions {
+					if arc[0] <= hue && hue < arc[1] {
+						return math.Inf(-1)
+					}
+				}
+			}
+			return contrastScore(rgb)
 		}
 	}
 	chosen := fitIn(l, c, h, m)

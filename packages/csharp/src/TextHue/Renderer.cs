@@ -327,6 +327,7 @@ public sealed partial class Renderer
             double secondary = second.HasValue ? Target("textOnSubtle") : 0;
             var repair = gamut.Repair(l, c, hue, target == 0 ? secondary : target, bytes =>
             {
+                if (hueDomain.Excludes(bytes, gamut)) return double.NegativeInfinity;
                 var rgb = EncodedRgb.FromBytes(bytes);
                 double primary = back is EncodedRgb bg ? (surface ? Score(bg, rgb) : Score(rgb, bg)) : Score(Foreground(rgb, target), rgb);
                 if (second is not EncodedRgb other || secondary == 0) return primary;

@@ -5,7 +5,8 @@ typedef HueArc = (double, double);
 final class HueDomain {
   final List<HueArc> _segments;
   final double _width;
-  HueDomain._(this._segments, this._width);
+  final List<HueArc> _exclusions;
+  HueDomain._(this._segments, this._width, this._exclusions);
 
   factory HueDomain(HueArc allowed, List<HueArc> excluded) {
     List<HueArc> split(HueArc arc) {
@@ -33,8 +34,14 @@ final class HueDomain {
     }
     final width = remaining.fold(0.0, (sum, arc) => sum + (arc.$2 - arc.$1));
     if (width <= 0) throw ArgumentError('No permitted hue remains');
-    return HueDomain._(remaining, width);
+    return HueDomain._(remaining, width, List.unmodifiable(excluded));
   }
+
+  bool get hasExclusions => _exclusions.isNotEmpty;
+
+  bool excludes(double hue) => _exclusions.any((arc) => arc.$1 > arc.$2
+      ? hue >= arc.$1 || hue < arc.$2
+      : hue >= arc.$1 && hue < arc.$2);
 
   double map(double hue) {
     if (_width == 360) return hue;

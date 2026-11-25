@@ -257,6 +257,7 @@ class Resolver(
             val threshold = if (target == 0.0 && second != null) secondTarget else target
             val repaired = repairTone(lightness, chroma, hue, gamut, threshold) { fitted ->
                 val rgb = fitted.encoded()
+                if (hueDomain.excludes(rgb, gamut)) return@repairTone Double.NEGATIVE_INFINITY
                 val primary = if (backdrop == null || surface) contrast(backdrop ?: foreground(rgb, target), rgb)
                     else contrast(rgb, backdrop)
                 when {

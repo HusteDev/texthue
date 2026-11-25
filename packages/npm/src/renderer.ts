@@ -155,16 +155,18 @@ function compileHueDomain(allowed:unknown, excluded:unknown) {
     return a <= b ? [[a,b]] : [[0,b],[a,360]];
   };
   if (!Array.isArray(excluded) || excluded.length > 16) fail('INVALID_OPTIONS','Invalid excluded hues');
+  const exclusions = excluded.flatMap(split).filter(([lo,hi]) => lo < hi);
+  const excludesHue = exclusions.length ? (h:number) => exclusions.some(([lo,hi]) => lo <= h && h < hi) : undefined;
   let segments = split(allowed);
-  for (const arc of excluded) for (const [a,b] of split(arc)) {
+  for (const [a,b] of exclusions) {
     segments = segments.flatMap(([lo,hi]):Range[] => [[lo,Math.min(hi,a)],[Math.max(lo,b),hi]])
       .filter(([lo,hi])=>lo<hi);
   }
   segments = segments.filter(([lo,hi])=>lo<hi);
   const width = segments.reduce((sum,[lo,hi])=>sum+hi-lo,0);
   if (!width) fail('INVALID_OPTIONS','Empty hue domain');
-  if (width === 360) return (h:number)=>h;
-  return (h:number) => {
+  const hueDomain = (h:number) => {
+    if (width === 360) return h;
     let distance = h / 360 * width;
     for (const [lo,hi] of segments) {
       if (distance < hi-lo) return lo+distance;
@@ -172,6 +174,7 @@ function compileHueDomain(allowed:unknown, excluded:unknown) {
     }
     return segments[0]?.[0] ?? 0;
   };
+  return {hueDomain,excludesHue};
 }
 
 function optionsValue(options: unknown): ResolvedOptions {
@@ -216,7 +219,7 @@ function optionsValue(options: unknown): ResolvedOptions {
   const scale = preset === 'mono' ? [0,0] : preset === 'subdued' ? [0.2,0.4] : preset === 'chart' ? [0.8,1] : [0.6,0.8];
   const seed = own(source, 'seed', 0);
   if (!finite(seed) || !Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) fail('INVALID_OPTIONS', 'seed must be uint32');
-  const hueDomain = compileHueDomain(own(source,'hueRange',[0,360]),own(source,'excludeHues',[]));
+  const {hueDomain,excludesHue} = compileHueDomain(own(source,'hueRange',[0,360]),own(source,'excludeHues',[]));
   const rules = record(own(source,'normalize',{}), ['unicode','case','whitespace'], 'normalize');
   const form = own(rules,'unicode','none'), casing = own(rules,'case','none'), space = own(rules,'whitespace','none');
   if (form !== 'none' && form !== 'NFC' && form !== 'NFKC') fail('INVALID_OPTIONS','invalid normalize.unicode');
@@ -323,7 +326,7 @@ function optionsValue(options: unknown): ResolvedOptions {
       id:entry.name,light:hexFormat(entry.light),dark:hexFormat(entry.dark)
     }))} : {})
   });
-  return { gamut, canonical, contrastModel, measure, exportOptions, brand, selectForeground, formatForeground, hueDomain, normalize, targets, seed, namespace:normalize(namespace), backgrounds, contrastTarget, profiles };
+  return { gamut, canonical, contrastModel, measure, exportOptions, brand, selectForeground, formatForeground, hueDomain, excludesHue, normalize, targets, seed, namespace:normalize(namespace), backgrounds, contrastTarget, profiles };
 }
 
 /**
@@ -530,6 +533,15 @@ function render(settings:ResolvedOptions,bases:Bases,digest:DataView,name:string
           if (secondY === undefined || secondTarget === 0) return primary;
           const secondary = contrastRatio(y,secondY);
           return target === 0 ? secondary : Math.min(primary,secondary*(target/secondTarget));
+        };
+      }
+      const excludesHue = settings.excludesHue;
+      if (excludesHue) {
+        const contrastScore = score ?? gamutScore;
+        score = rgb => {
+          if ((rgb[0] !== rgb[1] || rgb[1] !== rgb[2]) &&
+              excludesHue(oklchFormat(rgb,wide ? P3_TO_XYZ : undefined).h)) return -Infinity;
+          return contrastScore(rgb);
         };
       }
       const result = chooseColor(lightness, Math.min(chroma, profile.cap), hue, backdrop, threshold, second, secondTarget, settings.selectForeground,

@@ -447,6 +447,7 @@ public struct Renderer {
             let threshold = target == 0 ? secondary : target
             let result = gamut.repair(lightness: l, chroma: c, hue: hue, target: threshold) { fitted in
                 let bytes = fitted.map(Double.init)
+                if hueDomain.excludes(bytes, gamut: gamut) { return -Double.infinity }
                 let primary: Double
                 if let back { primary = surface ? score(back, bytes) : score(bytes, back) }
                 else { primary = score(foreground(bytes, target: target), bytes) }
