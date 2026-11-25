@@ -296,20 +296,19 @@ def _choose(
                     math.ceil(lightness * 4096) if endpoint == 0 else math.floor(lightness * 4096)
                 )
                 candidate = _fit(passing / 4096, chroma, hue, matrix)
-                score = measure(candidate["rgb"])
-                if score < target:
+                if measure(candidate["rgb"]) < target:
                     continue
                 while abs(passing - failing) > 1:
                     mid = (passing + failing) // 2
                     probe = _fit(mid / 4096, chroma, hue, matrix)
                     measured = measure(probe["rgb"])
                     if measured >= target:
-                        passing, candidate, score = mid, probe, measured
+                        passing, candidate = mid, probe
                     else:
                         failing = mid
                 distance = abs(candidate["lightness"] - lightness)
                 if distance < best_distance:
-                    chosen, ratio, best_distance = candidate, score, distance
+                    chosen, best_distance = candidate, distance
                     endpoint_step = -1 if endpoint == 0 else 1
             if best_distance == math.inf:
                 raise RuntimeError("Contrast search invariant failed")

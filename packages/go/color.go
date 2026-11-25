@@ -291,8 +291,7 @@ func chooseForeground(l, c, h float64, background *encodedRGB, target float64, s
 					fail = int(math.Floor(l * 4096))
 				}
 				candidate := fitIn(float64(pass)/4096, c, h, m)
-				score := measure(candidate.rgb)
-				if score < target {
+				if measure(candidate.rgb) < target {
 					continue
 				}
 				for pass-fail > 1 || fail-pass > 1 {
@@ -300,14 +299,14 @@ func chooseForeground(l, c, h float64, background *encodedRGB, target float64, s
 					probe := fitIn(float64(mid)/4096, c, h, m)
 					measured := measure(probe.rgb)
 					if measured >= target {
-						pass, candidate, score = mid, probe, measured
+						pass, candidate = mid, probe
 					} else {
 						fail = mid
 					}
 				}
 				distance := math.Abs(candidate.l - l)
 				if distance < bestDistance {
-					chosen, ratio, bestDistance = candidate, score, distance
+					chosen, bestDistance = candidate, distance
 					endpointStep = 1
 					if endpoint == 0 {
 						endpointStep = -1

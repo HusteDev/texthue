@@ -260,8 +260,7 @@ export function chooseColor(lightness: number, chroma: number, hue: number, back
         let pass = endpoint;
         let fail = endpoint === 0 ? Math.ceil(lightness * 4096) : Math.floor(lightness * 4096);
         let candidate = fitColor(pass / 4096, chroma, hue,matrix);
-        let score = measure(candidate.rgb);
-        if (score < target) continue;
+        if (measure(candidate.rgb) < target) continue;
         while (Math.abs(pass - fail) > 1) {
           const mid = Math.floor((pass + fail) / 2);
           const probe = fitColor(mid / 4096, chroma, hue,matrix);
@@ -269,7 +268,6 @@ export function chooseColor(lightness: number, chroma: number, hue: number, back
           if (measured >= target) {
             pass = mid;
             candidate = probe;
-            score = measured;
           } else {
             fail = mid;
           }
@@ -277,7 +275,6 @@ export function chooseColor(lightness: number, chroma: number, hue: number, back
         const distance = Math.abs(candidate.lightness - lightness);
         if (distance < bestDistance) {
           chosen = candidate;
-          ratio = score;
           bestDistance = distance;
           endpointStep = endpoint === 0 ? -1 : 1;
         }
