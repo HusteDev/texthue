@@ -6,12 +6,13 @@
 // Invalid cases record the expected error code.
 //
 //   --check   Recompute and compare against the committed file (used by CI).
+//   --out PATH   Write a candidate fixture to a separate file.
 //   --write   Overwrite the committed file. Only valid for a new algorithm
 //             version; v1 expectations are frozen.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
-import { resolveTextColors, VERSION } from '../packages/npm/dist/index.js';
+import { createResolver, resolveTextColors, VERSION } from '../packages/npm/dist/index.js';
 
 const cases = [
   { id: 'relationship-targets', text: 'label', options: {contrastTargets: {fill:7,text:3,textOnSubtle:7,fillHover:6,fillActive:5,border:4,strong:9}} },
@@ -80,12 +81,13 @@ const invalid = [
 ];
 
 const vectors = [];
+const defaults = createResolver().exportConfig().options;
 for (const item of cases) {
   const options = item.options ?? {};
-  const namespace = Buffer.from(options.namespace ?? '', 'utf8');
+  const namespace = Buffer.from(options.namespace ?? defaults.namespace, 'utf8');
   const text = Buffer.from(item.text, 'utf8');
   const length = Buffer.alloc(8);
-  length.writeUInt32BE(options.seed ?? 0);
+  length.writeUInt32BE(options.seed ?? defaults.seed);
   length.writeUInt32BE(namespace.length, 4);
   const payload = Buffer.concat([Buffer.from(`${VERSION}\0`), length, namespace, text]);
   const hash = createHash('sha256').update(payload).digest();
@@ -97,8 +99,10 @@ for (const item of cases) {
 const document = { version: VERSION, numericTolerance: 0.000001, vectors, invalid };
 const content = `${JSON.stringify(document, null, 2)}\n`;
 const destination = new URL('../conformance/vectors.json', import.meta.url);
-if (process.argv.length === 3 && process.argv[2] === '--write') {
-  await writeFile(destination, content);
+const [, , mode, path] = process.argv;
+if ((process.argv.length === 3 && mode === '--write') ||
+    (process.argv.length === 4 && mode === '--out' && path)) {
+  await writeFile(path ?? destination, content);
   process.stdout.write(`Wrote ${vectors.length} valid and ${invalid.length} invalid conformance vectors.\n`);
 } else if (process.argv.length === 3 && process.argv[2] === '--check') {
   const frozen = JSON.parse(await readFile(destination, 'utf8'));
@@ -118,6 +122,6 @@ if (process.argv.length === 3 && process.argv[2] === '--write') {
   assert.deepEqual(generated, frozen);
   process.stdout.write(`Verified ${vectors.length} valid and ${invalid.length} invalid conformance vectors.\n`);
 } else {
-  process.stderr.write('Usage: node tools/build-vectors.mjs --check | --write\n');
+  process.stderr.write('Usage: node tools/build-vectors.mjs --check | --write | --out PATH\n');
   process.exitCode = 2;
 }

@@ -114,6 +114,7 @@ def main():
     parser = argparse.ArgumentParser(description="Verify the primary libraries or a native port.")
     parser.add_argument("--port", choices=sorted(ports), help="Run one port's manifest checks")
     options = parser.parse_args()
+    check_fixture_digests(ROOT / "conformance")
     if options.port:
         package = ports[options.port]
         cwd = ROOT / package["dir"]
@@ -160,7 +161,6 @@ def main():
     run(
         "300-collection rendered fill separation", ["node", "tools/measure-separation.mjs"], env=env
     )
-    check_fixture_digests(ROOT / "conformance")
     run(
         "normalization vectors",
         ["node", "tools/build-normalization-vectors.mjs", "--check"],

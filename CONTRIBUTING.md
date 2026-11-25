@@ -41,7 +41,8 @@ in the corresponding port jobs.
    produced from the compiled npm package by `tools/build-vectors.mjs`,
    which is the reference implementation. To add a case, add it to the
    `cases` or `invalid` array in that file and run
-   `node tools/build-vectors.mjs --write`; never hand-edit the JSON. Run
+   `node tools/build-vectors.mjs --write`; never hand-edit the JSON. To inspect a candidate
+   before replacing the fixture, use `node tools/build-vectors.mjs --out candidate.json`. Run
    `node tools/build-vectors.mjs --check` (part of `tools/verify.py`) to
    confirm the checked-in file still matches. If your change alters any
    existing vector's expected output, it changed the v1 mapping and needs a
