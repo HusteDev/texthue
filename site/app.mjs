@@ -14,7 +14,7 @@ function append(parent, tag, value) {
 }
 const dialog = document.querySelector('#help-dialog');
 dialog.querySelector('button').onclick = () => dialog.close();
-function addHelp(parent, term, definition) {
+function addHelp(parent, term, [definition, wikiPath]) {
   const button = append(parent, 'button', '?');
   button.type = 'button';
   button.className = 'help-button';
@@ -24,25 +24,26 @@ function addHelp(parent, term, definition) {
   button.onclick = () => {
     dialog.querySelector('h2').textContent = term;
     dialog.querySelector('p').textContent = definition;
+    dialog.querySelector('a').href = 'https://github.com/HusteDev/texthue/wiki/' + wikiPath;
     dialog.showModal();
   };
 }
 const fieldHelp = {
-  labels: 'Each distinct label gets a row. Add a name, then select Generate Palette to see its colors.',
-  options: 'JSON settings control how colors are generated. Leave {} for the defaults, or paste a downloaded configuration and select Generate Palette.',
-  'config-file': 'Opening a configuration fills the options box and recalculates the table immediately.',
-  preset: 'Labels gives tags a moderate amount of color. Controls uses the same color range and raises the default WCAG contrast target from 4.5 to 7. Chart uses more saturated fills. Subdued uses less saturated fills. Mono generates grays. Apply preset updates the options and regenerates the swatches.',
-  'brand-example': 'Choose an example to replace the brand entries and regenerate the palette. Each entry has a stable ID and separate light and dark fills. Try the duo with three or more labels to see colors repeat, then try the eight-color set. Select Clear palette to return to generated hues.',
-  'brand-id': 'Give this brand color a reusable name. Use the same ID to update or remove the entry.',
-  'brand-light': 'The fill for this brand entry on the light theme. Select Add or update color to apply it.',
-  'brand-dark': 'The fill for this brand entry on the dark theme. Select Add or update color to apply it.',
-  theme: 'Select Generate Palette to view the fills and background contrast for the light or dark theme.',
-  vision: 'Normal shows the original colors. Protan simulates reduced red-cone sensitivity; deutan simulates reduced green-cone sensitivity. Both can make reds and greens harder to distinguish. Tritan simulates reduced blue-cone sensitivity and can make blues and greens look similar. Compare the swatches and closest pairs. Code values stay in the original colors.',
-  'optimize-vision': 'Score new placements for separation in both typical vision and the selected simulation. Existing saved placements keep their assignments.',
-  markers: 'Add a shape beside each label so color is only one way to recognize it.',
-  'minimum-distance': 'OKLab distance measures how different two colors look. Larger values mean more separation. Raise this threshold and inspect Pairs below minimum distance to find similar colors.',
-  registry: 'A registry is a saved map from labels to color placements. Download the registry and its configuration. Load both when adding labels to keep earlier placements fixed. Without a saved registry, Registry starts with the same placements as Assigned.',
-  'registry-file': 'Opening a saved registry fills the registry box and recalculates the palette immediately.'
+  labels: ['Each distinct label gets a row. Add a name, then select Generate Palette to see its colors.', 'Palette-workflows#preview-a-collection-in-the-palette-inspector'],
+  options: ['JSON settings control how colors are generated. Leave {} for the defaults, or paste a downloaded configuration and select Generate Palette.', 'Resolver-configuration#replay-a-configuration'],
+  'config-file': ['Opening a configuration fills the options box and recalculates the table immediately.', 'Resolver-configuration#replay-a-configuration'],
+  preset: ['Labels gives tags a moderate amount of color. Controls uses the same color range and raises the default WCAG contrast target from 4.5 to 7. Chart uses more saturated fills. Subdued uses less saturated fills. Mono generates grays. Apply preset updates the options and regenerates the swatches.', 'Resolver-configuration#all-tuning-controls'],
+  'brand-example': ['Choose an example to replace the brand entries and regenerate the palette. Each entry has a stable ID and separate light and dark fills. Try the duo with three or more labels to see colors repeat, then try the eight-color set. Select Clear palette to return to generated hues.', 'Read-the-palette-inspector'],
+  'brand-id': ['Give this brand color a reusable name. Use the same ID to update or remove the entry.', 'Resolver-configuration#brand-palettes-and-overrides'],
+  'brand-light': ['The fill for this brand entry on the light theme. Select Add or update color to apply it.', 'Resolver-configuration#brand-palettes-and-overrides'],
+  'brand-dark': ['The fill for this brand entry on the dark theme. Select Add or update color to apply it.', 'Resolver-configuration#brand-palettes-and-overrides'],
+  theme: ['Select Generate Palette to view the fills and background contrast for the light or dark theme.', 'Palette-workflows#render-a-badge'],
+  vision: ['Normal shows the original colors. Protan simulates reduced red-cone sensitivity; deutan simulates reduced green-cone sensitivity. Both can make reds and greens harder to distinguish. Tritan simulates reduced blue-cone sensitivity and can make blues and greens look similar. Compare the swatches and closest pairs. Code values stay in the original colors.', 'Palette-workflows#find-labels-that-need-another-visual-cue'],
+  'optimize-vision': ['Score new placements for separation in both typical vision and the selected simulation. Existing saved placements keep their assignments.', 'Palette-workflows#find-labels-that-need-another-visual-cue'],
+  markers: ['Add a shape beside each label so color is only one way to recognize it.', 'Palette-workflows#find-labels-that-need-another-visual-cue'],
+  'minimum-distance': ['OKLab distance measures how different two colors look. Larger values mean more separation. Raise this threshold and inspect Pairs below minimum distance to find similar colors.', 'Palette-workflows#find-labels-that-need-another-visual-cue'],
+  registry: ['A registry is a saved map from labels to color placements. Download the registry and its configuration. Load both when adding labels to keep earlier placements fixed. Without a saved registry, Registry starts with the same placements as Assigned.', 'Palette-workflows#restore-a-registry-and-add-a-label'],
+  'registry-file': ['Opening a saved registry fills the registry box and recalculates the palette immediately.', 'Palette-workflows#restore-a-registry-and-add-a-label']
 };
 for (const [id, definition] of Object.entries(fieldHelp)) {
   const input = document.getElementById(id);
@@ -121,10 +122,10 @@ function run() {
         heading.className = 'field-title';
         append(heading,'span',title);
         const meaning = {
-          Hash:'Color calculated from the label alone. Adding another label preserves this value.',
-          Assigned:'Color chosen with the other labels in this set to improve separation.',
-          Registry:'Color from the persistent placement. Download the registry to reuse this assignment later.',
-          'Registry fill / background (sRGB)':'Contrast ratio between the registry fill and the theme background in sRGB. Higher values indicate more luminance contrast.'
+          Hash:['Color calculated from the label alone. Adding another label preserves this value.', 'Choose-an-assignment-method#the-same-username-appears-in-three-apps'],
+          Assigned:['Color chosen with the other labels in this set to improve separation.', 'Color-results#assigning-a-collection'],
+          Registry:['Color from the persistent placement. Download the registry to reuse this assignment later.', 'Palette-workflows#restore-a-registry-and-add-a-label'],
+          'Registry fill / background (sRGB)':['Contrast ratio between the registry fill and the theme background in sRGB. Higher values indicate more luminance contrast.', 'Resolver-configuration#contrast-models']
         }[title];
         if (meaning) addHelp(heading,title,meaning);
       }
