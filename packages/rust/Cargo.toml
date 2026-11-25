@@ -6,9 +6,6 @@ description = "Deterministic text-to-color assignments"
 license-file = "LICENSE"
 repository = "https://github.com/HusteDev/texthue"
 
-[lib]
-crate-type = ["rlib", "cdylib"]
-
 [features]
 wasm-bindgen = ["dep:wasm-bindgen"]
 

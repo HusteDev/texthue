@@ -12,7 +12,10 @@ if subprocess.check_output([cli, "--version"], text=True).strip() != "wasm-bindg
 subprocess.run(
     [
         "cargo",
-        "build",
+        "rustc",
+        "--lib",
+        "--crate-type",
+        "cdylib",
         "--manifest-path",
         ROOT / "packages/rust/Cargo.toml",
         "--release",
