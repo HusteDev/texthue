@@ -28,7 +28,7 @@ toolchain installed. The supported names are `rust`, `csharp`, `kotlin`,
 See each package README for toolchain prerequisites. CI runs these commands
 in the corresponding port jobs.
 
-## Rules that keep the three (soon more) implementations in agreement
+## Cross-language conformance rules
 
 1. **The algorithm is frozen under its identifier.** `text-to-color-v1`
    fixes the hash framing, sampling, gamut fitting, contrast repair,

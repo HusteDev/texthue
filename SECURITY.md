@@ -3,8 +3,8 @@
 ## Supported versions
 
 TextHue has not yet published a `1.0` release. Until then, only the latest
-published version of each package (npm `texthue`, PyPI `texthue`, and the
-Go module `github.com/HusteDev/texthue/packages/go`) receives fixes. After
+published version of each TextHue distribution receives fixes. The
+[package manifest](tools/packages.json) lists the language packages and adapters. After
 `1.0`, this section will list which major versions receive security fixes.
 
 ## Reporting a vulnerability
