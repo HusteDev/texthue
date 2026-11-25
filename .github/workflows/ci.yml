@@ -41,7 +41,7 @@ jobs:
         run: |
           mkdir -p benchmark-results
           JAVA_HOME="$JAVA_HOME_17_X64" packages/kotlin/gradlew -q -p packages/kotlin benchmark > benchmark-results/kotlin.txt
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: benchmarks-kotlin-${{ runner.os }}-${{ runner.arch }}
           path: benchmark-results/
@@ -72,7 +72,7 @@ jobs:
         run: |
           mkdir -p benchmark-results
           cargo bench --locked --manifest-path packages/rust/Cargo.toml --bench renderer > benchmark-results/rust.txt
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: benchmarks-rust-${{ runner.os }}-${{ runner.arch }}
           path: benchmark-results/
@@ -123,7 +123,7 @@ jobs:
         run: |
           mkdir -p benchmark-results
           dotnet run -c Release --project packages/csharp/benchmarks/Renderer > benchmark-results/dotnet.txt
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: benchmarks-dotnet-${{ runner.os }}-${{ runner.arch }}
           path: benchmark-results/
@@ -163,7 +163,7 @@ jobs:
         run: |
           mkdir -p benchmark-results
           (cd packages/dart && dart run tool/benchmark.dart) > benchmark-results/dart.txt
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: benchmarks-dart-${{ runner.os }}-${{ runner.arch }}
           path: benchmark-results/
@@ -272,7 +272,7 @@ jobs:
           go -C packages/go test -run '^$' -bench '^BenchmarkResolverContrast$' -benchtime=100x > benchmark-results/go-resolve.txt
           go -C packages/go test -run '^$' -bench '^BenchmarkAssign40$' -benchtime=20x > benchmark-results/go-assign.txt
           swift run --package-path packages/swift --force-resolved-versions -c release TextHueBenchmark > benchmark-results/swift.txt
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: matrix.os == 'ubuntu-24.04' && matrix.node == '22'
         with:
           name: benchmarks-primary-${{ runner.os }}-${{ runner.arch }}
