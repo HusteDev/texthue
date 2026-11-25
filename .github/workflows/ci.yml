@@ -49,7 +49,7 @@ jobs:
 
   rust:
     name: Rust conformance and packaging
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: packages/rust
@@ -186,7 +186,7 @@ jobs:
           cache: pip
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.25'
+          go-version: '1.26'
           cache: false
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -203,7 +203,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             node: '22'
             python: '3.11'
             go: '1.23'
@@ -247,7 +247,7 @@ jobs:
       - run: python -m pip install -r requirements-dev.txt
       - run: python tools/check-version.py
       - name: Run Swift conformance on the host runtime
-        if: matrix.os == 'macos-latest' || (matrix.os == 'ubuntu-latest' && matrix.node == '22')
+        if: matrix.os == 'macos-latest' || (matrix.os == 'ubuntu-24.04' && matrix.node == '22')
         working-directory: packages/swift
         run: |
           swift --version
@@ -258,7 +258,7 @@ jobs:
           python3 ../../tools/check-swift-tag.py
       - run: python tools/verify.py
       - name: Measure primary performance
-        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        if: matrix.os == 'ubuntu-24.04' && matrix.node == '22'
         shell: bash
         working-directory: .
         run: |
@@ -269,16 +269,16 @@ jobs:
           go -C packages/go test -run '^$' -bench '^BenchmarkAssign40$' -benchtime=20x > benchmark-results/go-assign.txt
           swift run --package-path packages/swift --force-resolved-versions -c release TextHueBenchmark > benchmark-results/swift.txt
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        if: matrix.os == 'ubuntu-24.04' && matrix.node == '22'
         with:
           name: benchmarks-primary-${{ runner.os }}-${{ runner.arch }}
           path: benchmark-results/
           if-no-files-found: error
       - name: Compile CSS with the packed Tailwind adapter
-        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        if: matrix.os == 'ubuntu-24.04' && matrix.node == '22'
         run: python tools/check-tailwind-consumer.py
       - name: Exercise staged inspector in Firefox and WebKit
-        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        if: matrix.os == 'ubuntu-24.04' && matrix.node == '22'
         run: |
           python -m pip install playwright==1.59.0
           python -m playwright install --with-deps firefox webkit
@@ -287,19 +287,19 @@ jobs:
           python tools/check-browser.py firefox --css-only
           python tools/check-browser.py webkit --css-only
       - name: Exercise the packed React adapter on React 18 and 19
-        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        if: matrix.os == 'ubuntu-24.04' && matrix.node == '22'
         run: python tools/check-react-consumers.py
       - name: Verify CSS fallback and rendered pixels in Chrome
-        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        if: matrix.os == 'ubuntu-24.04' && matrix.node == '22'
         run: python tools/check-browser.py google-chrome
       - run: python tools/build-packages.py
       - name: Select the minimum supported consumer runtime
-        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        if: matrix.os == 'ubuntu-24.04' && matrix.node == '22'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '20.0.0'
       - name: Verify the compiled library on Node 20.0.0
-        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        if: matrix.os == 'ubuntu-24.04' && matrix.node == '22'
         run: node --test tests/text-to-color.test.mjs tests/resolver.test.mjs tests/sha256.test.mjs
 
   coverage:
