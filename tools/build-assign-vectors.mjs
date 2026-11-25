@@ -9,6 +9,9 @@ cases.push({texts:['free','fixed','fixed-2'],options:{overrides:{fixed:'#123456'
 cases.push({texts:['item:33','item:633']}, {texts:['item:79','item:81']});
 const pinned = assignTextColors(['one','two','three']).assignments;
 cases.push({texts:['four','five','two','one'],pinned});
+cases.push({texts:['pinned','free'],pinned:{
+  pinned:{hueFraction:0.5,ring:Number.MAX_SAFE_INTEGER,moved:true}
+}});
 const vectors = cases.map(item => {
   const {assignments,colors,report} = assignTextColors(item.texts,item.options,item.pinned);
   return {...item,assignments,report,lightFills:Object.fromEntries(

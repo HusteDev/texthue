@@ -662,5 +662,45 @@
       "five": "#65cf75",
       "one": "#5fd2db"
     }
+  },
+  {
+    "texts": [
+      "pinned",
+      "free"
+    ],
+    "pinned": {
+      "pinned": {
+        "hueFraction": 0.5,
+        "ring": 9007199254740991,
+        "moved": true
+      }
+    },
+    "assignments": {
+      "pinned": {
+        "hueFraction": 0.5,
+        "ring": 9007199254740991,
+        "moved": true
+      },
+      "free": {
+        "hueFraction": 0.5591660051140934,
+        "ring": 0,
+        "moved": false
+      }
+    },
+    "report": {
+      "minDistance": 0.1455499447694684,
+      "closestPairs": [
+        [
+          "pinned",
+          "free"
+        ]
+      ],
+      "withinRingCapacity": true,
+      "distinctFills": true
+    },
+    "lightFills": {
+      "pinned": "#7aedda",
+      "free": "#5abac9"
+    }
   }
 ]
