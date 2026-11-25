@@ -29,6 +29,14 @@ List<double> _lab(double r, double g, double b, Gamut gamut) {
       [for (final x in lms) x.sign * math.pow(x.abs(), 1 / 3).toDouble()]);
 }
 
+enum CssFormat { hex, rgb, hsl, oklch, displayP3 }
+
+String _cssNumber(double value) =>
+    value == value.truncate() ? value.toInt().toString() : value.toString();
+
+String _displayP3Css(Iterable<double> channels) =>
+    "color(display-p3 ${channels.map(_cssNumber).join(' ')})";
+
 final class Color {
   final String hex;
   final ({int r, int g, int b}) rgb;
@@ -41,6 +49,17 @@ final class Color {
 
   const Color._(this.hex, this.rgb, this.hsl, this.oklch,
       [this.p3, this.css, this.srgbClipped]);
+
+  /// Serialize this rendition in the selected CSS color notation.
+  String toCss([CssFormat format = CssFormat.hex]) => switch (format) {
+    CssFormat.hex => hex,
+    CssFormat.rgb => 'rgb(${rgb.r} ${rgb.g} ${rgb.b})',
+    CssFormat.hsl => 'hsl(${_cssNumber(hsl.h)} ${_cssNumber(hsl.s)}% ${_cssNumber(hsl.l)}%)',
+    CssFormat.oklch => 'oklch(${_cssNumber(oklch.l)} ${_cssNumber(oklch.c)} ${_cssNumber(oklch.h)})',
+    CssFormat.displayP3 => css ?? _displayP3Css(
+        canonicalChannels([rgb.r, rgb.g, rgb.b], Gamut.displayP3)
+            .map((v) => _round6(v / 255))),
+  };
 
   /// Composite this sRGB color over an opaque backdrop in linear light.
   Color compositeOver(double alpha, Color backdrop) {
@@ -109,16 +128,13 @@ final class Color {
     final bytes = fallback.bytes;
     final base = Color.fromRgb(bytes[0], bytes[1], bytes[2]);
     final values = channels.map(_round6).toList();
-    final css = values
-        .map((v) => v == v.truncate() ? v.toInt().toString() : v.toString())
-        .join(' ');
     return Color._(
         base.hex,
         base.rgb,
         base.hsl,
         _oklch(red, green, blue, Gamut.displayP3),
         (r: values[0], g: values[1], b: values[2]),
-        'color(display-p3 $css)',
+        _displayP3Css(values),
         fallback.clipped);
   }
 }

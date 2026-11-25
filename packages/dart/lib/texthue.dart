@@ -2,7 +2,7 @@ export 'src/normalization.dart'
     show Normalization, UnicodeForm, LetterCase, Whitespace;
 export 'src/hue_domain.dart' show HueArc;
 export 'src/contrast.dart' show ContrastModel, Gamut;
-export 'src/color.dart' show Color;
+export 'src/color.dart' show Color, CssFormat;
 export 'src/renderer.dart'
     show
         ContrastRelationship,

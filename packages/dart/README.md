@@ -2,6 +2,8 @@
 
 Resolve a label into ten color roles for each of two themes. The default gamut is sRGB. To render in Display-P3, use `Renderer(gamut: Gamut.displayP3)`. Read the native channels from `renderer.resolve('apple').light['fill']!.p3!` and use the role’s hex value for its sRGB fallback. A namespace separates independent sets of labels, and a seed gives each set a reproducible assignment.
 
+Call `color.toCss(CssFormat.hsl)` for HSL with percentage units. Use `CssFormat.displayP3` to preserve a native Display P3 rendition or convert an sRGB color to Display P3. The default `color.toCss()` returns hex.
+
 ## Use the checkout
 
 Add a path dependency to the consuming application's `pubspec.yaml`, adjusting the relative path to the checkout.

@@ -1,8 +1,23 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:texthue/src/color.dart';
+import 'package:texthue/texthue.dart';
 
 void main() {
+  final red = Color.fromRgb(255, 0, 0);
+  final expectedCss = {
+    CssFormat.hex: '#ff0000',
+    CssFormat.rgb: 'rgb(255 0 0)',
+    CssFormat.hsl: 'hsl(0 100% 50%)',
+    CssFormat.oklch: 'oklch(0.627955 0.257683 29.23388)',
+    CssFormat.displayP3: 'color(display-p3 0.917488 0.200287 0.138561)',
+  };
+  for (final entry in expectedCss.entries) {
+    if (red.toCss(entry.key) != entry.value) {
+      throw StateError('Incorrect CSS for ${entry.key}');
+    }
+  }
+  if (Color.fromDisplayP3(1, 0, 0).toCss(CssFormat.displayP3) !=
+      'color(display-p3 1 0 0)') throw StateError('Lost native P3 channels');
   final corpus = jsonDecode(
       File.fromUri(Platform.script.resolve('../../../conformance/vectors.json'))
           .readAsStringSync());
