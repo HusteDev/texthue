@@ -169,7 +169,10 @@ def _luminance(rgb, weights=(0.2126, 0.7152, 0.0722)):
 
 def _contrast(first, second, weights=(0.2126, 0.7152, 0.0722)):
     """Compute the WCAG contrast ratio between two RGB colors, at full precision."""
-    a, b = _luminance(first, weights), _luminance(second, weights)
+    return _contrast_ratio(_luminance(first, weights), _luminance(second, weights))
+
+
+def _contrast_ratio(a, b):
     return (max(a, b) + 0.05) / (min(a, b) + 0.05)
 
 
@@ -237,6 +240,7 @@ def _choose(
     apca=False,
     surface=False,
     wide=False,
+    background_y=None,
 ):
     """Fit the sampled tone, then repair failing contrast on the 1/4096 lightness grid.
 
@@ -250,7 +254,18 @@ def _choose(
     if apca and target == 0 and second is not None:
         target = second_target
 
+    weights = _P3_TO_XYZ[1] if wide else (0.2126, 0.7152, 0.0722)
+    second_y = (
+        _luminance(second, weights) if background_y is not None and second is not None else None
+    )
+
     def measure(rgb):
+        if background_y is not None:
+            y = _luminance(rgb, weights)
+            ratio = _contrast_ratio(y, background_y)
+            if second_y is None:
+                return ratio
+            return min(ratio, _contrast_ratio(y, second_y) * (target / (second_target or target)))
         if apca or wide:
             backdrop = background if background is not None else select(rgb, primary_target)
             primary = abs(
@@ -517,6 +532,8 @@ def _options(options):
         colors.append([int(hex_value[i : i + 2], 16) for i in (1, 3, 5)])
 
     canonical_colors = [canonical(c) for c in colors]
+    format_color = _p3_formats if wide else _formats
+    foreground_formats = {tuple(rgb): format_color(rgb) for rgb in canonical_colors}
 
     def select_foreground(rgb, target):
         selected, best = canonical_colors[0], -1
@@ -673,6 +690,7 @@ def _options(options):
         "apca": apca,
         "brand": brand,
         "selectForeground": select_foreground,
+        "foreground_formats": foreground_formats,
         "namespace": normalize(namespace),
         "hueDomain": domain,
         "normalize": normalize,
@@ -698,6 +716,10 @@ def compile_settings(options):
         + namespace_bytes
     )
     bases = {theme: settings["formats"](rgb) for theme, rgb in settings["backgrounds"].items()}
+    weights = _P3_TO_XYZ[1] if settings["wide"] else (0.2126, 0.7152, 0.0722)
+    settings["background_luminance"] = {
+        theme: _luminance(rgb, weights) for theme, rgb in settings["backgrounds"].items()
+    }
     settings["background_lightness"] = {
         theme: math.floor(base["oklch"]["l"] * 4096 + 0.5) / 4096 for theme, base in bases.items()
     }
@@ -798,6 +820,8 @@ def render(
             surface=False,
             requested=None,
             hue=hue,
+            theme_background=background,
+            background_y=settings["background_luminance"][theme],
         ):
             lightness = max(0, min(1, lightness))
             chroma = (
@@ -815,6 +839,7 @@ def render(
                 settings["apca"],
                 surface,
                 settings["wide"],
+                background_y if backdrop is theme_background and not settings["apca"] else None,
             )
             if trace:
                 raw = lightness if requested is None else max(0, min(1, requested))
@@ -941,7 +966,12 @@ def render(
         if requested_roles is None or "background" in requested_roles:
             output["background"] = deepcopy(base) if requested_roles is not None else dict(base)
         if requested_roles is None or "onFill" in requested_roles:
-            output["onFill"] = display(on_fill)
+            foreground = settings["foreground_formats"][tuple(on_fill)]
+            output["onFill"] = deepcopy(
+                foreground
+                if formats is None
+                else {k: v for k, v in foreground.items() if k in formats}
+            )
         result[theme] = {**output, "contrast": {"target": target, **meta}}
         if trace:
             for role in output:
