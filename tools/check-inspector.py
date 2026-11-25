@@ -186,7 +186,7 @@ def exercise(page, url, clipboard):
         ("Load configuration file", "#options", "configuration"),
         ("Load registry file", "#registry", "registry"),
     ):
-        page.get_by_label(label).set_input_files(
+        page.get_by_label(label, exact=True).set_input_files(
             {
                 "name": f"{kind}.json",
                 "mimeType": "application/json",
