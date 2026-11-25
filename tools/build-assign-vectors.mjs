@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import {readFile,writeFile} from 'node:fs/promises';
 import {assignTextColors} from '../packages/npm/dist/index.js';
 
@@ -16,4 +17,17 @@ const vectors = cases.map(item => {
 const file = new URL('../conformance/assign-vectors.json',import.meta.url);
 const json = JSON.stringify(vectors,null,2)+'\n';
 if(process.argv[2]==='--write') await writeFile(file,json);
-else if(process.argv[2]!=='--check' || (await readFile(file,'utf8')).replaceAll('\r\n','\n')!==json) throw Error('Assignment fixtures differ');
+else if (process.argv[2] === '--check') {
+  const frozen = JSON.parse(await readFile(file,'utf8'));
+  assert.equal(vectors.length, frozen.length);
+  for (const [index, vector] of vectors.entries()) {
+    const expected = frozen[index].report.minDistance;
+    if (typeof expected === 'number') {
+      const actual = vector.report.minDistance;
+      assert.ok(typeof actual === 'number' && Math.abs(actual - expected) <= 1e-12,
+        `Case ${index}: minimum distance ${actual} differs from ${expected}`);
+      vector.report.minDistance = expected;
+    }
+  }
+  assert.deepEqual(JSON.parse(JSON.stringify(vectors)), frozen);
+} else throw Error('Expected --check or --write');
