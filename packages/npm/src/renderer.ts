@@ -10,7 +10,7 @@
 
 import type { Placement } from './assignment.js';
 import { compareBytes } from './bytes.js';
-import { apcaContrast, blendOver, chooseColor, contrast, cusp, formats, hexFormat, hslFormat, oklchFormat, p3ApcaContrast, p3Channels, p3Contrast, p3Css, p3Fallback, p3Formats, P3_TO_XYZ, rgbFormat, srgbToP3, XYZ_TO_P3 } from './color-math.js';
+import { apcaContrast, blendOver, chooseColor, contrast, cusp, formats, hexFormat, hslFormat, oklchFormat, P3_TO_XYZ, p3ApcaContrast, p3Channels, p3Contrast, p3Css, p3Fallback, p3Formats, rgbFormat, srgbToP3, XYZ_TO_P3 } from './color-math.js';
 import { sha256 } from './sha256.js';
 import { anchors, biases } from './tables.js';
 import type { ChosenColor, Color, ColorSet, Range, ResolvedOptions, TextColorErrorCode, TextColorOptions, ThemeColors, Triple } from './types.js';
