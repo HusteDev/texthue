@@ -158,6 +158,18 @@ jobs:
               ;;
             *) exit 1 ;;
           esac
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        if: steps.bundle.outputs.state == 'absent'
+        with:
+          dotnet-version: '9.0.x'
+      - uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1
+        if: steps.bundle.outputs.state == 'absent'
+        with:
+          sdk: '3.12.2'
+      - name: Install locked Dart dependencies for parity verification
+        if: steps.bundle.outputs.state == 'absent'
+        working-directory: packages/dart
+        run: dart pub get --enforce-lockfile
       - if: steps.bundle.outputs.state == 'absent'
         run: JAVA_HOME="${JAVA_HOME_17_X64:?JDK 17 is required}" python tools/verify.py
       - if: steps.bundle.outputs.state == 'absent'
@@ -172,10 +184,6 @@ jobs:
           python tools/check-react-consumers.py --archives artifacts
           python tools/check-tailwind-consumer.py --archives artifacts
           (cd artifacts && sha256sum "texthue-react-${VERSION}.tgz" "texthue-tailwind-${VERSION}.tgz" >> SHA256SUMS)
-      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
-        if: steps.bundle.outputs.state == 'absent'
-        with:
-          dotnet-version: '9.0.x'
       - name: Build and verify the NuGet release archive
         if: steps.bundle.outputs.state == 'absent'
         env:
@@ -186,10 +194,6 @@ jobs:
           dotnet pack packages/csharp/src/TextHue --configuration Release --no-build --output artifacts
           python tools/check-nuget.py artifacts
           (cd artifacts && sha256sum "TextHue.${VERSION}.nupkg" >> SHA256SUMS)
-      - uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1
-        if: steps.bundle.outputs.state == 'absent'
-        with:
-          sdk: '3.12.2'
       - name: Verify Dart conformance and publication contents
         if: steps.bundle.outputs.state == 'absent'
         env:
@@ -197,7 +201,6 @@ jobs:
         working-directory: packages/dart
         run: |
           set -euo pipefail
-          dart pub get --enforce-lockfile
           python ../../tools/verify.py --port dart
           archive="texthue-${VERSION}-dart.tar.gz"
           python ../../tools/check-dart-publication.py --stage "../../artifacts/$archive"

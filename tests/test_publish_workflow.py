@@ -60,6 +60,20 @@ class PublishWorkflowTests(unittest.TestCase):
                         output.read_text(), f"version={version}\n" if requested == version else ""
                     )
 
+    def test_fresh_bundle_prepares_registered_runners_before_parity(self):
+        steps = self.jobs["build"]["steps"]
+        parity = next(
+            i for i, s in enumerate(steps) if s.get("run", "").endswith(" tools/verify.py")
+        )
+        before = steps[:parity]
+        for action in ("actions/setup-dotnet@", "dart-lang/setup-dart@"):
+            setup = next(s for s in before if s.get("uses", "").startswith(action))
+            self.assertEqual(setup["if"], steps[parity]["if"])
+        install = next(s for s in before if s.get("run") == "dart pub get --enforce-lockfile")
+        self.assertEqual(install["working-directory"], "packages/dart")
+        self.assertEqual(install["if"], steps[parity]["if"])
+        self.assertLess(before.index(setup), before.index(install))
+
     def test_dry_run_stages_the_bundle_without_promoting_it(self):
         build = self.jobs["build"]
         self.assertNotIn("if", build)
