@@ -359,6 +359,13 @@ pins.Add("é", default);
 try { _ = new Renderer(overrides: pins, normalization: folding); throw new InvalidDataException("Normalized collision accepted."); }
 catch (ArgumentException) { }
 Console.WriteLine("Passed 90 normalization vectors, normalized overrides and batch reuse.");
+try
+{
+    new Renderer().Assign(["a"], new Dictionary<string, Placement> { ["a"] = new(0.5, 1L << 53, false) });
+    throw new InvalidDataException("Accepted a non-replayable ring");
+}
+catch (ArgumentException error) when (error.ParamName == "pinned") { }
+
 using var collections = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "assign-vectors.json")));
 using var corpus = args.Length == 0 ? null : JsonDocument.Parse(File.ReadAllBytes(args.Single()));
 if (corpus != null && corpus.RootElement.GetArrayLength() != 300)

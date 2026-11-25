@@ -3,6 +3,14 @@ import 'dart:io';
 import 'package:texthue/texthue.dart';
 
 void main(List<String> args) {
+  try {
+    Renderer().assign(['a'], pinned: {
+      'a': (hueFraction: 0.5, ring: 1 << 53, moved: false)
+    });
+    throw StateError('Accepted a non-replayable ring');
+  } on ArgumentError {
+    // Oversized placements must fail before rendering.
+  }
   final rows = jsonDecode(File.fromUri(
           Platform.script.resolve('../../../conformance/assign-vectors.json'))
       .readAsStringSync()) as List;

@@ -195,6 +195,23 @@ mod tests {
     }
 
     #[test]
+    fn rejects_non_replayable_ring() {
+        let pins = BTreeMap::from([(
+            "a".to_owned(),
+            Placement {
+                hue_fraction: 0.5,
+                ring: 1 << 53,
+                moved: false,
+            },
+        )]);
+        assert!(Renderer::default()
+            .compile()
+            .unwrap()
+            .assign(["a"], &pins)
+            .is_err());
+    }
+
+    #[test]
     fn shared_assignment_vectors() {
         let mut rows: Vec<Value> =
             serde_json::from_str(include_str!("../../testdata/assign-vectors.json")).unwrap();

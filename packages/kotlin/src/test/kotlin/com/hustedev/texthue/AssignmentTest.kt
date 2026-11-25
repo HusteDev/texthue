@@ -12,6 +12,9 @@ private fun verifyDarkFills(assigned: Assignment, expected: Map<String, String>)
 }
 
 fun main() {
+    val oversized = mapOf("a" to Placement(0.5, 1L shl 53, false))
+    val failure = runCatching { Resolver().assign(listOf("a"), pinned = oversized) }.exceptionOrNull()
+    check(failure is IllegalArgumentException)
     val input = System.`in`.bufferedReader()
     var cases = 0
     for (casing in generateSequence(input::readLine)) {

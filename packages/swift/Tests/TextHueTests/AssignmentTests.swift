@@ -45,6 +45,12 @@ final class AssignmentTests: XCTestCase {
         XCTAssertEqual(try renderer.assign(labels.reversed(), pinned: result.assignments).colors, result.colors)
     }
 
+    func testRejectsNonReplayableRing() throws {
+        let renderer = try Renderer()
+        let pins = [Data("a".utf8): Placement(hueFraction: 0.5, ring: 1 << 53, moved: false)]
+        XCTAssertThrowsError(try renderer.assign(["a"], pinned: pins))
+    }
+
     func testGeneratedSeparationCorpus() throws {
         guard let path = ProcessInfo.processInfo.environment["TEXTHUE_SEPARATION_CORPUS"] else {
             throw XCTSkip("Provide the generated JavaScript separation corpus")
