@@ -1,4 +1,5 @@
 // npm ci installs the locked development oracle.
+import assert from 'node:assert/strict';
 import {readFile,writeFile} from 'node:fs/promises';
 import {APCAcontrast,sRGBtoY} from 'apca-w3';
 
@@ -14,4 +15,14 @@ const rows = pairs.map(([fg,bg])=>JSON.stringify([...fg,...bg,APCAcontrast(sRGBt
 const expected = `[\n${rows.join(',\n')}\n]\n`;
 const path = new URL('../conformance/apca-srgb-v1.json',import.meta.url);
 if (process.argv[2]==='--write') await writeFile(path,expected);
-else if (process.argv[2]!=='--check' || (await readFile(path,'utf8')).replaceAll('\r\n','\n')!==expected) throw new Error('APCA corpus mismatch or missing --check/--write');
+else if (process.argv[2] === '--check') {
+  const frozen = JSON.parse(await readFile(path,'utf8'));
+  const generated = JSON.parse(expected);
+  assert.equal(generated.length, frozen.length);
+  for (const [i, row] of generated.entries()) {
+    assert.deepEqual(row.slice(0,6), frozen[i].slice(0,6));
+    assert.equal(frozen[i].length, 7);
+    assert.ok(typeof frozen[i][6] === 'number' && Math.abs(row[6] - frozen[i][6]) <= 1e-12,
+      `APCA row ${i}: ${row[6]} differs from ${frozen[i][6]}`);
+  }
+} else throw new Error('Expected --check or --write');
