@@ -1,4 +1,4 @@
-# Lint and format checks for all three libraries.
+# Lint and format checks for the TextHue workspace.
 #
 #   python -m pip install -r requirements-dev.txt
 #   pre-commit install
