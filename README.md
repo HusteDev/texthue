@@ -10,6 +10,8 @@ The swatches below show how the same labels render across themes and how collect
 
 ## Libraries
 
+The repository contains eight language implementations plus three JavaScript ecosystem packages: the [WebAssembly binding](packages/wasm/README.md), [React hooks](packages/react/README.md), and [Tailwind adapter](packages/tailwind/README.md).
+
 TextHue is stateless. The JavaScript and Python packages have no runtime dependencies. Go uses `golang.org/x/text` for Unicode normalization and casing. The libraries run in your application without an account or service.
 
 | Platform | Package | Implementation and documentation |
@@ -46,7 +48,7 @@ go get github.com/HusteDev/texthue/packages/go
 
 ## Resolve your first label
 
-Each example resolves the same label, then reads its fill color for a light and a dark background. The hex values match across the three libraries.
+Each example resolves the same label, then reads its fill color for a light and a dark background. The hex values match in these examples.
 
 ```typescript
 import { resolveTextColors } from 'texthue';
@@ -273,9 +275,9 @@ python -m venv .venv
 .venv\Scripts\python tools/build-packages.py
 ```
 
-On macOS/Linux use `.venv/bin/python` instead. Verification compiles the npm package, checks TypeScript examples, runs all language tests and examples, compares the three implementations on generated cases, lints every language, validates documentation links and shared files, and checks the frozen vectors. The package build produces an npm tarball, a Python wheel and source distribution, and installs each into an isolated consumer. Build outputs go to the ignored `artifacts/` directory.
+On macOS/Linux use `.venv/bin/python` instead. Verification compiles the npm package, checks TypeScript examples, runs the primary language suites and examples, compares available registered implementations on generated cases, runs static checks, validates documentation links and shared files, and checks the frozen vectors. The package build produces an npm tarball, a Python wheel and source distribution, and installs each into an isolated consumer. Build outputs go to the ignored `artifacts/` directory.
 
-Linting uses Ruff and Black for Python, Biome for JavaScript and TypeScript, gofmt, go vet, and golangci-lint for Go, and zizmor for the GitHub Actions workflows. Run `pre-commit install` once to apply all of them as a Git pre-commit hook; `npm run lint`, `npm run lint:python`, and `npm run lint:go` run each set directly, and `npm run coverage`, `npm run coverage:python`, and `npm run coverage:go` write coverage reports to `coverage/`. Continuous integration runs the lint hooks, the full verification on Windows, Linux, and macOS, coverage upload to Codecov, and dependency review on pull requests. A separate security workflow runs CodeQL analysis for all three languages and the workflow files, audits the workflows with zizmor, and publishes an OpenSSF Scorecard.
+Linting uses Ruff and Black for Python, Biome for JavaScript and TypeScript, gofmt, go vet, and golangci-lint for Go, and zizmor for the GitHub Actions workflows. Run `pre-commit install` once to apply all of them as a Git pre-commit hook; `npm run lint`, `npm run lint:python`, and `npm run lint:go` run each set directly, and `npm run coverage`, `npm run coverage:python`, and `npm run coverage:go` write coverage reports to `coverage/`. Continuous integration runs the lint hooks, the full verification on Windows, Linux, and macOS, coverage upload to Codecov, and dependency review on pull requests. A separate security workflow runs CodeQL analysis for JavaScript/TypeScript, Python, Go, C#, Kotlin, Swift, and GitHub Actions, audits the workflows with zizmor, and publishes an OpenSSF Scorecard.
 
 The specification and notices are shared files: edit the root copies and run `python tools/sync-shared.py` to refresh the copies distributed with each package. The conformance vectors are frozen and protected by a digest check; a change to v1 output is a new algorithm version, not a fixture update. See the [release procedure](docs/RELEASING.md) for versioning and publication steps.
 
