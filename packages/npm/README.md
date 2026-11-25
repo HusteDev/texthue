@@ -1,6 +1,6 @@
 # TextHue for JavaScript and TypeScript
 
-![Light and dark label colors, collection assignments, and tonal roles](assets/gallery.svg)
+![The same username keeps its badge color in chat, task tracking, and on-call scheduling](assets/gallery.svg)
 
 ```js
 import { assignTextColors, resolveTextColors } from 'texthue';

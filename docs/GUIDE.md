@@ -16,7 +16,7 @@ npm ci
 npm run site
 ```
 
-Open `http://127.0.0.1:8000/site/`. Enter one label per line and select **Inspect palette**. The **Hash**, **Assigned**, and **Registry** columns show the same labels under each assignment method. Switch themes to inspect both sets of fills. Select a vision profile to see its simulated colors. Enable **Optimize new placements** and inspect again to compare how the selected profile affects assignment.
+Open `http://127.0.0.1:8000/site/`. Enter one label per line and select **Generate Palette**. The **Hash**, **Assigned**, and **Registry** columns show the same labels under each assignment method. Expand **Fill attributes** for the current theme or **Full color set** for the complete API result. Select the question mark beside a setting for its definition. The brand examples immediately regenerate the comparison with two, four, or eight brand colors. Switch themes to inspect both sets of fills. Select a vision profile to see its simulated colors. Enable **Optimize new placements** and inspect again to compare how the selected profile affects assignment.
 
 ## Render a badge
 
@@ -30,6 +30,10 @@ console.log(fill.hex, onFill.hex);
 ```
 
 ## Find labels that need another visual cue
+
+Read each column from top to bottom to follow one label. **Normal** shows the original fill. **Protan** simulates reduced sensitivity to red light, **deutan** to green light, and **tritan** to blue light. Look for labels that become hard to tell apart within a row. The simulation changes the preview while the application receives the original colors.
+
+![Six collection colors shown under normal, protan, deutan, and tritan vision profiles.](assets/vision.svg)
 
 Inspect final rendered fills for the theme and vision profile used by your audience. The palette analysis returns indices in input order. Use that same order to recover the label names. Shape markers can repeat. Keep a visible text label when identity matters.
 

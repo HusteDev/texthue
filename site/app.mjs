@@ -12,45 +12,36 @@ function append(parent, tag, value) {
   parent.append(element);
   return element;
 }
+const dialog = document.querySelector('#help-dialog');
+dialog.querySelector('button').onclick = () => dialog.close();
 function addHelp(parent, term, definition) {
   const button = append(parent, 'button', '?');
   button.type = 'button';
   button.className = 'help-button';
   button.setAttribute('aria-label', 'Help for ' + term);
-  const hint = append(parent, 'span', definition);
-  hint.className = 'hint';
-  hint.id = 'hint-' + (++helpCount);
-  button.setAttribute('aria-controls', hint.id);
-  let pinned = false;
-  function show(open) {
-    hint.hidden = !open;
-    button.setAttribute('aria-expanded', String(open));
-  }
-  show(false);
-  button.onpointerenter = e => { if (e.pointerType === 'mouse') show(true); };
-  parent.onpointerleave = () => { if (!pinned && document.activeElement !== button) show(false); };
-  button.onfocus = () => show(true);
-  button.onblur = () => { pinned = false; show(false); };
-  button.onclick = () => { pinned = !pinned; show(pinned); };
-  button.onkeydown = e => {
-    if (e.key === 'Escape') { pinned = false; show(false); }
+  button.setAttribute('aria-haspopup', 'dialog');
+  button.setAttribute('aria-controls', dialog.id);
+  button.onclick = () => {
+    dialog.querySelector('h2').textContent = term;
+    dialog.querySelector('p').textContent = definition;
+    dialog.showModal();
   };
 }
-let helpCount = 0;
 const fieldHelp = {
-  labels: 'Each distinct label gets a row. Add a name, then select Inspect palette to see its colors.',
-  options: 'JSON settings control how colors are generated. Leave {} for the defaults, or paste a downloaded configuration and select Inspect palette.',
+  labels: 'Each distinct label gets a row. Add a name, then select Generate Palette to see its colors.',
+  options: 'JSON settings control how colors are generated. Leave {} for the defaults, or paste a downloaded configuration and select Generate Palette.',
   'config-file': 'Opening a configuration fills the options box and recalculates the table immediately.',
-  preset: 'Choose a starting configuration for your use case. Apply preset updates the options box and recalculates the swatches.',
+  preset: 'Labels gives tags a moderate amount of color. Controls uses the same color range and raises the default WCAG contrast target from 4.5 to 7. Chart uses more saturated fills. Subdued uses less saturated fills. Mono generates grays. Apply preset updates the options and regenerates the swatches.',
+  'brand-example': 'Choose an example to replace the brand entries and regenerate the palette. Each entry has a stable ID and separate light and dark fills. Try the duo with three or more labels to see colors repeat, then try the eight-color set. Select Clear palette to return to generated hues.',
   'brand-id': 'Give this brand color a reusable name. Use the same ID to update or remove the entry.',
   'brand-light': 'The fill for this brand entry on the light theme. Select Add or update color to apply it.',
   'brand-dark': 'The fill for this brand entry on the dark theme. Select Add or update color to apply it.',
-  theme: 'Select Inspect palette to view the fills and background contrast for the light or dark theme.',
-  vision: 'Preview typical vision or simulate deutan (green), protan (red), or tritan (blue) color vision differences. Inspect the swatches and closest pairs.',
+  theme: 'Select Generate Palette to view the fills and background contrast for the light or dark theme.',
+  vision: 'Normal shows the original colors. Protan simulates reduced red-cone sensitivity; deutan simulates reduced green-cone sensitivity. Both can make reds and greens harder to distinguish. Tritan simulates reduced blue-cone sensitivity and can make blues and greens look similar. Compare the swatches and closest pairs. Code values stay in the original colors.',
   'optimize-vision': 'Score new placements for separation in both typical vision and the selected simulation. Existing saved placements keep their assignments.',
   markers: 'Add a shape beside each label so color is only one way to recognize it.',
   'minimum-distance': 'OKLab distance measures how different two colors look. Larger values mean more separation. Raise this threshold and inspect Pairs below minimum distance to find similar colors.',
-  registry: 'A registry remembers label placements across edits. Paste a downloaded registry and inspect the Registry column when you add another label.',
+  registry: 'A registry is a saved map from labels to color placements. Download the registry and its configuration. Load both when adding labels to keep earlier placements fixed. Without a saved registry, Registry starts with the same placements as Assigned.',
   'registry-file': 'Opening a saved registry fills the registry box and recalculates the palette immediately.'
 };
 for (const [id, definition] of Object.entries(fieldHelp)) {
@@ -58,13 +49,21 @@ for (const [id, definition] of Object.entries(fieldHelp)) {
   const label = input.closest('label');
   const title = label.textContent.replace(input.textContent, '').trim() || label.textContent.trim();
   const group = document.createElement('div');
+  group.className = 'field-control';
   label.before(group);
-  group.append(label);
-  addHelp(group, title, definition);
+  const heading = append(group,'div');
+  heading.className = 'field-title';
+  heading.append(label);
+  if (input.type !== 'checkbox') {
+    label.htmlFor = id;
+    group.append(input);
+  }
+  addHelp(heading, title, definition);
 }
-function details(parent, title, data) {
+function details(parent, title, data, explanation) {
   const group = append(parent, 'details');
   append(group, 'summary', title);
+  append(group, 'p', explanation);
   group.addEventListener('toggle', () => {
     if (group.open && !group.querySelector('pre')) append(group, 'pre', JSON.stringify(data, null, 2));
   });
@@ -100,7 +99,7 @@ function run() {
       const {rows, diagnostics, findings, config, registry, migration} = data.result;
       status.textContent = rows.length + ' distinct labels';
       results.replaceChildren();
-      if (migration) details(results,'Changes from comparison baseline',migration);
+      if (migration) details(results,'Changes from comparison baseline',migration,'Compare this run with the saved baseline to see which labels, placements, or theme colors changed.');
       const compare = append(results,'button',baseline ? 'Clear comparison baseline' : 'Use this palette as comparison baseline');
       compare.type = 'button';
       compare.onclick = () => {
@@ -118,14 +117,16 @@ function run() {
       append(table, 'caption', 'Palette comparison');
       const head = append(table, 'tr');
       for (const title of ['Label','Hash','Assigned','Registry','Registry fill / background (sRGB)']) {
-        const cell = append(head,'th',title);
+        const heading = append(append(head,'th'),'div');
+        heading.className = 'field-title';
+        append(heading,'span',title);
         const meaning = {
           Hash:'Color calculated from the label alone. Adding another label preserves this value.',
           Assigned:'Color chosen with the other labels in this set to improve separation.',
           Registry:'Color from the persistent placement. Download the registry to reuse this assignment later.',
           'Registry fill / background (sRGB)':'Contrast ratio between the registry fill and the theme background in sRGB. Higher values indicate more luminance contrast.'
         }[title];
-        if (meaning) addHelp(cell,title,meaning);
+        if (meaning) addHelp(heading,title,meaning);
       }
       if (config.options.gamut === 'display-p3') append(head,'th','Registry fill / background (Display-P3)');
       for (const row of rows) {
@@ -147,19 +148,23 @@ function run() {
             chip.title = row.nativeSwatches[index];
           }
           cell.append(hex);
+          const set = row.colorSets[index];
+          details(cell,'Fill attributes',set[input.theme].fill,
+            `Original ${input.theme} fill returned by the library. Use fill.hex for CSS or fill.rgb for channel values. Vision simulations affect the preview only.`);
+          details(cell,'Full color set',set,'The complete API result includes both themes, every color role, and contrast measurements.');
         }
         append(line,'td',`${row.fillOnBackground.srgbRatio.toFixed(2)}:1`);
         if (config.options.gamut === 'display-p3') {
           append(line,'td',`${row.fillOnBackground.displayP3LuminanceRatio.toFixed(2)}:1`);
         }
       }
-      for (const [title,items] of [
-        ['Normalized aliases',findings.aliases], ['Closest pairs in selected vision profile',findings.closest],
-        ['Exact duplicate registry fills',findings.duplicates], ['Pairs below minimum distance',findings.belowMinimum],
-        ['Placement searches below target after 24 positions across scored themes and profiles',findings.exhaustedSearches],
-      ]) details(results,`${title} (${items.length})`,items);
-      details(results,'Registry palette distances (row indices start at zero)',diagnostics);
-      for (const row of rows) details(results,row.label,{contrast:row.contrast,fillOnBackground:row.fillOnBackground,fill:row.fill,registryFillTrace:row.registryFillTrace,css:row.variables});
+      for (const [title,items,meaning] of [
+        ['Normalized aliases',findings.aliases,'Input spellings that become the same label after normalization.'], ['Closest pairs in selected vision profile',findings.closest,'The registry pairs with the smallest OKLab distance in this preview. Check these labels first for confusion.'],
+        ['Exact duplicate registry fills',findings.duplicates,'Labels whose registry fills have identical colors in this preview.'], ['Pairs below minimum distance',findings.belowMinimum,'Pairs closer than your Minimum OKLab distance setting. Increase the threshold to flag more pairs.'],
+        ['Placement searches below target after 24 positions across scored themes and profiles',findings.exhaustedSearches,'Placements that tried all 24 candidate positions and still fell below your distance threshold.'],
+      ]) details(results,`${title} (${items.length})`,items,meaning);
+      details(results,'Registry palette distances (row indices start at zero)',diagnostics,'Distances for every pair of registry fills, plus summary statistics. Index 0 refers to the first label row.');
+      for (const row of rows) details(results,row.label,{contrast:row.contrast,fillOnBackground:row.fillOnBackground,fill:row.fill,registryFillTrace:row.registryFillTrace,css:row.variables},'Registry details for this label: contrast by role, fill against background, the steps used to generate that fill, and reusable CSS variables.');
       download('Download configuration', 'texthue-config.json', 'application/json', () => JSON.stringify(config, null, 2));
       download('Download registry', 'texthue-registry.json', 'application/json', () => JSON.stringify(registry, null, 2));
       download('Download swatch sheet', 'texthue-swatches.svg', 'image/svg+xml', () => swatchSheet(rows, input.theme, input.vision));
@@ -195,6 +200,10 @@ function applyEdit(change) {
   }
 }
 document.getElementById('apply-preset').onclick = () => applyEdit({preset:document.getElementById('preset').value});
+document.getElementById('brand-example').onchange = event => {
+  if (event.target.value) applyEdit({example:event.target.value});
+  event.target.value = '';
+};
 function editBrand(remove) {
   applyEdit({remove, entry:{
     id:document.getElementById('brand-id').value,

@@ -4,20 +4,19 @@ TextHue turns a text label into repeatable colors for light and dark themes. Use
 
 [Try the live palette inspector](https://hustedev.github.io/texthue/site/?preview=2) · [Choose an assignment method](docs/GUIDE.md) · [Run the inspector locally](docs/GUIDE.md#preview-a-collection-in-the-palette-inspector)
 
-The swatches below show how the same labels render across themes and how collection assignment changes nearby colors.
+## One username across three apps
 
-![Light and dark label colors, collection assignments, and tonal roles](docs/assets/gallery.svg)
+Follow `@mira` from the chat message to the task assignee and the on-call shift. Each app resolves the username independently. With the same TextHue version, settings, and theme, each gets exactly the same badge colors. Adding another teammate leaves Mira’s badge unchanged.
 
-Use `resolveTextColors` for a label whose color should stay fixed as other labels appear. Use `assignTextColors` when you know the whole set and want to separate similar fills.
+![Chat messages, task cards, and calendar shifts show @mira and @nico with consistent username badges.](docs/assets/gallery.svg)
 
 ```js
-import { assignTextColors, resolveTextColors } from 'texthue';
+import { resolveTextColors } from 'texthue';
 
-const label = 'item:633';
-const independent = resolveTextColors(label);
-const collection = assignTextColors(['item:33', label]);
-console.log(independent.light.fill.hex);              // #a8c763
-console.log(collection.colors[label].light.fill.hex); // #6fd274
+const { fill, onFill } = resolveTextColors('@mira').light;
+badge.textContent = '@mira';
+badge.style.backgroundColor = fill.hex;
+badge.style.color = onFill.hex;
 ```
 
 ## Libraries
@@ -96,14 +95,16 @@ func main() {
 
 ## Result and color formats
 
-Each theme contains `background`, `fill`, `onFill`, and `text`. Use `fill` as a badge or surface background and `onFill` for its text. Use `text` for text or marks directly on the returned `background`. These are different contrast pairs: an text is not necessarily suitable on a fill. Both themes are returned; your application selects the active theme.
+Each theme contains `background`, `fill`, `onFill`, and `text`. Use `fill` as a badge or surface background and `onFill` for its text. Use `text` for text or marks directly on the returned `background`. The application selects the theme. The strip shows the roles for a single label, including lighter surfaces and fills for hover and active states.
+
+![Light-theme surface, interaction, border, and text colors for Design.](docs/assets/roles.svg)
 
 Every color has the same shape. For the default light fill for `research`:
 
 ```json
 {
   "hex": "#59b8d8",
-  "rgb": { "r": 191, "g": 151, "b": 252 },
+  "rgb": { "r": 89, "g": 184, "b": 216 },
   "hsl": { "h": 195.11811, "s": 61.95122, "l": 59.803922 },
   "oklch": { "l": 0.737459, "c": 0.100435, "h": 222.843011 }
 }
@@ -114,6 +115,10 @@ RGB channels are integers from 0 through 255. HSL hue is in degrees and saturati
 The top-level result also has `version` (the algorithm identifier) and `hue` (the original hash-derived hue). Each theme has `contrast.target`, `contrast.fill`, and `contrast.text`. The latter two report `ratio`, `meetsTarget`, `lightnessAdjusted`, `chromaReduced`, and `fallback`. Check these when using custom backgrounds or high contrast targets. An unattainable text target returns the better black/white endpoint with `meetsTarget: false` and `fallback: "unattainable-contrast"`; it does not claim success or throw an input error.
 
 ## Assigning a collection
+
+**Independent labels** get their colors one at a time. Different names can land on nearly identical colors. **Collection assignment** considers all the names you pass together and can adjust their colors so readers can tell them apart. Compare the same two labels in the rows below.
+
+![Two similar green fills resolved separately, followed by their colors when assigned together.](docs/assets/assignment.svg)
 
 | Method | Inputs | Effect of adding a label |
 | --- | --- | --- |

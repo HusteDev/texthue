@@ -23,7 +23,7 @@ def check_review_labels(page, labels):
         for profile in ("normal", "deutan", "protan", "tritan"):
             page.locator("#vision").select_option(profile)
             previous = page.locator("table").first.element_handle()
-            page.get_by_role("button", name="Inspect palette").click()
+            page.get_by_role("button", name="Generate Palette").click()
             page.wait_for_function("table => !table.isConnected", arg=previous)
             previous.dispose()
             expect(page.get_by_role("status")).to_have_text(f"{len(labels)} distinct labels")
@@ -37,7 +37,7 @@ def check_markers(page):
     page.locator("#labels").fill("\n".join(map(str, range(128))))
     toggle = page.get_by_role("checkbox", name="Show identity shapes")
     toggle.check()
-    page.get_by_role("button", name="Inspect palette").click()
+    page.get_by_role("button", name="Generate Palette").click()
     expect(page.get_by_role("status")).to_have_text("128 distinct labels")
     shapes = ("circle", "square", "triangle", "diamond", "star", "cross", "pentagon", "hexagon")
     pixels = set()
@@ -62,6 +62,26 @@ def exercise(page, url, clipboard):
     page.goto(url)
     status = page.get_by_role("status")
     expect(status).to_have_text("3 distinct labels")
+    for term in ("Role defaults", "Brand example", "Vision profile", "Registry"):
+        button = page.get_by_role("button", name=f"Help for {term}", exact=True)
+        button.focus()
+        button.press("Enter")
+        dialog = page.get_by_role("dialog", name=term)
+        expect(dialog).to_be_visible()
+        assert dialog.evaluate("el => el.matches(':modal')")
+        page.keyboard.press("Escape")
+        expect(button).to_be_focused()
+    for example, count in (("duo", 2), ("studio", 4), ("market", 8), ("none", 0)):
+        page.locator("#brand-example").select_option(example)
+        expect(status).to_have_text("3 distinct labels")
+        assert len(json.loads(page.locator("#options").input_value()).get("palette", [])) == count
+    for cell in page.locator("table tr").nth(1).locator("td").all()[:3]:
+        disclosure = cell.locator("details").last
+        assert not disclosure.evaluate("el => el.open")
+        disclosure.locator("summary").click()
+        value = json.loads(disclosure.locator("pre").inner_text())
+        for theme in ("light", "dark"):
+            assert value[theme]["fill"]["hex"].startswith("#")
     check_review_labels(
         page,
         (
@@ -101,14 +121,14 @@ def exercise(page, url, clipboard):
     )
     for theme, ratio in (("light", "1.00:1"), ("dark", "21.00:1")):
         page.locator("#theme").select_option(theme)
-        page.get_by_role("button", name="Inspect palette").click()
+        page.get_by_role("button", name="Generate Palette").click()
         expect(page.get_by_role("cell", name=ratio, exact=True)).to_be_visible()
     expect(
         page.get_by_role("columnheader", name="Registry fill / background (Display-P3)")
     ).to_have_count(0)
     page.get_by_role("button", name="Use this palette as comparison baseline").click()
     page.locator("#options").fill('{"gamut":"display-p3","backgrounds":{"dark":"#000000"}}')
-    page.get_by_role("button", name="Inspect palette").click()
+    page.get_by_role("button", name="Generate Palette").click()
     expect(
         page.get_by_role("columnheader", name="Registry fill / background (Display-P3)")
     ).to_be_visible()
@@ -149,7 +169,7 @@ def exercise(page, url, clipboard):
     check_markers(page)
     page.locator("#labels").fill("item:33\nitem:633")
     page.locator("#vision").select_option("deutan")
-    submit = page.get_by_role("button", name="Inspect palette")
+    submit = page.get_by_role("button", name="Generate Palette")
     submit.click()
     expect(status).to_have_text("2 distinct labels")
     swatches = page.locator("tr td:nth-of-type(3)")
@@ -195,7 +215,7 @@ def exercise(page, url, clipboard):
         )
         expect(page.locator(field)).to_have_value(outputs[kind])
         expect(status).to_have_text("1 distinct labels")
-    page.get_by_role("button", name="Inspect palette").press("Enter")
+    page.get_by_role("button", name="Generate Palette").press("Enter")
     expect(status).to_have_text("1 distinct labels")
     if not clipboard:
         # Exercise the documented manual-copy path without reading the OS clipboard.

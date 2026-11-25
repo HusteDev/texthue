@@ -40,7 +40,7 @@ export function inspect({labels, options, theme, vision, registry, baseline, opt
     const nativeSwatches = vision === 'normal' && saved[theme].fill.p3 ? fills.map(fill => fill.css) : undefined;
     const projection = resolver.project(label, {themes:[theme], roles:['fill'], formats:['hex','trace']},
       false, persistent.assignments[label]);
-    return {label, ...(markers && {marker:persistent.markers[label]}), swatches, ...(nativeSwatches && {nativeSwatches}), registryFillTrace:projection[theme].fill, contrast: saved[theme].contrast, fill: saved[theme].fill,
+    return {label, colorSets:[hash,assigned,saved], ...(markers && {marker:persistent.markers[label]}), swatches, ...(nativeSwatches && {nativeSwatches}), registryFillTrace:projection[theme].fill, contrast: saved[theme].contrast, fill: saved[theme].fill,
       fillOnBackground:surfaceContrast(saved[theme]), variables: cssVariables(saved, {theme, slug:label}),
       ...(saved[theme].fill.p3 && {p3Variables:cssVariables(saved,{theme,slug:label,format:'p3'})})};
   });

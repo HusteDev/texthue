@@ -1,119 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 846" role="img" aria-labelledby="title" font-family="system-ui, sans-serif">
-<title id="title">TextHue label colors in both themes, collection assignment, tonal roles, and simulated color vision</title>
-<rect y="0" width="900" height="94" fill="#ffffff"/>
-<text x="18" y="23" fill="#171717" font-size="16" font-weight="600">Independent labels · light</text>
-<rect x="18" y="33" width="139" height="29" rx="3" fill="#73c9c3"/>
-<text x="18" y="81" fill="#171717" font-size="13">Design</text>
-<rect x="162" y="33" width="139" height="29" rx="3" fill="#53c4ac"/>
-<text x="162" y="81" fill="#171717" font-size="13">Research</text>
-<rect x="306" y="33" width="139" height="29" rx="3" fill="#dab256"/>
-<text x="306" y="81" fill="#171717" font-size="13">Platform</text>
-<rect x="450" y="33" width="139" height="29" rx="3" fill="#8cc255"/>
-<text x="450" y="81" fill="#171717" font-size="13">Support</text>
-<rect x="594" y="33" width="139" height="29" rx="3" fill="#a8bb66"/>
-<text x="594" y="81" fill="#171717" font-size="13">Finance</text>
-<rect x="738" y="33" width="139" height="29" rx="3" fill="#deb75d"/>
-<text x="738" y="81" fill="#171717" font-size="13">Operations</text>
-<rect y="94" width="900" height="94" fill="#121212"/>
-<text x="18" y="117" fill="#fafafa" font-size="16" font-weight="600">Independent labels · dark</text>
-<rect x="18" y="127" width="139" height="29" rx="3" fill="#36625f"/>
-<text x="18" y="175" fill="#fafafa" font-size="13">Design</text>
-<rect x="162" y="127" width="139" height="29" rx="3" fill="#235c50"/>
-<text x="162" y="175" fill="#fafafa" font-size="13">Research</text>
-<rect x="306" y="127" width="139" height="29" rx="3" fill="#6a5526"/>
-<text x="306" y="175" fill="#fafafa" font-size="13">Platform</text>
-<rect x="450" y="127" width="139" height="29" rx="3" fill="#405c24"/>
-<text x="450" y="175" fill="#fafafa" font-size="13">Support</text>
-<rect x="594" y="127" width="139" height="29" rx="3" fill="#4f582d"/>
-<text x="594" y="175" fill="#fafafa" font-size="13">Finance</text>
-<rect x="738" y="127" width="139" height="29" rx="3" fill="#6e592a"/>
-<text x="738" y="175" fill="#fafafa" font-size="13">Operations</text>
-<rect y="188" width="900" height="94" fill="#ffffff"/>
-<text x="18" y="211" fill="#171717" font-size="16" font-weight="600">Collection assignment · light</text>
-<rect x="18" y="221" width="139" height="29" rx="3" fill="#a8bbe6"/>
-<text x="18" y="269" fill="#171717" font-size="13">Design</text>
-<rect x="162" y="221" width="139" height="29" rx="3" fill="#52bfe4"/>
-<text x="162" y="269" fill="#171717" font-size="13">Research</text>
-<rect x="306" y="221" width="139" height="29" rx="3" fill="#b0c056"/>
-<text x="306" y="269" fill="#171717" font-size="13">Platform</text>
-<rect x="450" y="221" width="139" height="29" rx="3" fill="#5dc4ad"/>
-<text x="450" y="269" fill="#171717" font-size="13">Support</text>
-<rect x="594" y="221" width="139" height="29" rx="3" fill="#71c765"/>
-<text x="594" y="269" fill="#171717" font-size="13">Finance</text>
-<rect x="738" y="221" width="139" height="29" rx="3" fill="#deb75d"/>
-<text x="738" y="269" fill="#171717" font-size="13">Operations</text>
-<rect y="282" width="900" height="94" fill="#ffffff"/>
-<text x="18" y="305" fill="#171717" font-size="16" font-weight="600">Design · light theme roles</text>
-<rect x="18" y="315" width="91" height="29" rx="3" fill="#ffffff"/>
-<text x="18" y="363" fill="#171717" font-size="13">background</text>
-<rect x="114" y="315" width="91" height="29" rx="3" fill="#d8faf7"/>
-<text x="114" y="363" fill="#171717" font-size="13">subtle</text>
-<rect x="210" y="315" width="91" height="29" rx="3" fill="#8df3ec"/>
-<text x="210" y="363" fill="#171717" font-size="13">muted</text>
-<rect x="306" y="315" width="91" height="29" rx="3" fill="#73c9c3"/>
-<text x="306" y="363" fill="#171717" font-size="13">fill</text>
-<rect x="402" y="315" width="91" height="29" rx="3" fill="#6ec0ba"/>
-<text x="402" y="363" fill="#171717" font-size="13">fillHover</text>
-<rect x="498" y="315" width="91" height="29" rx="3" fill="#69b8b2"/>
-<text x="498" y="363" fill="#171717" font-size="13">fillActive</text>
-<rect x="594" y="315" width="91" height="29" rx="3" fill="#51908c"/>
-<text x="594" y="363" fill="#171717" font-size="13">border</text>
-<rect x="690" y="315" width="91" height="29" rx="3" fill="#3b6b68"/>
-<text x="690" y="363" fill="#171717" font-size="13">text</text>
-<rect x="786" y="315" width="91" height="29" rx="3" fill="#294d4b"/>
-<text x="786" y="363" fill="#171717" font-size="13">strong</text>
-<rect y="376" width="900" height="94" fill="#ffffff"/>
-<text x="18" y="399" fill="#171717" font-size="16" font-weight="600">Collection assignment · protan simulation (severity 1)</text>
-<rect x="18" y="409" width="139" height="29" rx="3" fill="#aebee8"/>
-<text x="18" y="457" fill="#171717" font-size="13">Design</text>
-<rect x="162" y="409" width="139" height="29" rx="3" fill="#aabbe6"/>
-<text x="162" y="457" fill="#171717" font-size="13">Research</text>
-<rect x="306" y="409" width="139" height="29" rx="3" fill="#ccb74b"/>
-<text x="306" y="457" fill="#171717" font-size="13">Platform</text>
-<rect x="450" y="409" width="139" height="29" rx="3" fill="#beb9ac"/>
-<text x="450" y="457" fill="#171717" font-size="13">Support</text>
-<rect x="594" y="409" width="139" height="29" rx="3" fill="#cbb85d"/>
-<text x="594" y="457" fill="#171717" font-size="13">Finance</text>
-<rect x="738" y="409" width="139" height="29" rx="3" fill="#c9b654"/>
-<text x="738" y="457" fill="#171717" font-size="13">Operations</text>
-<rect y="470" width="900" height="94" fill="#ffffff"/>
-<text x="18" y="493" fill="#171717" font-size="16" font-weight="600">Collection assignment · deutan simulation (severity 1)</text>
-<rect x="18" y="503" width="139" height="29" rx="3" fill="#a8b8e5"/>
-<text x="18" y="551" fill="#171717" font-size="13">Design</text>
-<rect x="162" y="503" width="139" height="29" rx="3" fill="#95ace4"/>
-<text x="162" y="551" fill="#171717" font-size="13">Research</text>
-<rect x="306" y="503" width="139" height="29" rx="3" fill="#cab85c"/>
-<text x="306" y="551" fill="#171717" font-size="13">Platform</text>
-<rect x="450" y="503" width="139" height="29" rx="3" fill="#adaeaf"/>
-<text x="450" y="551" fill="#171717" font-size="13">Support</text>
-<rect x="594" y="503" width="139" height="29" rx="3" fill="#bfb06c"/>
-<text x="594" y="551" fill="#171717" font-size="13">Finance</text>
-<rect x="738" y="503" width="139" height="29" rx="3" fill="#d3c060"/>
-<text x="738" y="551" fill="#171717" font-size="13">Operations</text>
-<rect y="564" width="900" height="94" fill="#ffffff"/>
-<text x="18" y="587" fill="#171717" font-size="16" font-weight="600">Collection assignment · tritan simulation (severity 1)</text>
-<rect x="18" y="597" width="139" height="29" rx="3" fill="#98c3c9"/>
-<text x="18" y="645" fill="#171717" font-size="13">Design</text>
-<rect x="162" y="597" width="139" height="29" rx="3" fill="#00cacb"/>
-<text x="162" y="645" fill="#171717" font-size="13">Research</text>
-<rect x="306" y="597" width="139" height="29" rx="3" fill="#b9b6a9"/>
-<text x="306" y="645" fill="#171717" font-size="13">Platform</text>
-<rect x="450" y="597" width="139" height="29" rx="3" fill="#27c6bd"/>
-<text x="450" y="645" fill="#171717" font-size="13">Support</text>
-<rect x="594" y="597" width="139" height="29" rx="3" fill="#69c2b0"/>
-<text x="594" y="645" fill="#171717" font-size="13">Finance</text>
-<rect x="738" y="597" width="139" height="29" rx="3" fill="#efaaa3"/>
-<text x="738" y="645" fill="#171717" font-size="13">Operations</text>
-<rect y="658" width="900" height="94" fill="#ffffff"/>
-<text x="18" y="681" fill="#171717" font-size="16" font-weight="600">Near-collision · independent light fills</text>
-<rect x="18" y="691" width="427" height="29" rx="3" fill="#b4c860"/>
-<text x="18" y="739" fill="#171717" font-size="13">item:33 · #b4c860</text>
-<rect x="450" y="691" width="427" height="29" rx="3" fill="#a8c763"/>
-<text x="450" y="739" fill="#171717" font-size="13">item:633 · #a8c763</text>
-<rect y="752" width="900" height="94" fill="#ffffff"/>
-<text x="18" y="775" fill="#171717" font-size="16" font-weight="600">Same labels · assigned together</text>
-<rect x="18" y="785" width="427" height="29" rx="3" fill="#b4c860"/>
-<text x="18" y="833" fill="#171717" font-size="13">item:33 · #b4c860</text>
-<rect x="450" y="785" width="427" height="29" rx="3" fill="#6fd274"/>
-<text x="450" y="833" fill="#171717" font-size="13">item:633 · #6fd274</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 244" role="img" aria-labelledby="title" font-family="system-ui, sans-serif">
+<title id="title">The same usernames in team chat, a task board, and an on-call calendar</title>
+<g transform="translate(6 8)"><rect width="284" height="226" rx="10" fill="#fff" stroke="#bac6cd"/>
+<text x="16" y="32" font-size="20" font-weight="650">Team chat</text>
+<text x="16" y="57" font-size="14" fill="#465661"># release</text><path d="M0 73h284" stroke="#cdd6da"/><rect x="16" y="84" width="85" height="26" rx="6" fill="#eeb15f"/>
+<text x="25" y="102" fill="#000000" font-size="14">@mira</text><text x="16" y="132">Build is ready for review.</text><rect x="16" y="149" width="85" height="26" rx="6" fill="#c9c954"/>
+<text x="25" y="167" fill="#000000" font-size="14">@nico</text><text x="16" y="198">I’ll check the release notes.</text></g><g transform="translate(308 8)"><rect width="284" height="226" rx="10" fill="#fff" stroke="#bac6cd"/>
+<text x="16" y="32" font-size="20" font-weight="650">Task board</text>
+<text x="16" y="57" font-size="14" fill="#465661">In progress</text><path d="M0 73h284" stroke="#cdd6da"/><rect x="12" y="84" width="260" height="55" rx="5" fill="#f0f4f6"/><text x="23" y="118">Review build</text><rect x="178" y="99" width="85" height="26" rx="6" fill="#c9c954"/>
+<text x="187" y="117" fill="#000000" font-size="14">@nico</text><rect x="12" y="150" width="260" height="55" rx="5" fill="#f0f4f6"/><text x="23" y="184">Publish notes</text><rect x="178" y="165" width="85" height="26" rx="6" fill="#eeb15f"/>
+<text x="187" y="183" fill="#000000" font-size="14">@mira</text></g><g transform="translate(610 8)"><rect width="284" height="226" rx="10" fill="#fff" stroke="#bac6cd"/>
+<text x="16" y="32" font-size="20" font-weight="650">On-call calendar</text>
+<text x="16" y="57" font-size="14" fill="#465661">November · primary rotation</text><path d="M0 73h284" stroke="#cdd6da"/><text x="18" y="118">Mon 23</text><path d="M16 138h250" stroke="#d9e1e6"/><rect x="146" y="99" width="85" height="26" rx="6" fill="#eeb15f"/>
+<text x="155" y="117" fill="#000000" font-size="14">@mira</text><text x="18" y="180">Tue 24</text><path d="M16 200h250" stroke="#d9e1e6"/><rect x="146" y="161" width="85" height="26" rx="6" fill="#c9c954"/>
+<text x="155" y="179" fill="#000000" font-size="14">@nico</text></g>
 </svg>

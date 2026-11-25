@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 94" role="img" aria-labelledby="title" font-family="system-ui, sans-serif">
+<title id="title">Light theme roles for Design</title>
+<rect y="0" width="900" height="94" fill="#ffffff"/>
+<text x="18" y="23" fill="#171717" font-size="16" font-weight="600">Design · light theme</text>
+<rect x="18" y="33" width="91" height="29" rx="3" fill="#ffffff"/>
+<text x="18" y="81" fill="#171717" font-size="13">background</text>
+<rect x="114" y="33" width="91" height="29" rx="3" fill="#d8faf7"/>
+<text x="114" y="81" fill="#171717" font-size="13">subtle</text>
+<rect x="210" y="33" width="91" height="29" rx="3" fill="#8df3ec"/>
+<text x="210" y="81" fill="#171717" font-size="13">muted</text>
+<rect x="306" y="33" width="91" height="29" rx="3" fill="#73c9c3"/>
+<text x="306" y="81" fill="#171717" font-size="13">fill</text>
+<rect x="402" y="33" width="91" height="29" rx="3" fill="#6ec0ba"/>
+<text x="402" y="81" fill="#171717" font-size="13">fillHover</text>
+<rect x="498" y="33" width="91" height="29" rx="3" fill="#69b8b2"/>
+<text x="498" y="81" fill="#171717" font-size="13">fillActive</text>
+<rect x="594" y="33" width="91" height="29" rx="3" fill="#51908c"/>
+<text x="594" y="81" fill="#171717" font-size="13">border</text>
+<rect x="690" y="33" width="91" height="29" rx="3" fill="#3b6b68"/>
+<text x="690" y="81" fill="#171717" font-size="13">text</text>
+<rect x="786" y="33" width="91" height="29" rx="3" fill="#294d4b"/>
+<text x="786" y="81" fill="#171717" font-size="13">strong</text>
+</svg>

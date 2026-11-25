@@ -21,36 +21,61 @@ function row(title, swatches, y, dark = false) {
 <text x="18" y="${y + 23}" fill="${ink}" font-size="16" font-weight="600">${title}</text>
 ${shapes.join('\n')}`;
 }
-const rows = [
-  row('Independent labels · light', labels.map((s, i) => [s, hashed[i].light.fill.hex]), 0),
-  row('Independent labels · dark', labels.map((s, i) => [s, hashed[i].dark.fill.hex]), 94, true),
-  row('Collection assignment · light', labels.map(s => [s, assigned[s].light.fill.hex]), 188),
-  row('Design · light theme roles', scale.map(role => [role, hashed[0].light[role].hex]), 282),
-  ...['protan','deutan','tritan'].map((vision, i) => row(
-    `Collection assignment · ${vision} simulation (severity 1)`,
-    labels.map(s => [s, simulateVision(assigned[s].light.fill.hex, vision)]), 376 + 94 * i,
-  )),
-  row('Near-collision · independent light fills', collisionPair.map(label => {
-    const hex = resolveTextColors(label).light.fill.hex;
-    return [`${label} · ${hex}`, hex];
-  }), 658),
-  row('Same labels · assigned together', collisionPair.map(label => {
-    const hex = separated[label].light.fill.hex;
-    return [`${label} · ${hex}`, hex];
-  }), 752),
-];
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 ${94 * rows.length}" role="img" aria-labelledby="title" font-family="system-ui, sans-serif">
-<title id="title">TextHue label colors in both themes, collection assignment, tonal roles, and simulated color vision</title>
-${rows.join('\n')}
+function figure(title, height, content) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 ${height}" role="img" aria-labelledby="title" font-family="system-ui, sans-serif">
+<title id="title">${title}</title>
+${content}
 </svg>
 `;
-for (const folder of ['../docs/assets/', '../packages/npm/assets/']) {
-  const dir = new URL(folder, import.meta.url);
-  const file = new URL('gallery.svg', dir);
+}
+
+function badge(user, x, y) {
+  const {fill, onFill} = resolveTextColors(user).light;
+  return `<rect x="${x}" y="${y}" width="85" height="26" rx="6" fill="${fill.hex}"/>
+<text x="${x + 9}" y="${y + 18}" fill="${onFill.hex}" font-size="14">${user}</text>`;
+}
+
+function panel(x, title, subtitle, body) {
+  return `<g transform="translate(${x} 8)"><rect width="284" height="226" rx="10" fill="#fff" stroke="#bac6cd"/>
+<text x="16" y="32" font-size="20" font-weight="650">${title}</text>
+<text x="16" y="57" font-size="14" fill="#465661">${subtitle}</text><path d="M0 73h284" stroke="#cdd6da"/>${body}</g>`;
+}
+
+const hero = figure('The same usernames in team chat, a task board, and an on-call calendar', 244, [
+  panel(6,'Team chat','# release', badge('@mira',16,84) + '<text x="16" y="132">Build is ready for review.</text>' +
+    badge('@nico',16,149) + '<text x="16" y="198">I’ll check the release notes.</text>'),
+  panel(308,'Task board','In progress', ['Review build','Publish notes'].map((task,i) =>
+    `<rect x="12" y="${84+i*66}" width="260" height="55" rx="5" fill="#f0f4f6"/><text x="23" y="${118+i*66}">${task}</text>` +
+    badge(['@nico','@mira'][i],178,99+i*66)).join('')),
+  panel(610,'On-call calendar','November · primary rotation', ['Mon 23','Tue 24'].map((day,i) =>
+    `<text x="18" y="${118+i*62}">${day}</text><path d="M16 ${138+i*62}h250" stroke="#d9e1e6"/>` +
+    badge(['@mira','@nico'][i],146,99+i*62)).join('')),
+].join(''));
+
+function pairRow(title, colors, y) {
+  return row(title, collisionPair.map(label => {
+    const hex = colors[label].light.fill.hex;
+    return [`${label} · ${hex}`, hex];
+  }), y);
+}
+const independent = Object.fromEntries(collisionPair.map(label => [label, resolveTextColors(label)]));
+const files = {
+  '../docs/assets/gallery.svg': hero,
+  '../packages/npm/assets/gallery.svg': hero,
+  '../docs/assets/assignment.svg': figure('Resolving two labels separately and assigning them together',188,
+    pairRow('Resolved independently',independent,0) + pairRow('Assigned together',separated,94)),
+  '../docs/assets/roles.svg': figure('Light theme roles for Design',94,
+    row('Design · light theme',scale.map(role => [role, hashed[0].light[role].hex]),0)),
+  '../docs/assets/vision.svg': figure('One collection under four vision profiles',376,
+    ['normal','protan','deutan','tritan'].map((vision,i) => row(vision,
+      labels.map(label => [label,vision === 'normal' ? assigned[label].light.fill.hex : simulateVision(assigned[label].light.fill.hex,vision)]),94*i)).join('')),
+};
+for (const [path, svg] of Object.entries(files)) {
+  const file = new URL(path, import.meta.url);
   if (process.argv.includes('--check')) {
-    if ((await readFile(file, 'utf8')).replaceAll('\r\n', '\n') !== svg) throw Error(`Stale gallery: ${file.pathname}`);
+    if ((await readFile(file, 'utf8')).replaceAll('\r\n', '\n') !== svg) throw Error(`Stale visual: ${file.pathname}`);
   } else {
-    await mkdir(dir, {recursive: true});
+    await mkdir(new URL('.',file), {recursive:true});
     await writeFile(file, svg);
   }
 }

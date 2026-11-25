@@ -21,11 +21,28 @@ function editableReplay(input) {
   return options;
 }
 
-export function editOptions(input, {preset, entry, remove}) {
+export const brandExamples = {
+  duo: [['ocean','#176b83','#73c8dc'],['sand','#c69252','#eac798']],
+  studio: [['ink','#354360','#aabbe3'],['paper','#e1ceb0','#ecddc7'],
+    ['vermillion','#b94d35','#ed917c'],['leaf','#577445','#a9c394']],
+  market: [['berry','#91446a','#dc96ba'],['citrus','#be7229','#f3af66'],
+    ['herb','#527347','#a1c591'],['plum','#665589','#bba7dc'],
+    ['linen','#b39a77','#e5ceb0'],['denim','#3e678a','#90bada'],
+    ['brick','#9c5144','#df998c'],['mint','#33766d','#8acbc0']],
+  none: [],
+};
+
+export function editOptions(input, {preset, entry, remove, example}) {
   const source = input && Object.hasOwn(input, 'schema') ? editableReplay(input) : input;
   createResolver(source);
   const options = {...source};
   if (preset) options.preset = preset;
+  if (example !== undefined) {
+    if (!Object.hasOwn(brandExamples,example)) throw new Error('Unknown brand example');
+    const entries = brandExamples[example].map(([id,light,dark]) => ({id,light,dark}));
+    if (entries.length) options.palette = entries;
+    else delete options.palette;
+  }
   if (entry) {
     if (!entry.id) throw new Error('Enter a palette ID');
     const palette = [...(options.palette ?? [])];
