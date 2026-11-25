@@ -58,7 +58,8 @@ jobs:
           queries: security-extended
       - name: Compile Go module under CodeQL
         if: matrix.language == 'go'
-        run: go -C packages/go build -a ./...
+        working-directory: packages/go
+        run: go build -a ./...
       - name: Compile Kotlin JVM sources under CodeQL
         if: matrix.language == 'java-kotlin'
         run: JAVA_HOME="$JAVA_HOME_17_X64" packages/kotlin/gradlew -p packages/kotlin --no-daemon --no-build-cache -Pkotlin.compiler.execution.strategy=in-process compileKotlin
