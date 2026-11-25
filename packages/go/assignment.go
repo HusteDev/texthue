@@ -10,7 +10,7 @@ import (
 
 type Assignment struct {
 	HueFraction float64 `json:"hueFraction"`
-	Ring        int     `json:"ring"`
+	Ring        int64   `json:"ring"`
 	Moved       bool    `json:"moved"`
 }
 
@@ -47,7 +47,7 @@ func separationScore(pair [2]triple, occupied [][2]triple) float64 {
 }
 
 func place(natural float64, occupied map[string]Assignment, separation float64) Assignment {
-	for ring := 0; ; ring++ {
+	for ring := int64(0); ; ring++ {
 		for i := 0; i <= 384; i++ {
 			step := (i + 1) / 2
 			if i%2 != 0 {
@@ -131,7 +131,7 @@ func (r *Resolver) Assign(texts []string, pinned map[string]Assignment) (Collect
 			best := separationScore(pair, occupied)
 			for step := 1; step < 120 && best < 0.04; step++ {
 				hue := math.Mod(initial.HueFraction+float64(step%24)/24, 1)
-				ring := initial.Ring + step/24
+				ring := initial.Ring + int64(step/24)
 				free := true
 				for _, previous := range result.Assignments {
 					d := math.Abs(hue - previous.HueFraction)

@@ -588,19 +588,24 @@ func TestDisplayP3BatchIsolation(t *testing.T) {
 }
 
 func TestPinnedRingMustBeReplayable(t *testing.T) {
-	if strconv.IntSize < 64 {
-		t.Skip("all nonnegative int values fit in a registry ring on this platform")
-	}
 	r, err := NewResolver()
 	if err != nil {
 		t.Fatal(err)
 	}
 	maxRing := int64(1<<53 - 1)
-	pins := map[string]Assignment{"a": {Ring: int(maxRing)}}
+	pins := map[string]Assignment{"a": {Ring: maxRing}}
 	if _, err := r.Assign([]string{"a"}, pins); err != nil {
 		t.Fatal(err)
 	}
-	pins["a"] = Assignment{Ring: int(maxRing + 1)}
+	data, err := r.ExportRegistry(pins)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restored, err := r.ImportRegistry(data)
+	if err != nil || restored["a"] != pins["a"] {
+		t.Fatalf("maximum ring failed replay: %v, %v", restored, err)
+	}
+	pins["a"] = Assignment{Ring: maxRing + 1}
 	if _, err := r.Assign([]string{"a"}, pins); err == nil {
 		t.Fatal("accepted a ring that cannot be replayed")
 	}

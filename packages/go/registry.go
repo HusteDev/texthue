@@ -65,10 +65,10 @@ func (r *Resolver) ImportRegistry(data []byte) (map[string]Assignment, error) {
 		ring, ringOK := p["ring"].(float64)
 		moved, movedOK := p["moved"].(bool)
 		if !hueOK || !ringOK || !movedOK || hue < 0 || hue >= 1 || ring < 0 ||
-			math.Trunc(ring) != ring || ring > 1<<53-1 || float64(int(ring)) != ring {
+			math.Trunc(ring) != ring || ring > 1<<53-1 {
 			return nil, invalid("registry placement")
 		}
-		result[name] = Assignment{hue, int(ring), moved}
+		result[name] = Assignment{hue, int64(ring), moved}
 	}
 	return result, nil
 }

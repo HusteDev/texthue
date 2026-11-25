@@ -426,7 +426,7 @@ func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string
 	ring := 0
 	if placement != nil {
 		uH = placement.HueFraction
-		ring = placement.Ring % 5
+		ring = int(placement.Ring % 5)
 	}
 	offset := [5]float64{0, .08, -.08, .16, -.16}[ring]
 	position := uH * 12
