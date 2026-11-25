@@ -167,6 +167,15 @@ def generated_cases():
 class ConformanceTests(unittest.TestCase):
     """Frozen-vector, runtime-error, and cross-language checks for the Python package."""
 
+    def test_contrast_repair_grid_tie(self):
+        from texthue._core import _choose
+
+        for start, expected in ((2321, 1907), (2322, 1907), (2323, 2737)):
+            with self.subTest(start=start):
+                result = _choose(start / 4096, 0, 0, None, 7)
+                self.assertEqual(result["fitted"]["lightness"], expected / 4096)
+                self.assertTrue(result["metadata"]["meetsTarget"])
+
     def test_precision_trace(self):
         from texthue import Resolver
 

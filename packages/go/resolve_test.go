@@ -13,6 +13,16 @@ import (
 	"testing"
 )
 
+func TestContrastRepairGridTie(t *testing.T) {
+	selectColor := func(rgb encodedRGB, _ float64) encodedRGB { return foreground(rgb) }
+	for _, tc := range []struct{ start, expected int }{{2321, 1907}, {2322, 1907}, {2323, 2737}} {
+		color, result := chooseForeground(float64(tc.start)/4096, 0, 0, nil, 7, selectColor, false, false, false)
+		if color.l != float64(tc.expected)/4096 || !result.MeetsTarget {
+			t.Errorf("start %d: got grid point %v, meets target %v; want %d, true", tc.start, color.l*4096, result.MeetsTarget, tc.expected)
+		}
+	}
+}
+
 func TestDisplayP3CSSVariables(t *testing.T) {
 	colors, err := Resolve("badge", WithGamut("display-p3"))
 	if err != nil {
