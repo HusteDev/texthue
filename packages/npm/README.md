@@ -14,6 +14,8 @@ console.log(research.light.fill.hex, issues.colors.bug.light.fill.hex);
 
 For single-label rendering, import `resolveTextColor` or `resolveTextColors` from `texthue/single`. This entry loads the renderer without collection assignment, vision diagnostics, migration, registry fingerprinting, or CSS export modules.
 
+To request one format, use `resolveTextColor('research', {theme: 'light', role: 'fill', format: 'hex'})`. It returns the string `#59b8d8`. A compiled resolver accepts the same selection in `resolver.color(label, selection)`. Omit `format` to get the complete color object.
+
 ```bash
 npm install texthue
 ```

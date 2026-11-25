@@ -405,11 +405,15 @@ export function compileRenderer(options: TextColorOptions = {}) {
     const name = settings.normalize(textValue(text,'text','INVALID_TEXT'));
     return render(settings,bases,digestOf(name),name,placement === undefined ? undefined : readPlacement(placement),only,strict);
   };
-  const color = (text: string, {theme,role}:Selection) => {
-    const selected = project(text,{themes:[theme],roles:[role]})[theme]?.[role];
+  function color<F extends Format>(text:string, selection:Selection & {format:F}):Color[F];
+  function color(text:string, selection:Selection):Color;
+  function color(text:string, {theme,role,format}:Selection & {format?:Format}) {
+    const only:Only = {themes:[theme],roles:[role]};
+    if (format !== undefined) only.formats = [format];
+    const selected = project(text,only)[theme]?.[role];
     if (!selected) fail('INVALID_OPTIONS','Unknown role');
-    return selected as ThemeColors['background'];
-  };
+    return format === undefined ? selected as Color : selected[format];
+  }
   const hex = (text: string, {theme,role,strict = false}:Selection & {strict?:boolean}) => {
     if (typeof strict !== "boolean") fail("INVALID_OPTIONS", "strict must be boolean");
     const selected = project(text,{themes:[theme],roles:[role],formats:['hex']},strict)[theme]?.[role]?.hex;
@@ -431,8 +435,11 @@ export function compileRenderer(options: TextColorOptions = {}) {
   return {resolve,batch,color,hex,project,identity,digestOf,renderPlacement,fixedFraction,readPlacement,options:settings.exportOptions};
 }
 
-export function resolveTextColor(text: string, select: Selection, options: TextColorOptions = {}) {
-  return compileRenderer(options).color(text,select);
+export function resolveTextColor<F extends Format>(text:string, select:Selection & {format:F}, options?:TextColorOptions):Color[F];
+export function resolveTextColor(text:string, select:Selection, options?:TextColorOptions):Color;
+export function resolveTextColor(text:string, select:Selection & {format?:Format}, options:TextColorOptions = {}) {
+  const renderer = compileRenderer(options);
+  return select.format === undefined ? renderer.color(text,select) : renderer.color(text,{...select,format:select.format});
 }
 
 function fixedIdentity(rgb:Triple) {
