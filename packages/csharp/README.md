@@ -2,6 +2,8 @@
 
 The C# package targets .NET 9 and uses the platform SHA-256 implementation. Resolve a label into ten sRGB roles for each theme, or use a batch to preserve input order and reuse duplicate assignments.
 
+Use `color.ToCss(CssFormat.Hsl)` for HSL with percentages or `color.ToCss(CssFormat.DisplayP3)` for a Display P3 rendition. Calling `color.ToCss()` returns hex.
+
 For Display-P3, use `new Renderer(gamut: Gamut.DisplayP3)`. Each role exposes native channels in `P3` and a CSS color in `Css`. Its `Hex` value represents the sRGB fallback, and `SrgbClipped` indicates whether that fallback required clipping.
 
 ```csharp

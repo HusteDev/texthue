@@ -114,8 +114,14 @@ foreach (var row in fits.RootElement.EnumerateArray())
         throw new InvalidDataException($"Display-P3 fit or fallback mismatch for {row}");
 }
 if (fits.RootElement.GetArrayLength() != 108) throw new InvalidDataException("Unexpected fit corpus size.");
+var cssRed = new Color(new Rgb(255, 0, 0));
+if (cssRed.ToCss() != "#ff0000" || cssRed.ToCss(CssFormat.Rgb) != "rgb(255 0 0)"
+    || cssRed.ToCss(CssFormat.Hsl) != "hsl(0 100% 50%)"
+    || cssRed.ToCss(CssFormat.Oklch) != "oklch(0.627955 0.257683 29.23388)"
+    || cssRed.ToCss(CssFormat.DisplayP3) != "color(display-p3 0.917488 0.200287 0.138561)")
+    throw new InvalidDataException("CSS output differs from the reference renderer.");
 var redP3 = Color.FromDisplayP3(new(1, 0, 0));
-if (redP3.Css != "color(display-p3 1 0 0)" || redP3.Hex != "#ff0000" || redP3.SrgbClipped != true
+if (redP3.ToCss(CssFormat.DisplayP3) != redP3.Css || redP3.Css != "color(display-p3 1 0 0)" || redP3.Hex != "#ff0000" || redP3.SrgbClipped != true
     || Math.Abs(redP3.Oklch.L - 0.648574) > 0.000001)
     throw new InvalidDataException("Display-P3 red serialization or native OKLCH mismatch.");
 Console.WriteLine("Passed 108 Display-P3 fits and sRGB fallbacks plus native red serialization.");

@@ -5,6 +5,8 @@ public readonly record struct Oklch(double L, double C, double H);
 
 public readonly record struct P3Channels(double R, double G, double B);
 
+public enum CssFormat { Hex, Rgb, Hsl, Oklch, DisplayP3 }
+
 public sealed class Color
 {
     public Rgb Rgb { get; }
@@ -20,6 +22,20 @@ public sealed class Color
     public bool? SrgbClipped { get; }
 
     private static double Round6(double value) => Math.Floor(value * 1e6 + 0.5) / 1e6;
+
+    /// <summary>Serialize the rendered color in the selected CSS notation.</summary>
+    public string ToCss(CssFormat format = CssFormat.Hex) => format switch
+    {
+        CssFormat.Hex => Hex,
+        CssFormat.Rgb => FormattableString.Invariant($"rgb({Rgb.R} {Rgb.G} {Rgb.B})"),
+        CssFormat.Hsl => FormattableString.Invariant($"hsl({Hsl.H:0.######} {Hsl.S:0.######}% {Hsl.L:0.######}%)"),
+        CssFormat.Oklch => FormattableString.Invariant($"oklch({Oklch.L:0.######} {Oklch.C:0.######} {Oklch.H:0.######})"),
+        CssFormat.DisplayP3 => Css ?? FormatDisplayP3(Gamut.DisplayP3.FromSRgb(Rgb)),
+        _ => throw new ArgumentOutOfRangeException(nameof(format))
+    };
+
+    private static string FormatDisplayP3(EncodedRgb channels) => FormattableString.Invariant(
+        $"color(display-p3 {Round6(channels.R):0.######} {Round6(channels.G):0.######} {Round6(channels.B):0.######})");
 
     /// <summary>Composite this sRGB color over an opaque backdrop in linear light.</summary>
     public Color CompositeOver(double alpha, Rgb backdrop)
@@ -69,8 +85,7 @@ public sealed class Color
     {
         var (r, g, b) = channels;
         P3 = new(Round6(r), Round6(g), Round6(b));
-        var (red, green, blue) = P3.Value;
-        Css = FormattableString.Invariant($"color(display-p3 {red:0.######} {green:0.######} {blue:0.######})");
+        Css = FormatDisplayP3(new(r, g, b));
         SrgbClipped = clipped;
         Oklch = Coordinates(XyzToOklab(xyz.X, xyz.Y, xyz.Z), r == g && g == b);
     }
