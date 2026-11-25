@@ -81,6 +81,52 @@ function download(title, filename, type, serialize) {
     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   };
 }
+function sharePalette(parent, input) {
+  const button = append(parent, 'button', 'Copy link to this palette');
+  button.type = 'button';
+  let manual;
+  button.onclick = async () => {
+    const url = new URL(location.pathname, location.origin);
+    url.hash = 'palette=' + encodeURIComponent(JSON.stringify({version:1, ...input}));
+    try {
+      await navigator.clipboard.writeText(url.href);
+      if (button.isConnected) status.textContent = 'Palette link copied';
+    } catch {
+      if (!button.isConnected) return;
+      if (!manual) {
+        const label = append(parent, 'label', 'Select and copy palette link');
+        manual = append(label, 'textarea');
+        manual.readOnly = true;
+      }
+      manual.value = url.href;
+      manual.focus();
+      manual.select();
+    }
+  };
+}
+function restorePalette(fragment) {
+  const state = JSON.parse(decodeURIComponent(fragment));
+  if (state.version !== 1 || !Array.isArray(state.labels) ||
+      !state.labels.every(label => typeof label === 'string' && !/[\r\n]/.test(label)) ||
+      !['light','dark'].includes(state.theme) ||
+      !['normal','protan','deutan','tritan'].includes(state.vision) ||
+      typeof state.markers !== 'boolean' || typeof state.optimizeVision !== 'boolean' ||
+      !Number.isFinite(state.minimumDistance) || state.minimumDistance < 0 ||
+      !state.options || typeof state.options !== 'object' || Array.isArray(state.options)) {
+    throw new Error('Invalid palette link');
+  }
+  const field = id => document.getElementById(id);
+  field('labels').value = state.labels.join('\n');
+  field('options').value = JSON.stringify(state.options, null, 2);
+  field('registry').value = state.registry ? JSON.stringify(state.registry, null, 2) : '';
+  field('theme').value = state.theme;
+  field('vision').value = state.vision;
+  field('preset').value = state.options.options?.preset ?? state.options.preset ?? 'labels';
+  field('markers').checked = state.markers;
+  field('optimize-vision').checked = state.optimizeVision;
+  field('minimum-distance').value = state.minimumDistance;
+  baseline = state.baseline;
+}
 function run() {
   worker?.terminate();
   worker = undefined;
@@ -100,6 +146,7 @@ function run() {
       const {rows, diagnostics, findings, config, registry, migration} = data.result;
       status.textContent = rows.length + ' distinct labels';
       results.replaceChildren();
+      sharePalette(results, input);
       if (migration) details(results,'Changes from comparison baseline',migration,'Compare this run with the saved baseline to see which labels, placements, or theme colors changed.');
       const compare = append(results,'button',baseline ? 'Clear comparison baseline' : 'Use this palette as comparison baseline');
       compare.type = 'button';
@@ -254,4 +301,15 @@ if (vision) {
   document.getElementById('labels').value = ['Design', 'Research', 'Platform', 'Support', 'Finance', 'Operations'].join('\n');
 }
 
-run();
+function openPalette() {
+  try {
+    if (location.hash.startsWith('#palette=')) restorePalette(location.hash.slice('#palette='.length));
+    run();
+  } catch {
+    worker?.terminate();
+    worker = undefined;
+    status.textContent = 'This palette link could not be loaded. Enter labels and select Generate Palette to start a new palette.';
+  }
+}
+window.addEventListener('hashchange', openPalette);
+openPalette();

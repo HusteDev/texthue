@@ -65,6 +65,29 @@ def exercise(page, url, clipboard):
     options = json.loads(page.locator("#options").input_value())
     assert options["preset"] == "mono" and len(options["palette"]) == 4
     expect(page.locator("#vision")).to_have_value("deutan")
+    page.locator("#labels").fill("Mira #1\n研究 & QA")
+    page.locator("#theme").select_option("dark")
+    page.locator("#markers").check()
+    page.get_by_role("button", name="Generate Palette").click()
+    expect(page.get_by_role("status")).to_have_text("2 distinct labels")
+    swatches = page.locator("td").all_text_contents()
+    page.get_by_role("button", name="Copy link to this palette").click()
+    if clipboard:
+        expect(page.get_by_role("status")).to_have_text("Palette link copied")
+        shared = page.evaluate("navigator.clipboard.readText()")
+    else:
+        manual = page.get_by_label("Select and copy palette link")
+        if not manual.count():
+            page.evaluate("Object.defineProperty(navigator, 'clipboard', {value: undefined, configurable: true})")
+            page.get_by_role("button", name="Copy link to this palette").click()
+        shared = manual.input_value()
+    page.goto("about:blank")
+    page.goto(shared)
+    expect(page.get_by_role("status")).to_have_text("2 distinct labels")
+    expect(page.locator("#theme")).to_have_value("dark")
+    expect(page.locator("#markers")).to_be_checked()
+    expect(page.locator("#vision")).to_have_value("deutan")
+    assert page.locator("td").all_text_contents() == swatches
     page.goto(url)
     status = page.get_by_role("status")
     expect(status).to_have_text("3 distinct labels")
