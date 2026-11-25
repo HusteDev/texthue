@@ -1,6 +1,6 @@
 # TextHue for Go
 
-`texthue` turns exact text into repeatable light/dark color sets in Hex, RGB, HSL, and OKLCH. This native Go implementation requires Go 1.23+ and uses only the standard library. It has no global mutable configuration and can be called concurrently. Results match the JavaScript/TypeScript and Python libraries.
+`texthue` turns exact text into repeatable light/dark color sets in Hex, RGB, HSL, and OKLCH. This native Go implementation requires Go 1.23+ and uses the standard library for SHA-256. Its sole external runtime dependency is `golang.org/x/text` for Unicode normalization. It has no global mutable configuration and can be called concurrently. Results match the JavaScript/TypeScript and Python libraries.
 
 ```bash
 go get github.com/HusteDev/texthue/packages/go
@@ -128,7 +128,7 @@ if errors.As(err, &invalid) { // Import errors.
 }
 ```
 
-`*Error` has `Code` (`INVALID_TEXT` or `INVALID_OPTIONS`) and `Message`. Go's signature excludes non-string text at compile time; runtime validation rejects invalid UTF-8 strings, non-finite numbers, invalid ranges, and malformed hex colors. Empty strings and NUL characters are valid. Text and namespace are neither trimmed nor normalized nor case-folded. If your application needs normalization, do it consistently before calling TextHue; the Go standard library does not provide general Unicode normalization. Stable non-secret IDs survive display-name changes. Namespace separates domains and is not a secret salt. Different inputs can have identical visible colors.
+`*Error` has `Code` (`INVALID_TEXT` or `INVALID_OPTIONS`) and `Message`. Go's signature excludes non-string text at compile time; runtime validation rejects invalid UTF-8 strings, non-finite numbers, invalid ranges, and malformed hex colors. Empty strings and NUL characters are valid. By default, text and namespace retain their exact spelling. Pass `texthue.WithNormalize(texthue.NormalizeOptions{Unicode: "NFC"})` to hash canonically equivalent spellings identically. The same option also supports NFKC, lowercase mapping, and whitespace policies. Stable non-secret IDs survive display-name changes. Namespace separates domains and is not a secret salt. Different inputs can have identical visible colors.
 
 ## Algorithm and versioning
 
