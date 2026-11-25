@@ -253,21 +253,24 @@ func (n NormalizeOptions) transform(text string) string {
 	return text
 }
 
-func compileForegrounds(options Options) (func(encodedRGB, float64) encodedRGB, error) {
+func compileForegrounds(options Options) (func(encodedRGB, float64) encodedRGB, map[encodedRGB]Color, error) {
 	values := options.Foregrounds
 	if values == nil {
 		values = []string{"#000000", "#ffffff"}
 	}
 	if len(values) == 0 || (options.ForegroundPolicy != "" && options.ForegroundPolicy != "best" && options.ForegroundPolicy != "first-passing") {
-		return nil, invalid("foregrounds")
+		return nil, nil, invalid("foregrounds")
 	}
 	colors := make([]encodedRGB, len(values))
+	formatted := make(map[encodedRGB]Color, len(values))
 	for i, hex := range values {
 		color, err := background(hex)
 		if err != nil {
-			return nil, invalid("foregrounds")
+			return nil, nil, invalid("foregrounds")
 		}
-		colors[i] = canonicalRGB(color, options.Gamut == "display-p3")
+		wide := options.Gamut == "display-p3"
+		colors[i] = canonicalRGB(color, wide)
+		formatted[colors[i]] = rendition(colors[i], wide)
 	}
 	first := options.ForegroundPolicy == "first-passing"
 	return func(rgb encodedRGB, target float64) encodedRGB {
@@ -282,23 +285,25 @@ func compileForegrounds(options Options) (func(encodedRGB, float64) encodedRGB, 
 			}
 		}
 		return selected
-	}, nil
+	}, formatted, nil
 }
 
 type Resolver struct {
-	wide             bool
-	apca             bool
-	replay           replayInputs
-	brand            brandConfig
-	selectForeground func(encodedRGB, float64) encodedRGB
-	domain           hueDomain
-	normalize        NormalizeOptions
-	prefix           []byte
-	target           float64
-	targets          map[string]float64
-	profiles         [2]resolvedTheme
-	bases            [2]Color
-	baseLightness    [2]float64
+	wide              bool
+	apca              bool
+	replay            replayInputs
+	brand             brandConfig
+	selectForeground  func(encodedRGB, float64) encodedRGB
+	domain            hueDomain
+	normalize         NormalizeOptions
+	prefix            []byte
+	target            float64
+	targets           map[string]float64
+	profiles          [2]resolvedTheme
+	bases             [2]Color
+	baseLightness     [2]float64
+	baseY             [2]float64
+	foregroundFormats map[encodedRGB]Color
 }
 
 func NewResolver(options ...Option) (*Resolver, error) {
@@ -316,7 +321,7 @@ func NewResolver(options ...Option) (*Resolver, error) {
 		return nil, invalid("gamut")
 	}
 	wide := raw.Gamut == "display-p3"
-	selectForeground, err := compileForegrounds(raw)
+	selectForeground, formatted, err := compileForegrounds(raw)
 	if err != nil {
 		return nil, err
 	}
@@ -344,9 +349,12 @@ func NewResolver(options ...Option) (*Resolver, error) {
 	prefix = binary.BigEndian.AppendUint32(prefix, raw.Seed)
 	prefix = binary.BigEndian.AppendUint32(prefix, uint32(len(namespace)))
 	prefix = append(prefix, namespace...)
-	r := &Resolver{wide: wide, apca: raw.ContrastModel == "apca", replay: replayFrom(raw), brand: brand, selectForeground: selectForeground, domain: domain, normalize: normalization, prefix: prefix, target: target, targets: maps.Clone(raw.ContrastTargets), profiles: profiles}
+	r := &Resolver{wide: wide, apca: raw.ContrastModel == "apca", replay: replayFrom(raw), brand: brand, selectForeground: selectForeground, foregroundFormats: formatted, domain: domain, normalize: normalization, prefix: prefix, target: target, targets: maps.Clone(raw.ContrastTargets), profiles: profiles}
 	for i, profile := range profiles {
-		r.bases[i] = rendition(canonicalRGB(profile.background, wide), wide)
+		rgb := canonicalRGB(profile.background, wide)
+		r.profiles[i].background = rgb
+		r.baseY[i] = wcagLuminance(rgb, wide)
+		r.bases[i] = rendition(rgb, wide)
 		r.baseLightness[i] = math.Round(r.bases[i].OKLCH.L*4096) / 4096
 	}
 	return r, nil
@@ -354,7 +362,10 @@ func NewResolver(options ...Option) (*Resolver, error) {
 
 // background returns the compiled rendition with caller-owned optional fields.
 func (r *Resolver) background(index int) Color {
-	base := r.bases[index]
+	return detachedBaseColor(r.bases[index])
+}
+
+func detachedBaseColor(base Color) Color {
 	if base.P3 != nil {
 		p3, clipped := *base.P3, *base.SRGBClipped
 		base.P3, base.SRGBClipped = &p3, &clipped
@@ -489,7 +500,6 @@ func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string
 				theme.text.cap = 0
 			}
 		}
-		theme.background = canonicalRGB(theme.background, r.wide)
 		m := xyzToRGB
 		if r.wide {
 			m = xyzToP3
@@ -504,7 +514,11 @@ func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string
 			}
 			l = math.Max(0, math.Min(1, l))
 			c := cuspIn(l, hue, m) * scale
-			chosen, meta := chooseForeground(l, math.Min(c, cap), hue, backdrop, required, r.selectForeground, r.apca, surface, r.wide, second...)
+			var baseY *float64
+			if backdrop == &theme.background && !r.apca {
+				baseY = &r.baseY[i]
+			}
+			chosen, meta := chooseForeground(l, math.Min(c, cap), hue, backdrop, required, r.selectForeground, r.apca, surface, r.wide, baseY, second...)
 			meta.ChromaCapped = c > cap
 			if trace {
 				requested = math.Max(0, math.Min(1, requested))
@@ -574,6 +588,9 @@ func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string
 				if selection.hexOnly {
 					return Color{Hex: renditionHex(rgb, r.wide)}
 				}
+			}
+			if role == "onFill" {
+				return detachedBaseColor(r.foregroundFormats[rgb])
 			}
 			return display(rgb)
 		}

@@ -228,7 +228,14 @@ type surfaceConstraint struct {
 	target float64
 }
 
-func chooseForeground(l, c, h float64, background *encodedRGB, target float64, selectColor func(encodedRGB, float64) encodedRGB, apca, surface, wide bool, second ...surfaceConstraint) (fitted, ContrastResult) {
+func wcagLuminance(rgb encodedRGB, wide bool) float64 {
+	if wide {
+		return weightedLuminance(rgb, p3ToXYZ[1])
+	}
+	return luminance(rgb)
+}
+
+func chooseForeground(l, c, h float64, background *encodedRGB, target float64, selectColor func(encodedRGB, float64) encodedRGB, apca, surface, wide bool, baseY *float64, second ...surfaceConstraint) (fitted, ContrastResult) {
 	m := xyzToRGB
 	if wide {
 		m = xyzToP3
@@ -268,6 +275,20 @@ func chooseForeground(l, c, h float64, background *encodedRGB, target float64, s
 			return ratio
 		}
 		return contrast(rgb, selectColor(rgb, target))
+	}
+	if baseY != nil {
+		var secondY float64
+		if len(second) > 0 {
+			secondY = wcagLuminance(second[0].rgb, wide)
+		}
+		measure = func(rgb encodedRGB) float64 {
+			y := wcagLuminance(rgb, wide)
+			primary := luminanceRatio(y, *baseY)
+			if len(second) == 0 {
+				return primary
+			}
+			return math.Min(primary, luminanceRatio(y, secondY)*(target/second[0].target))
+		}
 	}
 	chosen := fitIn(l, c, h, m)
 	ratio := measure(chosen.rgb)

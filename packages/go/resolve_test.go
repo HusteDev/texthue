@@ -16,7 +16,7 @@ import (
 func TestContrastRepairGridTie(t *testing.T) {
 	selectColor := func(rgb encodedRGB, _ float64) encodedRGB { return foreground(rgb) }
 	for _, tc := range []struct{ start, expected int }{{2321, 1907}, {2322, 1907}, {2323, 2737}} {
-		color, result := chooseForeground(float64(tc.start)/4096, 0, 0, nil, 7, selectColor, false, false, false)
+		color, result := chooseForeground(float64(tc.start)/4096, 0, 0, nil, 7, selectColor, false, false, false, nil)
 		if color.l != float64(tc.expected)/4096 || !result.MeetsTarget {
 			t.Errorf("start %d: got grid point %v, meets target %v; want %d, true", tc.start, color.l*4096, result.MeetsTarget, tc.expected)
 		}
@@ -45,6 +45,23 @@ func TestCompiledP3BackgroundIsolation(t *testing.T) {
 	last, err := r.Resolve("third")
 	if err != nil || *last.Light.Background.P3 != wantP3 || *last.Light.Background.SRGBClipped != wantClipped {
 		t.Fatalf("selected color mutated compiled background: %+v, %v", last.Light.Background, err)
+	}
+}
+
+func TestCompiledP3ForegroundIsolation(t *testing.T) {
+	r, err := NewResolver(WithGamut("display-p3"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := r.Color("example", "light", "onFill")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := *first.P3
+	first.P3.R = -1
+	next, err := r.Resolve("example")
+	if err != nil || *next.Light.OnFill.P3 != want {
+		t.Fatalf("selected foreground mutated the compiled rendition: %v, %v", next.Light.OnFill.P3, err)
 	}
 }
 
