@@ -23,6 +23,7 @@ badge.style.color = onFill.hex;
 
 | What do you want to do? | Read |
 | --- | --- |
+| Run a roster across three sessions in a fresh project | [Clean-install quickstarts and runnable examples](examples/roster/README.md) |
 | Build your first username badge in JavaScript, Python, or Go | [Configure your first resolver](https://github.com/HusteDev/texthue/wiki/Configure-your-first-resolver) |
 | Install TextHue or find your language | [Package list, install commands, and first calls](https://github.com/HusteDev/texthue/wiki/Packages-and-installation) |
 | Choose colors for a group of labels | [Independent colors and collection assignment, illustrated](https://github.com/HusteDev/texthue/wiki/Color-results#assigning-a-collection) |

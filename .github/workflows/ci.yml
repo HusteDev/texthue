@@ -301,7 +301,8 @@ jobs:
       - name: Verify CSS fallback and rendered pixels in Chrome
         if: matrix.os == 'ubuntu-24.04' && matrix.node == '22'
         run: python tools/check-browser.py google-chrome
-      - run: python tools/build-packages.py
+      - name: Install built packages and run the roster quickstarts
+        run: python tools/build-packages.py
       - name: Select the minimum supported consumer runtime
         if: matrix.os == 'ubuntu-24.04' && matrix.node == '22'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0

@@ -54,6 +54,27 @@ def python_build(package, destination, env, *, source=False):
     run("Python distribution build", [sys.executable, "-c", script], cwd=package, env=env)
 
 
+def check_roster(label, command, directory, env):
+    """Run three fresh processes and check both visible colors and the saved placements."""
+    expected = {
+        "@mira": "@mira #a79de9 #000000 #a79de9",
+        "@lee": "@lee #dbb2ee #000000 #e4aeee",
+        "@nico": "@nico #ec9d89 #000000 #ec9d89",
+    }
+    previous = {}
+    for users in (["@mira", "@lee"], ["@mira", "@nico"], ["@lee", "@nico", "@mira"]):
+        output = run(label, [*command, *users], cwd=directory, env=env)
+        if output.splitlines() != [expected[user] for user in users]:
+            raise SystemExit(f"{label} produced unexpected badge or board colors: {output}")
+        saved = json.loads((directory / "roster.json").read_text(encoding="utf-8"))
+        pins = saved["registry"]["assignments"]
+        if set(pins) != set(previous).union(users) or any(
+            pins[k] != v for k, v in previous.items()
+        ):
+            raise SystemExit(f"{label} lost or changed a saved placement")
+        previous = pins
+
+
 def main():
     """Build all distributions, verify their contents, and exercise each in an isolated consumer."""
     ARTIFACTS.mkdir(exist_ok=True)
@@ -282,6 +303,35 @@ func main() {{
         )
         run("resolve consumer dependencies", ["go", "mod", "tidy"], cwd=consumer, env=env)
         run("isolated Go module consumer", ["go", "run", "."], cwd=consumer, env=env)
+        examples = ROOT / "examples/roster"
+        js = consumer / "javascript"
+        shutil.copytree(examples / "javascript", js)
+        check_roster("npm tarball roster", ["node", "roster.mjs"], js, env)
+        run(
+            "compile TypeScript roster against packed declarations",
+            [tsc, "-p", "tsconfig.json"],
+            cwd=js,
+            env=env,
+        )
+        check_roster("compiled TypeScript roster", ["node", "typed.mjs"], js / "compiled", env)
+        py = consumer / "python"
+        shutil.copytree(examples / "python", py)
+        check_roster(
+            "installed wheel roster",
+            [sys.executable, "roster.py"],
+            py,
+            dict(env, PYTHONPATH=str(target)),
+        )
+        shutil.copy2(examples / "go/main.go", consumer / "main.go")
+        run("vendor Go consumer dependencies", ["go", "mod", "vendor"], cwd=consumer, env=env)
+        binary = consumer / ("roster.exe" if os.name == "nt" else "roster")
+        run(
+            "build Go roster from vendored module",
+            ["go", "build", "-mod=vendor", "-o", binary, "."],
+            cwd=consumer,
+            env=env,
+        )
+        check_roster("compiled Go roster", [binary], consumer, env)
     checksums = {
         path.name: hashlib.sha256(path.read_bytes()).hexdigest()
         for path in (npm_archive, wheel, sdist)
