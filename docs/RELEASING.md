@@ -1,6 +1,6 @@
 # Releasing TextHue
 
-The Publish workflow supports npm, PyPI and Go. npm receives the core JavaScript package and optionally the React and Tailwind adapters, PyPI receives the Python distribution, and Go resolves the module through its subdirectory tag. The root npm workspace is private.
+The Publish workflow stages the shared release bundle. The dedicated Publish Python to PyPI workflow uploads the staged Python archives. npm receives the core JavaScript package and optionally the React and Tailwind adapters, PyPI receives the Python distribution, and Go resolves the module through its subdirectory tag. The root npm workspace is private.
 
 The [package manifest](../tools/packages.json) lists each package directory, version source, shared files, and verification commands. Only entries with a `publish` record are registry targets for the current workflow.
 
@@ -96,7 +96,7 @@ Set `dry_run` to true on the Publish workflow to verify the version and stage th
 The `Publish` workflow (`.github/workflows/publish.yml`) needs the following configured once in the GitHub repository and the registries.
 
 - **npm.** Either add an `NPM_TOKEN` repository secret containing a granular automation token with publish rights for `texthue`, or configure [npm trusted publishing](https://docs.npmjs.com/trusted-publishers) for the package with this repository, workflow file `publish.yml`, and environment `npm`. Trusted publishing needs the package to exist, so the first release uses the token; the token can be removed afterwards. Provenance attestations are generated either way.
-- **PyPI.** Add a [trusted publisher](https://docs.pypi.org/trusted-publishers/) on pypi.org for project `texthue` with owner `HusteDev`, repository `texthue`, workflow `publish.yml`, and environment `pypi`. A pending publisher can be registered before the first release. No secret is needed.
+- **PyPI.** Add a [trusted publisher](https://docs.pypi.org/trusted-publishers/) on pypi.org for project `texthue` with owner `HusteDev`, repository `texthue`, workflow `pypi-publish.yml`. The upload job uses the GitHub environment `pypi`; the current pending publisher accepts any environment. A pending publisher can be registered before the first release. No secret is needed.
 - **Go.** Nothing. The module is released by pushing the tag `packages/go/v<version>`, which the workflow does with the repository's own token.
 - **Environments.** Create the `npm` and `pypi` environments under repository settings and, optionally, add required reviewers so each upload waits for approval.
 - **Codecov.** Add a `CODECOV_TOKEN` repository secret from codecov.io so the CI coverage job can upload reports.
@@ -110,6 +110,12 @@ The `Publish` workflow (`.github/workflows/publish.yml`) needs the following con
 5. Approve the environment deployments if reviewers are required.
 
 Do not use a root `v<version>` tag as the Go module tag; the nested module needs the `packages/go/` prefix. Consumers request `github.com/HusteDev/texthue/packages/go@v<version>`. See [Go's module source organization documentation](https://go.dev/doc/modules/managing-source).
+
+## Publish Python to PyPI
+
+1. Run **Publish** with the release version and **dry_run** enabled to stage the verified wheel and source distribution in a draft release.
+2. From the same commit, run **Publish Python to PyPI** with that version. The workflow verifies the staged bundle against the commit and manifest and checks the existing PyPI file digests before uploading.
+3. Check the version and both files on the [TextHue project page](https://pypi.org/project/texthue/). A retry skips an already matching release.
 
 ## Manual fallback
 

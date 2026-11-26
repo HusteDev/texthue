@@ -19,7 +19,7 @@ class PublishWorkflowTests(unittest.TestCase):
         cls.jobs = yaml.safe_load((ROOT / ".github/workflows/publish.yml").read_text())["jobs"]
 
     def test_targets_can_retry_independently(self):
-        for registry in ("npm", "pypi", "go", "rust", "nuget", "dart"):
+        for registry in ("npm", "go", "rust", "nuget", "dart"):
             job = self.jobs[f"publish-{registry}"]
             with self.subTest(registry=registry):
                 self.assertEqual(job["if"], f"inputs.{registry} && !inputs.dry_run")
@@ -30,6 +30,17 @@ class PublishWorkflowTests(unittest.TestCase):
                 for step in steps[state + 1 : -1]:
                     self.assertEqual(step["if"], "steps.state.outputs.state == 'absent'")
                 self.assertEqual(steps[-1]["if"], "steps.state.outputs.state == 'matching'")
+
+    def test_pypi_uses_registered_workflow_and_verified_staged_archives(self):
+        path = ROOT / ".github/workflows/pypi-publish.yml"
+        job = yaml.safe_load(path.read_text())["jobs"]["publish-pypi"]
+        self.assertEqual(job["environment"]["name"], "pypi")
+        self.assertEqual(job["permissions"], {"contents": "read", "id-token": "write"})
+        steps = job["steps"]
+        state = next(i for i, step in enumerate(steps) if step.get("id") == "state")
+        self.assertIn("verify-bundle", steps[state - 1]["run"])
+        upload = next(step for step in steps if "pypa/gh-action" in step.get("uses", ""))
+        self.assertEqual(upload["if"], "steps.state.outputs.state == 'absent'")
 
     def test_version_step_emits_output_only_after_validation(self):
         step = next(step for step in self.jobs["build"]["steps"] if step.get("id") == "version")
@@ -106,7 +117,7 @@ class PublishWorkflowTests(unittest.TestCase):
         )
 
     def test_checkout_precedes_archive_download(self):
-        for registry in ("npm", "adapters", "pypi", "rust", "nuget", "dart"):
+        for registry in ("npm", "adapters", "rust", "nuget", "dart"):
             actions = [
                 s.get("uses", "").split("@")[0] for s in self.jobs[f"publish-{registry}"]["steps"]
             ]
