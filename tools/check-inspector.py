@@ -78,7 +78,9 @@ def exercise(page, url, clipboard):
     else:
         manual = page.get_by_label("Select and copy palette link")
         if not manual.count():
-            page.evaluate("Object.defineProperty(navigator, 'clipboard', {value: undefined, configurable: true})")
+            page.evaluate(
+                "Object.defineProperty(navigator, 'clipboard', {value: undefined, configurable: true})"
+            )
             page.get_by_role("button", name="Copy link to this palette").click()
         shared = manual.input_value()
     page.goto("about:blank")
