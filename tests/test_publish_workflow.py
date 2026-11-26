@@ -47,9 +47,16 @@ class PublishWorkflowTests(unittest.TestCase):
         self.assertEqual(step["env"]["REQUESTED"], "${{ inputs.version }}")
         self.assertNotIn("${{", step["run"])
         bash = shutil.which("bash")
-        if os.name == "nt":
-            git = Path(shutil.which("git"))
-            bash = git.parent.parent / "bin" / "bash.exe"
+        if os.name == "nt" and shutil.which("git"):
+            # Resolve Git for Windows through git itself, including shimmed installs.
+            git_exec = subprocess.check_output(["git", "--exec-path"], text=True).strip()
+            for directory in Path(git_exec).parents:
+                candidate = directory / "bin" / "bash.exe"
+                if candidate.is_file():
+                    bash = str(candidate)
+                    break
+        if not bash:
+            self.skipTest("Bash is required to execute the release workflow step")
         version = json.loads((ROOT / "package.json").read_text())["version"]
         with tempfile.TemporaryDirectory(dir=ROOT) as directory:
             output = Path(directory) / "output"

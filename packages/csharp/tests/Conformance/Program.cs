@@ -2,6 +2,20 @@ using System.Text;
 using System.Text.Json;
 using TextHue;
 
+if (args is ["--invariant-normalization"])
+{
+    const string label = "e\u0301";
+    if (new Normalization().Apply(label) != label)
+        throw new InvalidDataException("Raw identity changed in invariant mode.");
+    foreach (var form in new[] { UnicodeForm.NFC, UnicodeForm.NFKC })
+    {
+        try { new Normalization(form).Apply(label); }
+        catch (PlatformNotSupportedException) { continue; }
+        throw new InvalidDataException($"Invariant globalization silently accepted {form}.");
+    }
+    return;
+}
+
 using var document = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "vectors.json")));
 var vectors = document.RootElement.GetProperty("vectors");
 if (vectors.GetArrayLength() != 32) throw new InvalidDataException("Unexpected identity corpus size.");

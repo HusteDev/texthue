@@ -1,3 +1,5 @@
+import 'errors.dart';
+import 'result_collections.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
@@ -43,7 +45,7 @@ typedef RenderedPalette = ({
 
 List<int> _parseHex(String hex) {
   if (!RegExp(r'^#[0-9a-fA-F]{6}$').hasMatch(hex))
-    throw FormatException('Expected six-digit hex color', hex);
+    throw TextHueFormatError('INVALID_OPTIONS', 'Expected six-digit hex color', hex);
   return [
     for (final i in [1, 3, 5]) int.parse(hex.substring(i, i + 2), radix: 16)
   ];
@@ -106,12 +108,12 @@ final class RoleProfile {
   RoleProfile({this.lightness, this.chromaScale, this.chromaCap}) {
     for (final range in [lightness, chromaScale].nonNulls) {
       if (!(range.$1 >= 0 && range.$1 <= range.$2 && range.$2 <= 1)) {
-        throw ArgumentError.value(range, 'profile range');
+        throw OptionError.value(range, 'profile range');
       }
     }
     final cap = chromaCap;
     if (cap != null && !(cap >= 0 && cap <= 0.4)) {
-      throw ArgumentError.value(cap, 'chromaCap');
+      throw OptionError.value(cap, 'chromaCap');
     }
   }
 }
@@ -168,7 +170,7 @@ final class Renderer {
       Map<String, double> contrastTargets = const {},
       String lightBackground = '#ffffff',
       String darkBackground = '#121212'})
-      : _scope = normalization.apply(namespace),
+      : _scope = normalization.applyOption(namespace),
         contrastTarget = contrastTarget ??
             (contrastModel == ContrastModel.apca
                 ? 60
@@ -183,15 +185,15 @@ final class Renderer {
         _light = _Background(lightBackground),
         _dark = _Background(darkBackground) {
     for (final entry in overrides.entries) {
-      final key = normalization.apply(entry.key);
+      final key = normalization.applyOption(entry.key);
       if (_overrides.containsKey(key))
-        throw ArgumentError('Duplicate normalized override');
+        throw OptionError('Duplicate normalized override');
       _overrides[key] =
           (_FixedTone(entry.value.light), _FixedTone(entry.value.dark));
     }
     if (_foregrounds.isEmpty)
-      throw ArgumentError("Expected at least one foreground");
-    RangeError.checkValueInInterval(seed, 0, 0xffffffff, 'seed');
+      throw OptionError("Expected at least one foreground");
+    OptionRangeError.check(seed, 0, 0xffffffff, 'seed');
     const roles = {
       'fill',
       'fillHover',
@@ -206,10 +208,10 @@ final class Renderer {
             contrastModel == ContrastModel.apca
                 ? x >= 0 && x <= 106
                 : x >= 1 && x <= 21)) {
-      throw ArgumentError('Invalid contrast targets');
+      throw OptionError('Invalid contrast targets');
     }
     if (palette != null) {
-      if (palette.isEmpty) throw ArgumentError('Empty palette');
+      if (palette.isEmpty) throw OptionError('Empty palette');
       final ids = <String>{};
       final passing = <_RankedTone>[];
       final target = contrastTargets['fill'] ?? this.contrastTarget;
@@ -219,10 +221,10 @@ final class Renderer {
               .abs() >=
           target);
       for (final entry in palette) {
-        validateUtf16(entry.id);
-        if (!ids.add(entry.id)) throw ArgumentError('Duplicate palette ID');
+        validateUtf16(entry.id, code: 'INVALID_OPTIONS');
+        if (!ids.add(entry.id)) throw OptionError('Duplicate palette ID');
         final light = entry.light ?? entry.dark;
-        if (light == null) throw ArgumentError('Missing palette color');
+        if (light == null) throw OptionError('Missing palette color');
         final tones = (_FixedTone(light), _FixedTone(entry.dark ?? light));
         final ranked = (id: utf8.encode(entry.id), tones: tones);
         _palette.add(ranked);
@@ -252,7 +254,7 @@ final class Renderer {
           {bool strict = false}) =>
       _theme(
           dark, _mapping(normalization.apply(text)), role, 0, strict)[role] ??
-      (throw ArgumentError.value(role, 'role', 'Unknown color role'));
+      (throw OptionError.value(role, 'role', 'Unknown color role'));
 
   String hex(String text,
           {bool dark = false, String role = 'fill', bool strict = false}) =>
@@ -278,7 +280,7 @@ final class Renderer {
   RenderedPalette _render(_Mapping mapping, [int ring = 0]) {
     final lightReport = <String, ContrastRelationship>{},
         darkReport = <String, ContrastRelationship>{};
-    Map<String, Color> theme(bool dark) => Map.unmodifiable(_theme(
+    Map<String, Color> theme(bool dark) => ResultMap(_theme(
             dark, mapping, null, ring, false, dark ? darkReport : lightReport)
         .map((role, v) => MapEntry(role, _display(v))));
     return (
@@ -288,8 +290,8 @@ final class Renderer {
       hueFraction: mapping.fraction,
       light: theme(false),
       dark: theme(true),
-      lightContrast: Map.unmodifiable(lightReport),
-      darkContrast: Map.unmodifiable(darkReport)
+      lightContrast: ResultMap(lightReport),
+      darkContrast: ResultMap(darkReport)
     );
   }
 
@@ -462,7 +464,7 @@ final class Renderer {
       final value = colors[selected]!;
       void require(String pair, List<num> front, List<num> back) {
         if (score(front, back) < target(pair)) {
-          throw StateError('Contrast target for $pair was not met');
+          throw ContrastConstraintError('Contrast target for $pair was not met');
         }
       }
 

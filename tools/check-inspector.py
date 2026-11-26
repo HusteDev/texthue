@@ -61,6 +61,7 @@ def check_markers(page):
 
 def exercise(page, url, clipboard):
     page.goto(urljoin(url, "site/?preset=mono&brand=studio&vision=deutan"))
+    page.get_by_text("Advanced settings", exact=True).click()
     expect(page.get_by_role("status")).to_have_text("6 distinct labels")
     options = json.loads(page.locator("#options").input_value())
     assert options["preset"] == "mono" and len(options["palette"]) == 4
@@ -91,6 +92,8 @@ def exercise(page, url, clipboard):
     expect(page.locator("#vision")).to_have_value("deutan")
     assert page.locator("td").all_text_contents() == swatches
     page.goto(url)
+    expect(page.locator("#options")).to_be_hidden()
+    page.get_by_text("Advanced settings", exact=True).click()
     status = page.get_by_role("status")
     expect(status).to_have_text("3 distinct labels")
     for term in ("Role defaults", "Brand example", "Vision profile", "Registry"):
@@ -145,6 +148,8 @@ def exercise(page, url, clipboard):
         ),
     )
     page.goto(url)
+    expect(page.locator("#options")).to_be_hidden()
+    page.get_by_text("Advanced settings", exact=True).click()
     expect(status).to_have_text("3 distinct labels")
     page.locator("#labels").fill("badge")
     page.locator("#options").fill(
@@ -152,14 +157,22 @@ def exercise(page, url, clipboard):
     )
     for theme, ratio in (("light", "1.00:1"), ("dark", "21.00:1")):
         page.locator("#theme").select_option(theme)
+        previous = page.locator("table").first.element_handle()
         page.get_by_role("button", name="Generate Palette").click()
+        page.wait_for_function("table => !table.isConnected", arg=previous)
+        previous.dispose()
+        page.get_by_text("Fill contrast against the page", exact=True).click()
         expect(page.get_by_role("cell", name=ratio, exact=True)).to_be_visible()
     expect(
         page.get_by_role("columnheader", name="Registry fill / background (Display-P3)")
     ).to_have_count(0)
     page.get_by_role("button", name="Use this palette as comparison baseline").click()
     page.locator("#options").fill('{"gamut":"display-p3","backgrounds":{"dark":"#000000"}}')
+    previous = page.locator("table").first.element_handle()
     page.get_by_role("button", name="Generate Palette").click()
+    page.wait_for_function("table => !table.isConnected", arg=previous)
+    previous.dispose()
+    page.get_by_text("Fill contrast against the page", exact=True).click()
     expect(
         page.get_by_role("columnheader", name="Registry fill / background (Display-P3)")
     ).to_be_visible()
@@ -196,6 +209,8 @@ def exercise(page, url, clipboard):
     page.get_by_role("button", name="Clear comparison baseline").click()
     expect(comparison).to_have_count(0)
     page.goto(url)
+    expect(page.locator("#options")).to_be_hidden()
+    page.get_by_text("Advanced settings", exact=True).click()
     expect(status).to_have_text("3 distinct labels")
     check_markers(page)
     page.locator("#labels").fill("item:33\nitem:633")

@@ -34,7 +34,7 @@ All eight runners accept sRGB and Display-P3 resolution requests. JavaScript, Py
 | C# | `dotnet run --configuration Release --project packages/csharp/tools/JsonRunner` |
 | Rust | `cargo run --quiet --locked --manifest-path packages/rust/Cargo.toml --example conformance` |
 
-Build the npm package before testing. Kotlin needs a JDK and uses `gradlew.bat` on Windows. Dart needs its locked dependencies restored with `dart pub get --enforce-lockfile` in `packages/dart`. C# targets .NET 9.
+Build the npm package before testing. Kotlin needs a JDK and uses `gradlew.bat` on Windows. The parity test and `python tools/verify.py --port dart` restore the locked Dart dependencies automatically. For direct invocation of the Dart runner, first run `dart pub get --enforce-lockfile` in `packages/dart`. C# targets .NET 10.
 
 ## Comparing results
 
@@ -53,4 +53,4 @@ emulator test exercises the Kotlin fixtures on Android ART.
 
 ## Registering a runner
 
-Set `conformanceRunner` in the package's entry in `tools/packages.json` to the argument list for its command. Set `conformanceReplay` to `true` if it accepts exported configurations. The parity test reads this manifest and sends the Display-P3 corpus to every registered runner.
+Set `conformanceRunner` in the package's entry in `tools/packages.json` to the argument list for its command. When a runner requires package restoration, set `conformanceSetup` to the setup command. The verifier runs it in the package directory before starting the runner. Set `conformanceReplay` to `true` if it accepts exported configurations. The parity test reads this manifest and sends the Display-P3 corpus to every registered runner.

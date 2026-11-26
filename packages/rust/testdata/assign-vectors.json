@@ -12,18 +12,18 @@
         "moved": false
       },
       "1": {
-        "hueFraction": 0.9424207601696253,
+        "hueFraction": 0.15075409350295854,
         "ring": 0,
-        "moved": false
+        "moved": true
       },
       "2": {
-        "hueFraction": 0.03568592426987993,
+        "hueFraction": 0.41068592426987993,
         "ring": 0,
         "moved": true
       }
     },
     "report": {
-      "minDistance": 0.06599095450708506,
+      "minDistance": 0.1619294879513506,
       "closestPairs": [
         [
           "1",
@@ -35,8 +35,8 @@
     },
     "lightFills": {
       "0": "#7caeee",
-      "1": "#e599bd",
-      "2": "#ee968d"
+      "1": "#d7a667",
+      "2": "#56c37c"
     }
   },
   {
@@ -50,14 +50,14 @@
     ],
     "assignments": {
       "0": {
-        "hueFraction": 0.7246575141325593,
+        "hueFraction": 0.9121575141325593,
         "ring": 0,
         "moved": true
       },
       "1": {
-        "hueFraction": 0.9424207601696253,
+        "hueFraction": 0.27575409350295854,
         "ring": 0,
-        "moved": false
+        "moved": true
       },
       "2": {
         "hueFraction": 0.03568592426987993,
@@ -70,34 +70,34 @@
         "moved": false
       },
       "4": {
-        "hueFraction": 0.4585337904281914,
+        "hueFraction": 0.6668671237615248,
         "ring": 0,
-        "moved": false
+        "moved": true
       },
       "5": {
-        "hueFraction": 0.6376580582000315,
+        "hueFraction": 0.42932472486669804,
         "ring": 0,
-        "moved": false
+        "moved": true
       }
     },
     "report": {
-      "minDistance": 0.06599095450708506,
+      "minDistance": 0.07443571340522884,
       "closestPairs": [
         [
-          "1",
-          "2"
+          "5",
+          "1"
         ]
       ],
       "withinRingCapacity": true,
       "distinctFills": true
     },
     "lightFills": {
-      "0": "#a8a3ef",
-      "1": "#e599bd",
+      "0": "#f185d1",
+      "1": "#a6b666",
       "2": "#ee968d",
       "3": "#d2a260",
-      "4": "#6dc6a5",
-      "5": "#8abae3"
+      "4": "#99b8e6",
+      "5": "#70c696"
     }
   },
   {
@@ -452,21 +452,21 @@
         "moved": false
       },
       "b": {
-        "hueFraction": 0.8171844421885908,
+        "hueFraction": 0.9421844421885908,
         "ring": 0,
-        "moved": false
+        "moved": true
       },
       "constructor": {
-        "hueFraction": 0.9064403569015363,
+        "hueFraction": 0.19810702356820298,
         "ring": 0,
         "moved": true
       }
     },
     "report": {
-      "minDistance": 0.05397194707193586,
+      "minDistance": 0.14570291232389218,
       "closestPairs": [
         [
-          "b",
+          "__proto__",
           "constructor"
         ]
       ],
@@ -475,8 +475,8 @@
     },
     "lightFills": {
       "__proto__": "#63d8a7",
-      "b": "#d99ceb",
-      "constructor": "#efa5d9"
+      "b": "#ed99c2",
+      "constructor": "#d8b95d"
     }
   },
   {
@@ -506,13 +506,13 @@
         "moved": false
       },
       "free": {
-        "hueFraction": 0.5591660051140934,
+        "hueFraction": 0.3091660051140934,
         "ring": 0,
-        "moved": false
+        "moved": true
       }
     },
     "report": {
-      "minDistance": 0.1912860893704612,
+      "minDistance": 0.21810888875461543,
       "closestPairs": [
         [
           "fixed-2",
@@ -525,7 +525,7 @@
     "lightFills": {
       "fixed-2": "#777777",
       "fixed": "#123456",
-      "free": "#5abac9"
+      "free": "#90ba53"
     }
   },
   {
@@ -540,13 +540,13 @@
         "moved": false
       },
       "item:633": {
-        "hueFraction": 0.37700352709119517,
+        "hueFraction": 0.7936701937578619,
         "ring": 0,
         "moved": true
       }
     },
     "report": {
-      "minDistance": 0.0735585981099187,
+      "minDistance": 0.22246285369962315,
       "closestPairs": [
         [
           "item:33",
@@ -558,7 +558,7 @@
     },
     "lightFills": {
       "item:33": "#b4c860",
-      "item:633": "#6fd274"
+      "item:633": "#d4afeb"
     }
   },
   {
@@ -573,13 +573,13 @@
         "moved": false
       },
       "item:81": {
-        "hueFraction": 0.8782229707576334,
+        "hueFraction": 0.7948896374243,
         "ring": 0,
-        "moved": false
+        "moved": true
       }
     },
     "report": {
-      "minDistance": 0.26789150049245153,
+      "minDistance": 0.24807349956341307,
       "closestPairs": [
         [
           "item:79",
@@ -591,7 +591,94 @@
     },
     "lightFills": {
       "item:79": "#b4ce66",
-      "item:81": "#e58fd9"
+      "item:81": "#c89ce3"
+    }
+  },
+  {
+    "texts": [
+      "research",
+      "design",
+      "engineering"
+    ],
+    "assignments": {
+      "engineering": {
+        "hueFraction": 0.5391089434269816,
+        "ring": 0,
+        "moved": false
+      },
+      "research": {
+        "hueFraction": 0.044814796264593726,
+        "ring": 0,
+        "moved": true
+      },
+      "design": {
+        "hueFraction": 0.8005975114647299,
+        "ring": 0,
+        "moved": true
+      }
+    },
+    "report": {
+      "minDistance": 0.132755313244433,
+      "closestPairs": [
+        [
+          "research",
+          "design"
+        ]
+      ],
+      "withinRingCapacity": true,
+      "distinctFills": true
+    },
+    "lightFills": {
+      "engineering": "#5ac6cb",
+      "research": "#ec9586",
+      "design": "#d1a8e7"
+    }
+  },
+  {
+    "texts": [
+      "bug",
+      "feature",
+      "question",
+      "docs"
+    ],
+    "assignments": {
+      "docs": {
+        "hueFraction": 0.2674425090663135,
+        "ring": 0,
+        "moved": false
+      },
+      "feature": {
+        "hueFraction": 0.7546717398023854,
+        "ring": 0,
+        "moved": true
+      },
+      "bug": {
+        "hueFraction": 0.024260051315650344,
+        "ring": 0,
+        "moved": true
+      },
+      "question": {
+        "hueFraction": 0.5017830243644616,
+        "ring": 0,
+        "moved": true
+      }
+    },
+    "report": {
+      "minDistance": 0.12735334907575727,
+      "closestPairs": [
+        [
+          "docs",
+          "question"
+        ]
+      ],
+      "withinRingCapacity": true,
+      "distinctFills": true
+    },
+    "lightFills": {
+      "docs": "#abba52",
+      "feature": "#b49bdf",
+      "bug": "#eab0ae",
+      "question": "#72cbbd"
     }
   },
   {
@@ -608,14 +695,14 @@
         "moved": false
       },
       "one": {
-        "hueFraction": 0.5448290228378028,
+        "hueFraction": 0.7948290228378028,
         "ring": 0,
-        "moved": false
+        "moved": true
       },
       "three": {
-        "hueFraction": 0.8362284975592047,
+        "hueFraction": 0.5445618308925382,
         "ring": 0,
-        "moved": false
+        "moved": true
       }
     },
     "assignments": {
@@ -625,42 +712,42 @@
         "moved": false
       },
       "one": {
-        "hueFraction": 0.5448290228378028,
+        "hueFraction": 0.7948290228378028,
         "ring": 0,
-        "moved": false
+        "moved": true
       },
       "three": {
-        "hueFraction": 0.8362284975592047,
+        "hueFraction": 0.5445618308925382,
         "ring": 0,
-        "moved": false
+        "moved": true
       },
       "four": {
-        "hueFraction": 0.18539167870767415,
+        "hueFraction": 0.060391678707674146,
         "ring": 0,
-        "moved": false
+        "moved": true
       },
       "five": {
-        "hueFraction": 0.3865848687322189,
+        "hueFraction": 0.9282515353988856,
         "ring": 0,
         "moved": true
       }
     },
     "report": {
-      "minDistance": 0.07727635439073621,
+      "minDistance": 0.06270170606663547,
       "closestPairs": [
         [
-          "two",
-          "five"
+          "five",
+          "one"
         ]
       ],
       "withinRingCapacity": true,
       "distinctFills": true
     },
     "lightFills": {
-      "four": "#e0bd6f",
+      "four": "#ebb6a6",
       "two": "#a3ba65",
-      "five": "#65cf75",
-      "one": "#5fd2db"
+      "five": "#efa1ce",
+      "one": "#d9b3f2"
     }
   },
   {
@@ -682,13 +769,13 @@
         "moved": true
       },
       "free": {
-        "hueFraction": 0.5591660051140934,
+        "hueFraction": 0.017499338447426682,
         "ring": 0,
-        "moved": false
+        "moved": true
       }
     },
     "report": {
-      "minDistance": 0.1455499447694684,
+      "minDistance": 0.24295089797594172,
       "closestPairs": [
         [
           "pinned",
@@ -700,7 +787,7 @@
     },
     "lightFills": {
       "pinned": "#7aedda",
-      "free": "#5abac9"
+      "free": "#ec9497"
     }
   },
   {

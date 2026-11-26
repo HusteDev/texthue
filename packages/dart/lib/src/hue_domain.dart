@@ -1,3 +1,4 @@
+import 'errors.dart';
 import 'dart:math' as math;
 
 typedef HueArc = (double, double);
@@ -12,13 +13,13 @@ final class HueDomain {
     List<HueArc> split(HueArc arc) {
       final (a, b) = arc;
       if (!(a >= 0 && a <= 360 && b >= 0 && b <= 360)) {
-        throw ArgumentError.value(arc, 'hue arc');
+        throw OptionError.value(arc, 'hue arc');
       }
       return a <= b ? [arc] : [(0, b), (a, 360)];
     }
 
     if (excluded.length > 16)
-      throw ArgumentError('At most 16 hue exclusions are supported');
+      throw OptionError('At most 16 hue exclusions are supported');
     var remaining = split(allowed).where((arc) => arc.$1 < arc.$2).toList();
     for (final exclusion in excluded) {
       for (final (a, b) in split(exclusion)) {
@@ -33,7 +34,7 @@ final class HueDomain {
       }
     }
     final width = remaining.fold(0.0, (sum, arc) => sum + (arc.$2 - arc.$1));
-    if (width <= 0) throw ArgumentError('No permitted hue remains');
+    if (width <= 0) throw OptionError('No permitted hue remains');
     return HueDomain._(remaining, width, List.unmodifiable(excluded));
   }
 
@@ -47,7 +48,7 @@ final class HueDomain {
     if (_width == 360) return hue;
     var distance = hue / 360 * _width;
     for (final (lo, hi) in _segments) {
-      if (distance < hi - lo) return lo + distance;
+      if (distance < hi - lo) return (lo + distance) % 360;
       distance -= hi - lo;
     }
     return _segments.first.$1;

@@ -101,7 +101,8 @@
         { "path": "packages/dart/pubspec.yaml", "kind": "pyRegex", "pattern": "^version: ([^\\s]+)$" }
       ],
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
-      "verifyCommands": [["dart", "analyze", "--fatal-infos"], ["dart", "run", "{suite}"]],
+      "conformanceSetup": ["dart", "pub", "get", "--enforce-lockfile"],
+      "verifyCommands": [["dart", "analyze", "--fatal-infos"], ["dart", "test"], ["dart", "run", "{suite}"]],
       "verifySuites": "tool/check_*.dart",
       "optionalToolchain": true,
       "conformanceRunner": ["dart", "run", "packages/dart/tool/conformance.dart"]
@@ -114,7 +115,7 @@
         { "path": "packages/csharp/src/TextHue/TextHue.csproj", "kind": "pyRegex", "pattern": "<Version>([^<]+)</Version>" }
       ],
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
-      "verifyCommands": [["dotnet", "run", "--configuration", "Release", "--project", "tests/Conformance"]],
+      "verifyCommands": [["dotnet", "test", "--configuration", "Release", "tests/Behavior"], ["dotnet", "run", "--configuration", "Release", "--project", "tests/Conformance"]],
       "optionalToolchain": true,
       "conformanceRunner": ["dotnet", "run", "--configuration", "Release", "--project", "packages/csharp/tools/JsonRunner"]
     },

@@ -7,7 +7,7 @@ public readonly record struct P3Channels(double R, double G, double B);
 
 public enum CssFormat { Hex, Rgb, Hsl, Oklch, DisplayP3 }
 
-public sealed class Color
+public sealed record Color
 {
     public Rgb Rgb { get; }
     public string Hex { get; }
@@ -31,7 +31,7 @@ public sealed class Color
         CssFormat.Hsl => FormattableString.Invariant($"hsl({Hsl.H:0.######} {Hsl.S:0.######}% {Hsl.L:0.######}%)"),
         CssFormat.Oklch => FormattableString.Invariant($"oklch({Oklch.L:0.######} {Oklch.C:0.######} {Oklch.H:0.######})"),
         CssFormat.DisplayP3 => Css ?? FormatDisplayP3(Gamut.DisplayP3.FromSRgb(Rgb)),
-        _ => throw new ArgumentOutOfRangeException(nameof(format))
+        _ => throw TextHueErrors.WithCode(new ArgumentOutOfRangeException(nameof(format)))
     };
 
     private static string FormatDisplayP3(EncodedRgb channels) => FormattableString.Invariant(
@@ -41,7 +41,7 @@ public sealed class Color
     public Color CompositeOver(double alpha, Rgb backdrop)
     {
         if (!(alpha >= 0 && alpha <= 1))
-            throw new ArgumentOutOfRangeException(nameof(alpha), "Alpha must be between zero and one.");
+            throw TextHueErrors.WithCode(new ArgumentOutOfRangeException(nameof(alpha), "Alpha must be between zero and one."));
 
         byte Blend(byte front, byte back) => GamutFit.ChannelByte(
             alpha * Contrast.LinearChannel(front / 255.0) + (1 - alpha) * Contrast.LinearChannel(back / 255.0));
@@ -75,7 +75,7 @@ public sealed class Color
     {
         static bool Valid(double x) => x >= 0 && x <= 1;
         if (!Valid(channels.R) || !Valid(channels.G) || !Valid(channels.B))
-            throw new ArgumentOutOfRangeException(nameof(channels));
+            throw TextHueErrors.WithCode(new ArgumentOutOfRangeException(nameof(channels)));
         var xyz = GamutFit.P3ToXyz(channels);
         var fallback = GamutFit.FallbackFromXyz(xyz);
         return new Color(channels, xyz, fallback.Bytes, fallback.Clipped);

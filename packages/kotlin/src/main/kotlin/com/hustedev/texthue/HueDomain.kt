@@ -1,9 +1,11 @@
 package com.hustedev.texthue
 
+private const val MAX_EXCLUDED_ARCS = 16
+
 /** An arc in degrees. A start greater than the end crosses zero. */
 data class HueArc(val start: Double, val end: Double) {
-    init { require(start in 0.0..360.0 && end in 0.0..360.0) }
-    internal fun split() = if (start <= end) listOf(this) else listOf(HueArc(0.0, end), HueArc(start, 360.0))
+    init { requireOption(start in 0.0..FULL_TURN && end in 0.0..FULL_TURN) }
+    internal fun split() = if (start <= end) listOf(this) else listOf(HueArc(0.0, end), HueArc(start, FULL_TURN))
 }
 
 internal class HueDomain(allowed: HueArc, excluded: List<HueArc>) {
@@ -12,7 +14,7 @@ internal class HueDomain(allowed: HueArc, excluded: List<HueArc>) {
     private val exclusions: List<HueArc>
 
     init {
-        require(excluded.size <= 16)
+        requireOption(excluded.size <= MAX_EXCLUDED_ARCS)
         var remaining = allowed.split().filter { it.start < it.end }
         exclusions = excluded.flatMap { it.split() }.filter { it.start < it.end }
         for (cut in exclusions) {
@@ -27,7 +29,7 @@ internal class HueDomain(allowed: HueArc, excluded: List<HueArc>) {
         }
         segments = remaining
         width = segments.fold(0.0) { sum, arc -> sum + arc.end - arc.start }
-        require(width > 0.0) { "Empty hue domain" }
+        requireOption(width > 0.0) { "Empty hue domain" }
     }
 
     fun excludes(rgb: DoubleArray, gamut: Gamut): Boolean {
@@ -36,12 +38,13 @@ internal class HueDomain(allowed: HueArc, excluded: List<HueArc>) {
         return exclusions.any { hue >= it.start && hue < it.end }
     }
 
-    fun map(hue: Double): Double {
-        if (width == 360.0) return hue
-        var distance = hue / 360.0 * width
+    fun map(hue: Double): Double = if (width == FULL_TURN) hue else mapWithinSegments(hue)
+
+    private fun mapWithinSegments(hue: Double): Double {
+        var distance = hue / FULL_TURN * width
         for (arc in segments) {
             val span = arc.end - arc.start
-            if (distance < span) return arc.start + distance
+            if (distance < span) return (arc.start + distance) % FULL_TURN
             distance -= span
         }
         return segments.first().start

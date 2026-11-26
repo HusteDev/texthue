@@ -4,6 +4,7 @@ import java.util.Base64
 
 // Input rows come from the shared conformance corpus; Base64 preserves empty
 // strings, control characters and supplementary code points across shells.
+@Suppress("DestructuringDeclarationWithTooManyEntries") // Named columns of the conformance fixture.
 fun main() {
     val decode = Base64.getDecoder()
     val count = generateSequence(::readlnOrNull).map { line ->

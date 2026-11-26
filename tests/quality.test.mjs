@@ -71,3 +71,19 @@ test('default contrast repairs stay below five percent for each tone in each the
     assert.ok(count / size < 0.05, `${key}: ${count} repairs in ${size} labels`);
   }
 });
+
+test('small review collections spread around the hue circle and replay their pins', () => {
+  const resolver = createResolver();
+  for (const labels of [['research','design','engineering'], ['bug','feature','question','docs']]) {
+    const board = resolver.assign(labels);
+    for (const theme of ['light','dark']) {
+      const hues = labels.map(label => board.colors[label][theme].fill.oklch.h).sort((a, b) => a-b);
+      const gaps = hues.map((h, i) => (hues[(i+1) % hues.length] - h + 360) % 360);
+      assert.ok(Math.min(...gaps) >= 55, JSON.stringify({theme,hues,gaps}));
+      assert.ok(Math.max(...gaps) <= 195, JSON.stringify({theme,hues,gaps}));
+    }
+    const pinned = resolver.importRegistry(resolver.exportRegistry(board.assignments));
+    const extended = resolver.assign([...labels, 'new'], {pinned});
+    for (const label of labels) assert.deepEqual(extended.colors[label], board.colors[label]);
+  }
+});

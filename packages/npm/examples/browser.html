@@ -23,16 +23,21 @@
 </section>
 <pre id="output"></pre>
 <script type="module">
-  import { resolveTextColors } from '../dist/index.js';
+  import { createResolver } from '../dist/index.js';
 
   const text = document.querySelector('#text');
   const namespace = document.querySelector('#namespace');
   const theme = document.querySelector('#theme');
   const output = document.querySelector('#output');
   const status = document.querySelector('#status');
+  let resolver, currentNamespace;
   function update() {
     try {
-      const colors = resolveTextColors(text.value, { namespace: namespace.value });
+      if (currentNamespace !== namespace.value) {
+        resolver = createResolver({ namespace: namespace.value });
+        currentNamespace = namespace.value;
+      }
+      const colors = resolver.resolve(text.value);
       const palette = colors[theme.value];
       document.querySelector('#surface').style.backgroundColor = palette.background.hex;
       document.querySelector('#fill').style.backgroundColor = palette.fill.hex;

@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Placement: Codable, Equatable {
+public struct Placement: Codable, Equatable, Sendable {
     public let hueFraction: Double
     public let ring: Int64
     public let moved: Bool
@@ -14,7 +14,24 @@ public struct Placement: Codable, Equatable {
     static let offsets = [0.0, 0.08, -0.08, 0.16, -0.16]
 
     static func choose(_ natural: Double, _ occupied: Dictionary<Data, Placement>.Values,
-                       _ separation: Double) -> Placement {
+                       _ separation: Double, size: Int) -> Placement {
+        if size <= 8 && !occupied.isEmpty {
+            var best = -1.0
+            var chosen = natural
+            for step in 0..<24 {
+                let raw = natural + Double(step) / 24
+                let hue = raw - floor(raw)
+                let distance = occupied.reduce(Double.infinity) { nearest, previous in
+                    let delta = abs(previous.hueFraction - hue)
+                    return min(nearest, min(delta, 1 - delta))
+                }
+                if distance > best {
+                    best = distance
+                    chosen = hue
+                }
+            }
+            return Placement(hueFraction: chosen, ring: 0, moved: chosen != natural)
+        }
         var ring: Int64 = 0
         while true {
             let neighbors = occupied.filter { $0.ring == ring }
@@ -34,13 +51,13 @@ public struct Placement: Codable, Equatable {
     }
 }
 
-public struct Assignment {
+public struct Assignment: Sendable {
     public let assignments: [Data: Placement]
     public let colors: [Data: RenderedPalette]
     public let report: AssignmentReport
 }
 
-public struct AssignmentReport {
+public struct AssignmentReport: Sendable {
     public let minDistance: Double?
     public let closestPairs: [[Data]]
     public let withinRingCapacity: Bool

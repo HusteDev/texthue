@@ -9,21 +9,31 @@ public enum Whitespace { None, Trim, Collapse }
 public sealed record Normalization(UnicodeForm Unicode = UnicodeForm.None, bool Lowercase = false, Whitespace Whitespace = Whitespace.None)
 {
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
-    public string Apply(string input)
+    // In invariant mode .NET accepts Normalize calls but skips composition.
+    private static readonly bool HasUnicodeNormalization =
+        "e\u0301".Normalize(NormalizationForm.FormC) == "\u00e9";
+
+    public string Apply(string input) => Apply(input, "INVALID_TEXT");
+
+    internal string Apply(string input, string code)
     {
-        StrictUtf8.GetByteCount(input);
+        if (input is null) throw TextHueErrors.WithCode(new ArgumentNullException(nameof(input)), code);
+        try { StrictUtf8.GetByteCount(input); }
+        catch (EncoderFallbackException error) { TextHueErrors.WithCode(error, code); throw; }
+        if (Unicode != UnicodeForm.None && !HasUnicodeNormalization)
+            throw TextHueErrors.WithCode(new PlatformNotSupportedException("TextHue NFC and NFKC require .NET globalization data. Disable invariant globalization and install ICU where required."));
         string value = Unicode switch {
             UnicodeForm.None => input,
             UnicodeForm.NFC => input.Normalize(NormalizationForm.FormC),
             UnicodeForm.NFKC => input.Normalize(NormalizationForm.FormKC),
-            _ => throw new ArgumentOutOfRangeException(nameof(Unicode))
+            _ => throw TextHueErrors.WithCode(new ArgumentOutOfRangeException(nameof(Unicode)))
         };
         if (Lowercase) value = Lower(value);
         return Whitespace switch {
             Whitespace.None => value,
             Whitespace.Trim => value.Trim(),
             Whitespace.Collapse => Regex.Replace(value.Trim(), @"\s+", " "),
-            _ => throw new ArgumentOutOfRangeException(nameof(Whitespace))
+            _ => throw TextHueErrors.WithCode(new ArgumentOutOfRangeException(nameof(Whitespace)))
         };
     }
 

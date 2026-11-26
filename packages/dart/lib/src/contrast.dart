@@ -1,3 +1,4 @@
+import 'errors.dart';
 import 'dart:math' as math;
 
 enum Gamut { sRGB, displayP3 }
@@ -26,12 +27,12 @@ double measureContrast(List<num> text, List<num> background,
   };
   double luminance(List<num> rgb) {
     if (rgb.length != 3)
-      throw ArgumentError.value(rgb, 'rgb', 'Expected three channels');
+      throw OptionError.value(rgb, 'rgb', 'Expected three channels');
     var sum = 0.0;
     for (var i = 0; i < 3; i++) {
       final channel = rgb[i];
       if (!(channel >= 0 && channel <= 255))
-        throw RangeError.range(channel, 0, 255, 'channel');
+        throw OptionRangeError.range(channel, 0, 255, 'channel');
       final x = channel / 255;
       sum += weights[i] *
           (model == ContrastModel.apca ? math.pow(x, 2.4) : linearChannel(x));

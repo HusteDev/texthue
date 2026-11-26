@@ -1,9 +1,9 @@
 import Foundation
 
-public struct Normalization: Decodable {
-    public enum Form: String, Decodable { case none, NFC, NFKC }
-    public enum Casing: String, Decodable { case none, lower }
-    public enum Whitespace: String, Decodable { case none, trim, collapse }
+public struct Normalization: Decodable, Sendable {
+    public enum Form: String, Decodable, Sendable { case none, NFC, NFKC }
+    public enum Casing: String, Decodable, Sendable { case none, lower }
+    public enum Whitespace: String, Decodable, Sendable { case none, trim, collapse }
 
     public let unicode: Form
     public let casing: Casing
@@ -18,6 +18,7 @@ public struct Normalization: Decodable {
     }
 
     public init(from decoder: Decoder) throws {
+        try validateOptionKeys(decoder, allowed: ["unicode", "case", "whitespace"])
         let fields = try decoder.container(keyedBy: CodingKeys.self)
         self.init(unicode: try fields.decodeIfPresent(Form.self, forKey: .unicode) ?? .none,
                   casing: try fields.decodeIfPresent(Casing.self, forKey: .casing) ?? .none,

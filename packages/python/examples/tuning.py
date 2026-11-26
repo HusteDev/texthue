@@ -1,4 +1,4 @@
-"""Exercise every option, fixed ranges, grayscale, and an unattainable contrast target."""
+"""Set per-theme profiles, generate a neutral fill, and inspect an unattainable contrast target."""
 
 import json
 
@@ -27,6 +27,7 @@ gray = resolve_text_colors(
         "profiles": {"light": {"fill": {"lightness": [0.75, 0.75], "chromaScale": [0, 0]}}},
     },
 )
+assert gray.light.fill.rgb.r == gray.light.fill.rgb.g == gray.light.fill.rgb.b
 print("Fixed preferred lightness, grayscale:", gray.light.fill)
 
 impossible = resolve_text_colors(
@@ -37,6 +38,8 @@ impossible = resolve_text_colors(
     },
 )
 status = impossible.light.contrast.text
+assert not status.meets_target
+assert status.fallback == "unattainable-contrast"
 if not status.meets_target:
     print(
         "Use the returned fallback or change the background/target:",

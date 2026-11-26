@@ -16,46 +16,79 @@ const rotate = (word: number, bits: number) => (word >>> bits) | (word << (32 - 
 
 /** Hash a sequence of byte strings without allocating a concatenated payload. */
 export function sha256(...parts: Uint8Array[]): DataView {
-  const state = new Uint32Array([0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
-    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]);
+  const state = new Uint32Array([
+    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
+  ]);
   const words = new Uint32Array(64);
   const block = new Uint8Array(64);
   const input = new DataView(block.buffer);
   function compress() {
     for (let i = 0; i < 16; i++) words[i] = input.getUint32(i * 4);
     for (let i = 16; i < 64; i++) {
-      const x = wordAt(words, i - 15), y = wordAt(words, i - 2);
-      words[i] = wordAt(words, i - 16) + (rotate(x, 7) ^ rotate(x, 18) ^ (x >>> 3)) +
-        wordAt(words, i - 7) + (rotate(y, 17) ^ rotate(y, 19) ^ (y >>> 10));
+      const x = wordAt(words, i - 15),
+        y = wordAt(words, i - 2);
+      words[i] =
+        wordAt(words, i - 16) +
+        (rotate(x, 7) ^ rotate(x, 18) ^ (x >>> 3)) +
+        wordAt(words, i - 7) +
+        (rotate(y, 17) ^ rotate(y, 19) ^ (y >>> 10));
     }
-    let [a,b,c,d,e,f,g,h] = state as unknown as [number,number,number,number,number,number,number,number];
+    let [a, b, c, d, e, f, g, h] = state as unknown as [
+      number,
+      number,
+      number,
+      number,
+      number,
+      number,
+      number,
+      number,
+    ];
     for (let i = 0; i < 64; i++) {
-      const t1 = h + (rotate(e, 6) ^ rotate(e, 11) ^ rotate(e, 25)) +
-        ((e & f) ^ (~e & g)) + wordAt(K, i) + wordAt(words, i);
+      const t1 =
+        h +
+        (rotate(e, 6) ^ rotate(e, 11) ^ rotate(e, 25)) +
+        ((e & f) ^ (~e & g)) +
+        wordAt(K, i) +
+        wordAt(words, i);
       const t2 = (rotate(a, 2) ^ rotate(a, 13) ^ rotate(a, 22)) + ((a & b) ^ (a & c) ^ (b & c));
-      h = g; g = f; f = e; e = (d + t1) >>> 0;
-      d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+      h = g;
+      g = f;
+      f = e;
+      e = (d + t1) >>> 0;
+      d = c;
+      c = b;
+      b = a;
+      a = (t1 + t2) >>> 0;
     }
-    const result = [a,b,c,d,e,f,g,h];
+    const result = [a, b, c, d, e, f, g, h];
     for (let i = 0; i < 8; i++) state[i] = wordAt(state, i) + wordAt(result, i);
   }
-  let used = 0, length = 0;
+  let used = 0,
+    length = 0;
   for (const part of parts) {
     length += part.length;
-    for (let offset = 0; offset < part.length;) {
+    for (let offset = 0; offset < part.length; ) {
       const count = Math.min(64 - used, part.length - offset);
       block.set(part.subarray(offset, offset + count), used);
       offset += count;
       used += count;
-      if (used === 64) { compress(); used = 0; }
+      if (used === 64) {
+        compress();
+        used = 0;
+      }
     }
   }
   block[used++] = 0x80;
   block.fill(0, used);
-  if (used > 56) { compress(); block.fill(0); }
+  if (used > 56) {
+    compress();
+    block.fill(0);
+  }
   input.setBigUint64(56, BigInt(length) * 8n);
   compress();
   const digest = new DataView(new ArrayBuffer(32));
-  state.forEach((word, i) => { digest.setUint32(i * 4, word); });
+  state.forEach((word, i) => {
+    digest.setUint32(i * 4, word);
+  });
   return digest;
 }

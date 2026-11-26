@@ -20,6 +20,7 @@ kotlin.compilerOptions {
 }
 dependencies {
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:2.2.21'
+    testImplementation 'junit:junit:4.13.2'
 }
 
 tasks.named('jar') {
@@ -76,16 +77,13 @@ def conformance = tasks.register('conformance', Exec) {
             '--classpath', sourceSets.test.runtimeClasspath.asPath
     }
 }
-// The Kotlin test sources are executable fixture runners invoked by check-kotlin.py.
+// Keep the same dependency-free fixture runners available to the Android conformance harness.
+sourceSets.test.kotlin.srcDir('src/junit/kotlin')
 tasks.named('test') {
     dependsOn conformance
-    failOnNoDiscoveredTests = false
+    useJUnit()
 }
 tasks.named('publishLibraryPublicationToStagingRepository') { dependsOn tasks.named('check') }
-
-detekt {
-    baseline = file('detekt-baseline.xml')
-}
 
 sourceSets {
     benchmark {

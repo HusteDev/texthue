@@ -6,23 +6,24 @@ import (
 	"unicode/utf8"
 )
 
-const registrySchema = "texthue-registry-v1"
+const registrySchema = "texthue-registry-v2"
+const legacyRegistrySchema = "texthue-registry-v1"
 
 func (p Assignment) valid() bool {
 	return p.HueFraction >= 0 && p.HueFraction < 1 && p.Ring >= 0 && uint64(p.Ring) <= 1<<53-1
 }
 
-func (r *Resolver) registryFingerprint() (string, error) {
+func (r *Resolver) registryFingerprint(legacy bool) (string, error) {
 	payload, err := r.configPayload()
 	if err != nil {
 		return "", err
 	}
-	return fingerprint(payload)
+	return r.digestForConfig(payload["options"].(map[string]any), legacy)
 }
 
 // ExportRegistry serializes caller-owned assignments against the current configuration.
 func (r *Resolver) ExportRegistry(assignments map[string]Assignment) ([]byte, error) {
-	sum, err := r.registryFingerprint()
+	sum, err := r.registryFingerprint(false)
 	if err != nil {
 		return nil, err
 	}
@@ -41,10 +42,10 @@ func (r *Resolver) ExportRegistry(assignments map[string]Assignment) ([]byte, er
 func (r *Resolver) ImportRegistry(data []byte) (map[string]Assignment, error) {
 	var saved map[string]any
 	if !validJSONUnicode(data) || json.Unmarshal(data, &saved) != nil || len(saved) != 4 ||
-		saved["schema"] != registrySchema || saved["algorithm"] != Version {
+		(saved["schema"] != registrySchema && saved["schema"] != legacyRegistrySchema) || saved["algorithm"] != Version {
 		return nil, invalid("registry schema or algorithm")
 	}
-	sum, err := r.registryFingerprint()
+	sum, err := r.registryFingerprint(saved["schema"] == legacyRegistrySchema)
 	if err != nil {
 		return nil, err
 	}

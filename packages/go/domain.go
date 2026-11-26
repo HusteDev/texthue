@@ -66,11 +66,11 @@ func (d hueDomain) mapHue(h float64) float64 {
 	if d.width == 360 {
 		return h
 	}
-	distance := h / 360 * d.width
+	distance := float64(h / 360 * d.width)
 	for _, arc := range d.arcs {
 		width := arc[1] - arc[0]
 		if distance < width {
-			return arc[0] + distance
+			return math.Mod(arc[0]+distance, 360)
 		}
 		distance -= width
 	}

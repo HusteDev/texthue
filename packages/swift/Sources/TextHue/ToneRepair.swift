@@ -55,7 +55,7 @@ extension Gamut {
             guard (0...4096).contains(grid) else { break }
             best = evaluate(Double(grid) / 4096)
         }
-        precondition(best.score >= target, "Contrast repair lost its passing candidate")
-        return best
+        if best.score >= target { return best }
+        return black.score >= white.score ? black : white
     }
 }

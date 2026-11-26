@@ -9,10 +9,11 @@ cases = [
     ("research", {"backgrounds": {"light": "#fff"}}),
     ("research", {"profiles": {"light": {"fill": {"chromaScale": [0.2, 0.1]}}}}),
 ]
-for text, options in cases:
+for index, (text, options) in enumerate(cases):
     try:
         resolve_text_colors(text, options)
     except TextColorError as error:
+        assert error.code == ("INVALID_TEXT" if index < 2 else "INVALID_OPTIONS")
         print(error.code, str(error))
     else:
         raise AssertionError("This intentionally invalid example should have failed")

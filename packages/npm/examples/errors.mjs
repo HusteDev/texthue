@@ -1,4 +1,5 @@
 // Show the stable error codes returned for invalid text and options.
+import assert from 'node:assert/strict';
 import { resolveTextColors, TextColorError } from 'texthue';
 
 for (const [text, options] of [
@@ -13,6 +14,7 @@ for (const [text, options] of [
     throw new Error('This intentionally invalid example should have failed');
   } catch (error) {
     if (!(error instanceof TextColorError)) throw error;
+    assert.equal(error.code, text === 'research' ? 'INVALID_OPTIONS' : 'INVALID_TEXT');
     console.log(error.code, error.message);
   }
 }

@@ -1,3 +1,4 @@
+export 'src/errors.dart' show TextHueError;
 export 'src/normalization.dart'
     show Normalization, UnicodeForm, LetterCase, Whitespace;
 export 'src/hue_domain.dart' show HueArc;

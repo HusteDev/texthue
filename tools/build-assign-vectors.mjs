@@ -7,6 +7,7 @@ cases.push({texts:['__proto__','constructor','B','b','B'],options:{normalize:{ca
 cases.push({texts:['free','fixed','fixed-2'],options:{overrides:{fixed:'#123456','fixed-2':{light:'#777777',dark:'#333333'}}}});
 // Historical pairs from the library review. Keep each isolated to expose placement changes.
 cases.push({texts:['item:33','item:633']}, {texts:['item:79','item:81']});
+cases.push({texts:['research','design','engineering']}, {texts:['bug','feature','question','docs']});
 const pinned = assignTextColors(['one','two','three']).assignments;
 cases.push({texts:['four','five','two','one'],pinned});
 cases.push({texts:['pinned','free'],pinned:{

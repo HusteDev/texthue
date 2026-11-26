@@ -79,7 +79,7 @@ var themeShape = &jsonShape{fields: map[string]*jsonShape{"fill": profileShape, 
 var pairShape = &jsonShape{fields: map[string]*jsonShape{"light": stringShape, "dark": stringShape}}
 var paletteEntryShape = &jsonShape{fields: map[string]*jsonShape{"light": stringShape, "dark": stringShape, "id": stringShape}}
 var optionsShape = &jsonShape{fields: map[string]*jsonShape{
-	"palette": {kind: "palette"}, "overrides": {kind: "overrides"},
+	"paletteMode": stringShape, "palette": {kind: "palette"}, "overrides": {kind: "overrides"},
 	"foregrounds": {kind: "strings"}, "foregroundPolicy": stringShape,
 	"namespace":      stringShape,
 	"seed":           numberShape,

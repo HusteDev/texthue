@@ -11,7 +11,7 @@ internal sealed class HueDomain
     private static IEnumerable<HueArc> Split(HueArc arc)
     {
         if (!(arc.Start is >= 0 and <= 360 && arc.End is >= 0 and <= 360))
-            throw new ArgumentOutOfRangeException(nameof(arc));
+            throw TextHueErrors.WithCode(new ArgumentOutOfRangeException(nameof(arc)));
         if (arc.Start <= arc.End) yield return arc;
         else
         {
@@ -22,7 +22,7 @@ internal sealed class HueDomain
 
     internal HueDomain(HueArc allowed, IReadOnlyList<HueArc> excluded)
     {
-        if (excluded.Count > 16) throw new ArgumentException("At most 16 hue exclusions are supported.", nameof(excluded));
+        if (excluded.Count > 16) throw TextHueErrors.WithCode(new ArgumentException("At most 16 hue exclusions are supported.", nameof(excluded)));
         segments = Split(allowed).Where(s => s.Start < s.End).ToList();
         exclusions = excluded.SelectMany(Split).Where(cut => cut.Start < cut.End).ToArray();
         foreach (var cut in exclusions)
@@ -37,7 +37,7 @@ internal sealed class HueDomain
             segments = next;
         }
         width = segments.Sum(s => s.End - s.Start);
-        if (width <= 0) throw new ArgumentException("No permitted hue remains.");
+        if (width <= 0) throw TextHueErrors.WithCode(new ArgumentException("No permitted hue remains."));
     }
 
     internal bool Excludes(Rgb bytes, Gamut gamut)
@@ -53,7 +53,7 @@ internal sealed class HueDomain
         double distance = hue / 360 * width;
         foreach (var (lo, hi) in segments)
         {
-            if (distance < hi - lo) return lo + distance;
+            if (distance < hi - lo) return (lo + distance) % 360;
             distance -= hi - lo;
         }
         return segments[0].Start;

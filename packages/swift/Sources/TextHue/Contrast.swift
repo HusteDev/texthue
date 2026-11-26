@@ -1,6 +1,6 @@
 import Foundation
 
-public enum Gamut: String, Decodable {
+public enum Gamut: String, Decodable, Sendable {
     case sRGB = "srgb"
     case displayP3 = "display-p3"
 
@@ -19,7 +19,7 @@ public enum Gamut: String, Decodable {
     }
 }
 
-public enum ContrastModel: String, Decodable {
+public enum ContrastModel: String, Decodable, Sendable {
     case wcag2, apca
 
     func measure(text: [UInt8], background: [UInt8], gamut: Gamut) -> Double {

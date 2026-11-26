@@ -41,7 +41,7 @@ struct HueDomain {
         if width == 360 { return hue }
         var distance = hue / 360 * width
         for (lo, hi) in segments {
-            if distance < hi - lo { return lo + distance }
+            if distance < hi - lo { return (lo + distance).truncatingRemainder(dividingBy: 360) }
             distance -= hi - lo
         }
         return segments[0].0

@@ -5,10 +5,15 @@ pub(crate) struct HueDomain {
 }
 
 impl HueDomain {
-    pub(crate) fn new(allowed: (f64, f64), excluded: &[(f64, f64)]) -> Result<Self, &'static str> {
-        fn split((a, b): (f64, f64)) -> Result<[(f64, f64); 2], &'static str> {
+    pub(crate) fn new(
+        allowed: (f64, f64),
+        excluded: &[(f64, f64)],
+    ) -> Result<Self, crate::TextColorError> {
+        fn split((a, b): (f64, f64)) -> Result<[(f64, f64); 2], crate::TextColorError> {
             if ![a, b].iter().all(|v| (0.0..=360.0).contains(v)) {
-                return Err("Hue endpoint outside [0, 360]");
+                return Err(crate::TextColorError::InvalidOptions(
+                    "Hue endpoint outside [0, 360]",
+                ));
             }
             Ok(if a <= b {
                 [(a, b), (0.0, 0.0)]
@@ -17,7 +22,9 @@ impl HueDomain {
             })
         }
         if excluded.len() > 16 {
-            return Err("Too many excluded hue ranges");
+            return Err(crate::TextColorError::InvalidOptions(
+                "Too many excluded hue ranges",
+            ));
         }
         let spans = split(allowed)?;
         if allowed == (0.0, 360.0) && excluded.is_empty() {
@@ -41,7 +48,7 @@ impl HueDomain {
         }
         let width = segments.iter().map(|(lo, hi)| hi - lo).sum();
         if width == 0.0 {
-            return Err("Empty hue domain");
+            return Err(crate::TextColorError::InvalidOptions("Empty hue domain"));
         }
         Ok(Self { width, segments })
     }

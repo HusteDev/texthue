@@ -14,7 +14,23 @@ typedef AssignmentResult = ({
 });
 
 Placement _place(
-    double natural, Iterable<Placement> occupied, double separation) {
+    double natural, Iterable<Placement> occupied, double separation, int size) {
+  if (size <= 8 && occupied.isNotEmpty) {
+    var best = -1.0, chosen = natural;
+    for (var step = 0; step < 24; step++) {
+      final hue = (natural + step / 24) % 1;
+      var distance = double.infinity;
+      for (final previous in occupied) {
+        final delta = (previous.hueFraction - hue).abs();
+        distance = math.min(distance, math.min(delta, 1 - delta));
+      }
+      if (distance > best) {
+        best = distance;
+        chosen = hue;
+      }
+    }
+    return (hueFraction: chosen, ring: 0, moved: chosen != natural);
+  }
   for (var ring = 0;; ring++) {
     final neighbors = occupied.where((p) => p.ring == ring).toList();
     for (var i = 0; i < 385; i++) {
@@ -36,12 +52,12 @@ extension CollectionAssignment on Renderer {
     final names = labels.map(normalization.apply).toSet();
     final assignments = <String, Placement>{};
     for (final entry in pinned.entries) {
-      final name = normalization.apply(entry.key), p = entry.value;
+      final name = normalization.applyOption(entry.key), p = entry.value;
       if (!(p.hueFraction >= 0 && p.hueFraction < 1) ||
           p.ring < 0 ||
           p.ring > 9007199254740991 ||
           assignments.containsKey(name)) {
-        throw ArgumentError('Invalid pinned placement');
+        throw OptionError('Invalid pinned placement');
       }
       assignments[name] = p;
     }
@@ -116,7 +132,7 @@ extension CollectionAssignment on Renderer {
       final name = entry.key, m = entry.value;
       final existing = assignments[name];
       final initial =
-          existing ?? _place(m.fraction, assignments.values, separation);
+          existing ?? _place(m.fraction, assignments.values, separation, size);
       var palette = placed(m, initial);
       if (existing == null) {
         var selected = initial;
@@ -168,11 +184,11 @@ extension CollectionAssignment on Renderer {
       }
     }
     return (
-      assignments: Map.unmodifiable(assignments),
-      colors: Map.unmodifiable(colors),
+      assignments: ResultMap(assignments),
+      colors: ResultMap(colors),
       report: (
         minDistance: minimum,
-        closestPairs: List.unmodifiable(pairs),
+        closestPairs: ResultList(pairs),
         withinRingCapacity: size <= 5 * (1 / separation).floor(),
         distinctFills: fills.length == colors.length
       )

@@ -12,6 +12,15 @@ public sealed record RenderedPalette(double HueFraction, double Hue,
 {
     public IReadOnlyDictionary<string, ContrastRelationship> LightContrast { get; internal init; } = FrozenDictionary<string, ContrastRelationship>.Empty;
     public IReadOnlyDictionary<string, ContrastRelationship> DarkContrast { get; internal init; } = FrozenDictionary<string, ContrastRelationship>.Empty;
+    public bool Equals(RenderedPalette? other) => other is not null && HueFraction.Equals(other.HueFraction)
+        && Hue.Equals(other.Hue) && Source == other.Source && ResultEquality.SameMap(Light, other.Light)
+        && ResultEquality.SameMap(Dark, other.Dark) && ResultEquality.SameMap(LightContrast, other.LightContrast)
+        && ResultEquality.SameMap(DarkContrast, other.DarkContrast);
+
+    public override int GetHashCode() => HashCode.Combine(HueFraction, Hue, Source,
+        ResultEquality.MapHash(Light), ResultEquality.MapHash(Dark),
+        ResultEquality.MapHash(LightContrast), ResultEquality.MapHash(DarkContrast));
+
     public string Version => "text-to-color-v1";
     public string Source { get; internal init; } = "hash";
 }
@@ -23,9 +32,9 @@ public sealed record RoleProfile((double Low, double High)? Lightness = null,
     {
         foreach (var range in new[] { Lightness, ChromaScale })
             if (range is { } r && !(r.Low >= 0 && r.Low <= r.High && r.High <= 1))
-                throw new ArgumentException("Profile ranges must increase within [0, 1].");
+                throw TextHueErrors.WithCode(new ArgumentException("Profile ranges must increase within [0, 1]."));
         if (ChromaCap is double cap && !(cap >= 0 && cap <= 0.4))
-            throw new ArgumentOutOfRangeException(nameof(ChromaCap));
+            throw TextHueErrors.WithCode(new ArgumentOutOfRangeException(nameof(ChromaCap)));
     }
 }
 
@@ -74,30 +83,30 @@ public sealed partial class Renderer
                     IReadOnlyDictionary<string, BrandColors>? overrides = null, IEnumerable<PaletteEntry>? palette = null,
                     Normalization? normalization = null, Gamut gamut = Gamut.SRgb)
     {
-        if (!Enum.IsDefined(contrastModel)) throw new ArgumentOutOfRangeException(nameof(contrastModel));
-        if (!Enum.IsDefined(foregroundPolicy)) throw new ArgumentOutOfRangeException(nameof(foregroundPolicy));
+        if (!Enum.IsDefined(contrastModel)) throw TextHueErrors.WithCode(new ArgumentOutOfRangeException(nameof(contrastModel)));
+        if (!Enum.IsDefined(foregroundPolicy)) throw TextHueErrors.WithCode(new ArgumentOutOfRangeException(nameof(foregroundPolicy)));
         hueDomain = new(hueRange ?? new HueArc(0, 360), excludeHues ?? []);
         this.foregroundPolicy = foregroundPolicy;
-        if (!Enum.IsDefined(gamut)) throw new ArgumentOutOfRangeException(nameof(gamut));
+        if (!Enum.IsDefined(gamut)) throw TextHueErrors.WithCode(new ArgumentOutOfRangeException(nameof(gamut)));
         this.gamut = gamut;
         candidates = (foregrounds ?? [new Rgb(0, 0, 0), new Rgb(255, 255, 255)]).Select(rgb => gamut.FromSRgb(rgb)).ToArray();
-        if (candidates.Length == 0) throw new ArgumentException("Expected at least one foreground.", nameof(foregrounds));
+        if (candidates.Length == 0) throw TextHueErrors.WithCode(new ArgumentException("Expected at least one foreground.", nameof(foregrounds)));
         this.contrastModel = contrastModel;
         chromaScale = preset switch
         {
             Preset.Labels or Preset.Controls => (0.6, 0.8),
             Preset.Chart => (0.8, 1), Preset.Subdued => (0.2, 0.4), Preset.Mono => (0, 0),
-            _ => throw new ArgumentOutOfRangeException(nameof(preset))
+            _ => throw TextHueErrors.WithCode(new ArgumentOutOfRangeException(nameof(preset)))
         };
         this.contrastTarget = contrastTarget ?? (contrastModel == ContrastModel.Apca ? 60 : preset == Preset.Controls ? 7 : 4.5);
         bool Valid(double x) => contrastModel == ContrastModel.Apca ? x is >= 0 and <= 106 : x is >= 1 and <= 21;
         if (!Valid(this.contrastTarget))
-            throw new ArgumentOutOfRangeException(nameof(contrastTarget));
+            throw TextHueErrors.WithCode(new ArgumentOutOfRangeException(nameof(contrastTarget)));
         targets = contrastTargets?.ToFrozenDictionary(StringComparer.Ordinal) ?? FrozenDictionary<string, double>.Empty;
         foreach (var (role, value) in targets)
             if (role is not ("fill" or "fillHover" or "fillActive" or "border" or "text" or "textOnSubtle" or "strong")
                 || !Valid(value))
-                throw new ArgumentException("Invalid contrast relationship or target.", nameof(contrastTargets));
+                throw TextHueErrors.WithCode(new ArgumentException("Invalid contrast relationship or target.", nameof(contrastTargets)));
         this.lightProfile = lightProfile ?? new();
         this.darkProfile = darkProfile ?? new();
         foreach (var profile in new[] { this.lightProfile, this.darkProfile })
@@ -110,25 +119,29 @@ public sealed partial class Renderer
         var normalized = new Dictionary<string,(FixedTone Light, FixedTone Dark)>(StringComparer.Ordinal);
         if (overrides is not null)
             foreach (var (key, colors) in overrides)
-                normalized.Add(this.normalization.Apply(key), (new(colors.Light), new(colors.Dark)));
+                if (!normalized.TryAdd(this.normalization.Apply(key, "INVALID_OPTIONS"), (new(colors.Light), new(colors.Dark))))
+                    throw TextHueErrors.WithCode(new ArgumentException("Duplicate normalized override.", nameof(overrides)));
         this.overrides = normalized.ToFrozenDictionary(StringComparer.Ordinal);
         if (palette is not null)
         {
             var ids = new HashSet<string>(StringComparer.Ordinal);
             foreach (var entry in palette)
             {
-                if (!ids.Add(entry.Id)) throw new ArgumentException("Duplicate palette ID.", nameof(palette));
-                var light = entry.Light ?? entry.Dark ?? throw new ArgumentException("Missing palette color.", nameof(palette));
-                this.palette.Add((utf8.GetBytes(entry.Id), new(light), new(entry.Dark ?? light)));
+                if (!ids.Add(entry.Id)) throw TextHueErrors.WithCode(new ArgumentException("Duplicate palette ID.", nameof(palette)));
+                var light = entry.Light ?? entry.Dark ?? throw TextHueErrors.WithCode(new ArgumentException("Missing palette color.", nameof(palette)));
+                byte[] id;
+                try { id = utf8.GetBytes(entry.Id); }
+                catch (EncoderFallbackException error) { TextHueErrors.WithCode(error); throw; }
+                this.palette.Add((id, new(light), new(entry.Dark ?? light)));
             }
-            if (this.palette.Count == 0) throw new ArgumentException("Empty palette.", nameof(palette));
+            if (this.palette.Count == 0) throw TextHueErrors.WithCode(new ArgumentException("Empty palette.", nameof(palette)));
             double threshold = targets.GetValueOrDefault("fill", this.contrastTarget);
             bool Passes(FixedTone tone) => candidates.Any(candidate =>
                 Math.Abs(Contrast.MeasureChannels(candidate, gamut.FromSRgb(tone.Bytes), contrastModel, gamut)) >= threshold);
             var passing = this.palette.FindAll(entry => Passes(entry.Light) && Passes(entry.Dark));
             if (passing.Count > 0) this.palette = passing;
         }
-        this.scope = this.normalization.Apply(scope);
+        this.scope = this.normalization.Apply(scope, "INVALID_OPTIONS");
         this.seed = seed;
         this.lightBackground = new(lightBackground ?? new Rgb(255, 255, 255));
         this.darkBackground = new(darkBackground ?? new Rgb(18, 18, 18));
@@ -136,7 +149,7 @@ public sealed partial class Renderer
 
     public IReadOnlyList<RenderedPalette> Batch(IEnumerable<string> labels)
     {
-        ArgumentNullException.ThrowIfNull(labels);
+        if (labels is null) throw TextHueErrors.WithCode(new ArgumentNullException(nameof(labels)), "INVALID_TEXT");
         var cache = new Dictionary<string, RenderedPalette>(StringComparer.Ordinal);
         var result = new List<RenderedPalette>();
         foreach (var label in labels)
@@ -205,7 +218,7 @@ public sealed partial class Renderer
         void Require(string relationship, EncodedRgb front, EncodedRgb back)
         {
             if (Math.Abs(Contrast.MeasureChannels(front, back, contrastModel, gamut)) < Target(relationship))
-                throw new InvalidOperationException($"Contrast target for {relationship} was not met.");
+                throw TextHueErrors.WithCode(new InvalidOperationException($"Contrast target for {relationship} was not met."), "UNMET_CONSTRAINT");
         }
         switch (role)
         {
@@ -356,7 +369,7 @@ public sealed partial class Renderer
             "border" => Tone(role, lb + direction * 0.39, true, Target("border"), bgChannels),
             "text" => Tone(role, lt, false, Target("text"), bgChannels, Subtle()),
             "strong" => Tone(role, lt + direction * 0.10, false, Target("strong"), bgChannels),
-            _ => throw new ArgumentOutOfRangeException(nameof(role), role, "Unknown color role.")
+            _ => throw TextHueErrors.WithCode(new ArgumentOutOfRangeException(nameof(role), role, "Unknown color role."))
         };
     }
 }

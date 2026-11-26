@@ -10,13 +10,38 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   GOTOOLCHAIN: local
 
 jobs:
+  go-arm64:
+    name: Go arm64 determinism
+    runs-on: ubuntu-24.04-arm
+    defaults:
+      run:
+        working-directory: packages/go
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version: '1.26'
+          cache-dependency-path: packages/go/go.sum
+      - run: go test ./...
+      - name: Check compiled arm64 arithmetic for fused multiply-add
+        shell: bash
+        run: |
+          assembly="$RUNNER_TEMP/texthue-arm64.s"
+          go build -gcflags=-S . 2>"$assembly" || { cat "$assembly"; exit 1; }
+          if grep -E 'packages/go/[^/]+[.]go:[0-9]+[)][[:space:]]+F(N?MADD|N?MSUB)[DS][[:space:]]' "$assembly"; then
+            exit 1
+          fi
+      - run: go test -run '^$' -fuzz '^FuzzJSONUnicode$' -fuzztime 10s .
+
   kotlin:
     name: Kotlin JVM conformance and Maven packaging
     runs-on: ubuntu-latest
@@ -109,8 +134,12 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
       - run: python tools/verify.py --port csharp
+      - name: Exercise Unicode normalization with invariant globalization
+        env:
+          DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: '1'
+        run: dotnet run -c Release --project packages/csharp/tests/Conformance -- --invariant-normalization
       - name: Compare C# collection assignments with JavaScript
         shell: bash
         run: |
@@ -149,7 +178,6 @@ jobs:
       - uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1
         with:
           sdk: '3.8.1'
-      - run: dart pub get --enforce-lockfile
       - run: python ../../tools/verify.py --port dart
       - name: Compare both theme fills and placements with JavaScript
         working-directory: .
@@ -240,12 +268,10 @@ jobs:
           cache: false
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
       - uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1
         with:
           sdk: '3.8.1'
-      - run: dart pub get --enforce-lockfile
-        working-directory: packages/dart
       - run: npm ci
       - run: python -m pip install -r requirements-dev.txt
       - run: python tools/check-version.py

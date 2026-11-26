@@ -6,20 +6,23 @@ import java.nio.charset.CharacterCodingException
 import java.security.MessageDigest
 
 internal object Identity {
+    private const val IDENTITY_FRACTIONS = 3
+    private const val UINT32_RANGE = 4294967296.0
     private val prefix = "text-to-color-v1\u0000".toByteArray(Charsets.UTF_8)
 
     private fun utf8(value: String, field: String): ByteBuffer {
         try {
             return Charsets.UTF_8.newEncoder().encode(CharBuffer.wrap(value))
         } catch (error: CharacterCodingException) {
-            throw IllegalArgumentException("Unpaired surrogate in $field", error)
+            val code = if (field == "text") "INVALID_TEXT" else "INVALID_OPTIONS"
+            throw TextColorException(code, "Unpaired surrogate in $field", error)
         }
     }
 
     fun digest(text: String, namespace: String = "", seed: UInt = 0u): ByteArray {
         countHash()
         val scope = utf8(namespace, "namespace")
-        val header = ByteBuffer.allocate(8).putInt(seed.toInt()).putInt(scope.remaining())
+        val header = ByteBuffer.allocate(2 * Int.SIZE_BYTES).putInt(seed.toInt()).putInt(scope.remaining())
         return MessageDigest.getInstance("SHA-256").apply {
             update(prefix)
             update(header.array())
@@ -30,6 +33,6 @@ internal object Identity {
 
     fun fractions(digest: ByteArray): DoubleArray {
         val words = ByteBuffer.wrap(digest)
-        return DoubleArray(3) { words.int.toUInt().toDouble() / 4294967296.0 }
+        return DoubleArray(IDENTITY_FRACTIONS) { words.int.toUInt().toDouble() / UINT32_RANGE }
     }
 }

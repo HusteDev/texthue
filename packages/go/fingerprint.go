@@ -10,8 +10,12 @@ import (
 
 // fingerprint accepts the JSON representation of already validated configuration.
 func fingerprint(value any) (string, error) {
+	return fingerprintDomain(value, "texthue-config-v1")
+}
+
+func fingerprintDomain(value any, domain string) (string, error) {
 	digest := sha256.New()
-	digest.Write([]byte("texthue-config-v1\x00"))
+	digest.Write([]byte(domain + "\x00"))
 	count := func(n int) error {
 		if uint64(n) > math.MaxUint32 {
 			return invalid("configuration length")

@@ -1,4 +1,4 @@
-public enum CompositingError: Error { case invalidAlpha }
+public enum CompositingError: Error, Sendable { case invalidAlpha }
 
 /// Composites an sRGB source over an opaque backdrop in linear light.
 public func compositeOver(_ source: Color, alpha: Double, backdrop: Color) throws -> Color {

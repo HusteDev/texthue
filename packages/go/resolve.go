@@ -166,22 +166,10 @@ func resolveOptions(options *Options) (string, float64, [2]resolvedTheme, error)
 	return options.Namespace, target, themes, nil
 }
 
-// Resolve maps exact text to coordinated light and dark theme colors.
-//
-// The text is hashed with SHA-256 together with Version and the namespace,
-// and the digest drives hue, lightness, and chroma sampling for four OKLCH
-// profiles. Each color is gamut-fitted to sRGB, checked against the contrast
-// target, and returned in Hex, RGB, HSL, and OKLCH.
-//
-// Text is used exactly as given: no trimming, case folding, or Unicode
-// normalization is applied. Empty strings and embedded NUL are valid. A nil
-// options pointer selects every default.
-//
-// Resolve returns a *Error with Code "INVALID_TEXT" for text that is not
-// valid UTF-8 and "INVALID_OPTIONS" for any invalid option. A contrast target
-// that cannot be met is not an error; it is reported in the result's
-// ContrastResult metadata. Resolve performs no I/O and retains neither text
-// nor options.
+// Resolve renders ten roles in each theme using the supplied options. By default,
+// hashing preserves the exact UTF-8 text, including empty strings and NUL.
+// Configure normalization to change identity. Check ContrastResult for unmet
+// targets. Invalid text or configuration returns a coded *Error.
 func Resolve(text string, options ...Option) (ColorSet, error) {
 	if !utf8.ValidString(text) {
 		return ColorSet{}, &Error{Code: "INVALID_TEXT", Message: "text contains malformed UTF-8"}
@@ -222,6 +210,11 @@ func WithProfile(value Profiles) Option { return optionFunc(func(o *Options) { o
 func WithOverrides(values map[string]Override) Option {
 	snapshot := maps.Clone(values)
 	return optionFunc(func(o *Options) { o.Overrides = maps.Clone(snapshot) })
+}
+
+// WithPaletteMode selects fixed brand fills or generated variations around the palette anchors.
+func WithPaletteMode(mode string) Option {
+	return optionFunc(func(o *Options) { o.PaletteMode = mode })
 }
 
 // WithPalette restricts brand selection to the supplied palette entries.
@@ -306,10 +299,22 @@ type Resolver struct {
 	foregroundFormats map[encodedRGB]Color
 }
 
+// NewResolver accepts one base *Options and any number of With options.
+// With options override the base in the order supplied.
 func NewResolver(options ...Option) (*Resolver, error) {
 	var raw Options
+	var base *Options
 	for _, option := range options {
-		if option != nil {
+		if config, ok := option.(*Options); ok && config != nil {
+			if base != nil {
+				return nil, invalid("multiple base Options")
+			}
+			base = config
+		}
+	}
+	base.apply(&raw)
+	for _, option := range options {
+		if _, isBase := option.(*Options); !isBase && option != nil {
 			option.apply(&raw)
 		}
 	}
@@ -440,7 +445,7 @@ func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string
 		ring = int(placement.Ring % 5)
 	}
 	offset := [5]float64{0, .08, -.08, .16, -.16}[ring]
-	position := uH * 12
+	position := float64(uH * 12)
 	index := int(position)
 	hue := math.Mod(anchors[index]+float64((anchors[index+1]-anchors[index])*(position-float64(index))), 360)
 	hue = r.domain.mapHue(hue)
@@ -470,6 +475,11 @@ func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string
 		hue = naturalHue
 		if brand != nil {
 			hue = snappedHue(brand[i])
+		} else if len(r.brand.anchors) != 0 {
+			var cap float64
+			hue, cap = r.brand.anchor(uH, i, r.domain)
+			theme.fill.cap = math.Min(theme.fill.cap, cap)
+			theme.text.cap = math.Min(theme.text.cap, cap)
 		}
 		// Explicit float64 conversions block fused multiply-add so the
 		// interpolation rounds exactly as the specification requires.
@@ -537,8 +547,8 @@ func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string
 		if r.apca {
 			unconstrained = 0
 		}
-		subtle, _ := tone("subtle", &traces.Subtle, lb+direction*.04, lb+direction*.04, fillC, theme.fill.cap, nil, unconstrained, true)
-		muted, _ := tone("muted", &traces.Muted, lb+direction*.10, lb+direction*.10, fillC, theme.fill.cap, nil, unconstrained, true)
+		subtle, _ := tone("subtle", &traces.Subtle, lb+float64(direction*.04), lb+float64(direction*.04), fillC, theme.fill.cap, nil, unconstrained, true)
+		muted, _ := tone("muted", &traces.Muted, lb+float64(direction*.10), lb+float64(direction*.10), fillC, theme.fill.cap, nil, unconstrained, true)
 		fill, fillMeta := tone("fill", &traces.Fill, requestedFill, fillL, fillC, theme.fill.cap, nil, required("fill"), true)
 		if brand != nil {
 			fill = canonicalRGB(brand[i], r.wide)
@@ -554,11 +564,11 @@ func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string
 				fillMeta.Fallback = ptr("palette-constraint")
 			}
 		}
-		hover, hoverMeta := tone("fillHover", &traces.FillHover, requestedFill+direction*.025, fillL+direction*.025, fillC, theme.fill.cap, &onFill, required("fillHover"), true)
-		active, activeMeta := tone("fillActive", &traces.FillActive, requestedFill+direction*.05, fillL+direction*.05, fillC, theme.fill.cap, &onFill, required("fillActive"), true)
-		border, borderMeta := tone("border", &traces.Border, lb+direction*.39, lb+direction*.39, fillC, theme.fill.cap, &theme.background, required("border"), false)
+		hover, hoverMeta := tone("fillHover", &traces.FillHover, requestedFill+float64(direction*.025), fillL+float64(direction*.025), fillC, theme.fill.cap, &onFill, required("fillHover"), true)
+		active, activeMeta := tone("fillActive", &traces.FillActive, requestedFill+float64(direction*.05), fillL+float64(direction*.05), fillC, theme.fill.cap, &onFill, required("fillActive"), true)
+		border, borderMeta := tone("border", &traces.Border, lb+float64(direction*.39), lb+float64(direction*.39), fillC, theme.fill.cap, &theme.background, required("border"), false)
 		text, textMeta := tone("text", &traces.Text, requestedText, textL, textC, theme.text.cap, &theme.background, required("text"), false, surfaceConstraint{subtle, required("textOnSubtle")})
-		strong, strongMeta := tone("strong", &traces.Strong, requestedText+direction*.10, textL+direction*.10, textC, theme.text.cap, &theme.background, required("strong"), false)
+		strong, strongMeta := tone("strong", &traces.Strong, requestedText+float64(direction*.10), textL+float64(direction*.10), textC, theme.text.cap, &theme.background, required("strong"), false)
 		subtleMeta := textMeta
 		textMeta.Ratio = ratioMetric(text, theme.background)
 		textMeta.MeetsTarget = textMeta.Ratio >= required("text")
@@ -614,6 +624,10 @@ func (r *Resolver) renderTones(digest []byte, placement *Assignment, name string
 			t.Strong.Trace = traces.Strong
 		}
 
+	}
+	hue = naturalHue
+	if len(r.brand.anchors) != 0 {
+		hue, _ = r.brand.anchor(uH, 0, r.domain)
 	}
 	if brand != nil {
 		hue = snappedHue(brand[0])

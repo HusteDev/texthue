@@ -1,6 +1,7 @@
 """Immutable Python results with canonical JSON serialization."""
 
 from dataclasses import dataclass, field, fields
+from functools import cache
 from typing import Literal, Self
 
 
@@ -9,30 +10,39 @@ def _wire_name(name: str) -> str:
     return first + "".join(part.capitalize() for part in rest)
 
 
+@cache
+def _record_schema(cls):
+    # Field metadata and wire names depend only on the result type.
+    schema = []
+    for member in fields(cls):
+        kind = member.metadata.get("record", member.type)
+        nested = kind if isinstance(kind, type) and issubclass(kind, _Record) else None
+        schema.append(
+            (member.name, _wire_name(member.name), member.metadata.get("optional"), nested)
+        )
+    return tuple(schema)
+
+
 class _Record:
     __slots__ = ()
 
     def to_dict(self) -> dict:
         result = {}
-        for member in fields(self):
-            value = getattr(self, member.name)
-            if member.metadata.get("optional") and value is None:
+        for name, wire, optional, nested in _record_schema(type(self)):
+            value = getattr(self, name)
+            if optional and value is None:
                 continue
-            result[_wire_name(member.name)] = (
-                value.to_dict() if isinstance(value, _Record) else value
-            )
+            result[wire] = value.to_dict() if nested else value
         return result
 
     @classmethod
     def from_dict(cls, values: dict) -> Self:
         result = {}
-        for member in fields(cls):
-            if member.metadata.get("optional") and _wire_name(member.name) not in values:
+        for name, wire, optional, nested in _record_schema(cls):
+            if optional and wire not in values:
                 continue
-            value = values[_wire_name(member.name)]
-            kind = member.metadata.get("record", member.type)
-            nested = isinstance(kind, type) and issubclass(kind, _Record)
-            result[member.name] = kind.from_dict(value) if nested else value
+            value = values[wire]
+            result[name] = nested.from_dict(value) if nested else value
         return cls(**result)
 
 

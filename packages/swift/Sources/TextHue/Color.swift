@@ -1,6 +1,6 @@
 import Foundation
 
-public struct RGB: Codable, Equatable {
+public struct RGB: Codable, Equatable, Sendable {
     public let r, g, b: UInt8
     public init(r: UInt8, g: UInt8, b: UInt8) {
         self.r = r
@@ -9,8 +9,8 @@ public struct RGB: Codable, Equatable {
     }
 }
 
-public struct HSL: Codable, Equatable { public let h, s, l: Double }
-public struct OKLCH: Codable, Equatable { public let l, c, h: Double }
+public struct HSL: Codable, Equatable, Sendable { public let h, s, l: Double }
+public struct OKLCH: Codable, Equatable, Sendable { public let l, c, h: Double }
 
 func linearChannel(_ encoded: Double) -> Double {
     encoded <= 0.04045 ? encoded / 12.92 : pow((encoded + 0.055) / 1.055, 2.4)
@@ -29,11 +29,11 @@ func multiply(_ matrix: [[Double]], _ v: [Double]) -> [Double] {
     matrix.map { row in (row[0] * v[0] + row[1] * v[1]) + row[2] * v[2] }
 }
 
-public struct DisplayP3: Codable, Equatable { public let r, g, b: Double }
+public struct DisplayP3: Codable, Equatable, Sendable { public let r, g, b: Double }
 
-public enum CSSFormat { case hex, rgb, hsl, oklch, displayP3 }
+public enum CSSFormat: Sendable { case hex, rgb, hsl, oklch, displayP3 }
 
-public struct Color: Codable, Equatable {
+public struct Color: Codable, Equatable, Sendable {
     public let hex: String
     public let rgb: RGB
     public let hsl: HSL

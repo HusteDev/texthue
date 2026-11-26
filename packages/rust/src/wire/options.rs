@@ -1,6 +1,6 @@
+use crate::*;
 use serde::Deserialize;
 use std::{collections::BTreeMap, error::Error};
-use texthue::*;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 

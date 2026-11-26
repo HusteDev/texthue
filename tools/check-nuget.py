@@ -27,7 +27,7 @@ def verify(archive):
         env = dict(os.environ, NUGET_PACKAGES=str(app / "cache"), DOTNET_NOLOGO="1")
         project = ET.Element("Project", Sdk="Microsoft.NET.Sdk")
         settings = ET.SubElement(project, "PropertyGroup")
-        ET.SubElement(settings, "TargetFramework").text = "net9.0"
+        ET.SubElement(settings, "TargetFramework").text = "net10.0"
         ET.SubElement(settings, "OutputType").text = "Exe"
         ET.SubElement(
             ET.SubElement(project, "ItemGroup"),
