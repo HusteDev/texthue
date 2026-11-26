@@ -1,6 +1,7 @@
 package texthue
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"math"
@@ -747,6 +748,52 @@ func TestVisionAssignmentMatchesReference(t *testing.T) {
 	for _, profiles := range [][]string{{}, {"unknown"}} {
 		if _, err := r.AssignWithOptions(nil, AssignmentOptions{Vision: profiles}); err == nil {
 			t.Fatalf("Accepted invalid profiles: %v", profiles)
+		}
+	}
+}
+
+func TestPortableNormalizationIdentities(t *testing.T) {
+	var rows []struct {
+		Text      string
+		Namespace string
+		Seed      uint32
+		Normalize NormalizeOptions
+		Digest    string
+	}
+	data, err := os.ReadFile("../../conformance/normalization-v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(data, &rows); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) == 0 {
+		t.Fatal("empty normalization corpus")
+	}
+	for _, row := range rows {
+		r, err := NewResolver(WithNamespace(row.Namespace), WithSeed(row.Seed), WithNormalize(row.Normalize))
+		if err != nil {
+			t.Fatal(err)
+		}
+		identity, err := r.identity(row.Text)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := hex.EncodeToString(r.digest(identity)); got != row.Digest {
+			t.Errorf("%q with %+v: digest %s, want %s", row.Text, row.Normalize, got, row.Digest)
+		}
+	}
+}
+
+func TestMigrationRejectsInvalidSide(t *testing.T) {
+	r, err := NewResolver()
+	if err != nil {
+		t.Fatal(err)
+	}
+	valid := MigrationSide{Resolver: r}
+	for _, sides := range [][2]MigrationSide{{{}, valid}, {valid, {Resolver: r, Registry: []byte("{}")}}} {
+		if _, err := CompareAssignments(sides[0], sides[1], []string{"label"}); err == nil {
+			t.Fatal("accepted an invalid migration side")
 		}
 	}
 }

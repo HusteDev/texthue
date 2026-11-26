@@ -131,6 +131,22 @@ func (r *Resolver) digestForConfig(options map[string]any, legacy bool) (string,
 			behavior[key] = val
 		}
 	}
+	seen := map[string]bool{}
+	var foregrounds []any
+	for _, entry := range options["foregrounds"].([]any) {
+		color := entry.(string)
+		if !seen[color] {
+			foregrounds = append(foregrounds, color)
+			seen[color] = true
+		}
+	}
+	behavior["foregrounds"] = foregrounds
+	if len(foregrounds) == 1 {
+		behavior["foregroundPolicy"] = "best"
+	}
+	if _, ok := behavior["palette"]; !ok {
+		delete(behavior, "paletteMode")
+	}
 	behavior["namespace"] = r.normalize.transform(r.replay.namespace)
 	pairs := map[string]any{}
 	for name, pair := range options["overrides"].(map[string]any) {

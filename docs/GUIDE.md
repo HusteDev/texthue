@@ -27,9 +27,10 @@ To share your edits, select **Generate Palette**, wait for the updated results, 
 Use the fill and its paired foreground from the same [theme](GLOSSARY.md#theme-and-role). For standalone text on the configured page background, use the text role.
 
 ```js
-import { resolveTextColors } from 'texthue';
+import { createResolver } from 'texthue';
 
-const {fill, onFill} = resolveTextColors('research').light;
+const labels = createResolver();
+const {fill, onFill} = labels.resolve('research').light;
 console.log(fill.hex, onFill.hex);
 ```
 

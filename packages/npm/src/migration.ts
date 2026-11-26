@@ -1,4 +1,5 @@
 import { compareBytes } from './bytes.js';
+import { fail } from './errors.js';
 import type { Resolver } from './index.js';
 import type { Color, ThemeColors } from './types.js';
 
@@ -57,6 +58,16 @@ function distance(first: Color, second: Color) {
 
 /** Preview changes on the entire requested set, retaining each side's normalization and pins. */
 export function compareAssignments(old: Side, next: Side, texts: readonly string[]) {
+  if (!Array.isArray(texts)) fail('INVALID_TEXT', 'Expected an array of labels');
+  for (const side of [old, next]) {
+    if (
+      !side?.resolver ||
+      typeof side.resolver.assign !== 'function' ||
+      typeof side.resolver.identity !== 'function' ||
+      typeof side.resolver.importRegistry !== 'function'
+    )
+      fail('INVALID_OPTIONS', 'Expected a resolver on each side of the comparison');
+  }
   const utf8 = new TextEncoder();
   const labels = [...new Set(texts)].sort((a, b) => compareBytes(utf8.encode(a), utf8.encode(b)));
   const before = snapshot(old, labels),

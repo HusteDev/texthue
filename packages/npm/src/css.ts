@@ -7,6 +7,15 @@ export function toCss(
   color: Color,
   format: 'hex' | 'rgb' | 'hsl' | 'oklch' | 'p3' = 'hex',
 ): string {
+  if (
+    !color ||
+    typeof color !== 'object' ||
+    typeof color.hex !== 'string' ||
+    !color.rgb ||
+    !color.hsl ||
+    !color.oklch
+  )
+    fail('INVALID_OPTIONS', 'Expected a rendered color');
   const { rgb, hsl, oklch } = color;
   switch (format) {
     case 'hex':
@@ -39,6 +48,8 @@ export function cssVariables(
     fail('INVALID_OPTIONS', 'Expected a theme and a string slug');
   if (typeof prefix !== 'string' || !/^[a-z][a-z0-9-]*$/.test(prefix))
     fail('INVALID_OPTIONS', 'Invalid CSS variable prefix');
+  if (!colors?.[theme] || typeof colors[theme] !== 'object')
+    fail('INVALID_OPTIONS', 'Expected a rendered theme');
   const suffix = sha256(new TextEncoder().encode(slug))
     .getUint32(0)
     .toString(16)
@@ -51,7 +62,7 @@ export function cssVariables(
       .replace(/^-|-$/g, '') || 'label';
   const variables: Record<string, string> = {};
   for (const [role, value] of Object.entries(colors[theme])) {
-    if ('hex' in value) {
+    if (value && typeof value === 'object' && 'hex' in value) {
       const label = role.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
       variables[`--${prefix}-${stem}-${suffix}-${label}`] = toCss(value, format);
     }

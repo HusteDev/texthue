@@ -24,6 +24,19 @@ Median / p95 in microseconds on Windows x64, AMD Ryzen 7 PRO 7840U. Each harness
 
 Reproduce with `npm run build`, `node tools/bench.mjs`, `python tools/bench.py`, and `go -C packages/go test -run '^$' -bench BenchmarkResolverContrast -benchtime=100x`. Go's standard ns/op column measures a batch of 100. The custom median-us and p95-us columns report per-resolution costs.
 
+### Python consolidation benchmark
+
+On Windows x64 with CPython 3.14.3, the same host ran `python tools/bench.py` three times per revision. The table gives the median of the three run medians. Each resolution produces both themes. Each assignment places 40 labels. Other verification processes shared the host.
+
+| Operation | Reviewed commit `5040bc2` | Consolidation candidate |
+| --- | ---: | ---: |
+| Default resolution | 1.660 ms | 0.967 ms |
+| WCAG target 7, white | 2.160 ms | 1.440 ms |
+| WCAG target 21, white | 7.773 ms | 5.306 ms |
+| APCA target 75 | 7.843 ms | 5.747 ms |
+| Display-P3 | 4.460 ms | 2.589 ms |
+| Assign 40 labels | 536.397 ms | 323.402 ms |
+
 ### APCA and Display P3 timing
 
 Go’s resolver benchmark repeats each label 100 times per timed operation to reduce clock granularity effects. Its standard `ns/op` covers all 100 resolves. Use `ns/resolve` for their mean cost. The reported median and p95 summarize the per-label averages across the corpus.

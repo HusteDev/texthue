@@ -12,7 +12,7 @@ data class Assignment(val assignments: Map<String, Placement>, val colors: Map<S
 
 private const val LIGHTNESS_STEP = 0.08
 private const val WIDE_STEP = 0.16
-private const val FULL_TURN = 360.0
+internal const val FULL_TURN = 360.0
 internal val ringOffsets = listOf(0.0, LIGHTNESS_STEP, -LIGHTNESS_STEP, WIDE_STEP, -WIDE_STEP)
 private const val MUTED_RING = 3
 private const val MUTED_SCALE = 0.6

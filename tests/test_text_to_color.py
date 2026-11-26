@@ -578,6 +578,14 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
                 },
             },
             {
+                "text": "empty-anchor-policy",
+                "options": {
+                    "foregrounds": ["#FFFFFF", "#ffffff"],
+                    "foregroundPolicy": "first-passing",
+                    "paletteMode": "anchors",
+                },
+            },
+            {
                 "text": "night",
                 "options": {"preset": "controls", "backgrounds": {"light": "#888888"}},
             },

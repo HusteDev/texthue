@@ -796,9 +796,7 @@ export function resolveTextColor(
   options: TextColorOptions = {},
 ) {
   const renderer = compileRenderer(options);
-  return select.format === undefined
-    ? renderer.color(text, select)
-    : renderer.color(text, { ...select, format: select.format });
+  return renderer.color(text, select);
 }
 
 function fixedIdentity(rgb: Triple) {

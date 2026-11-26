@@ -2,6 +2,16 @@ package com.hustedev.texthue
 
 import kotlin.math.floor
 
+internal const val BYTE_MAX = 255.0
+internal const val RGB_CHANNELS = 3
+internal const val HEX_RADIX = 16
+internal const val PERCENT = 100
+internal const val ROUND_HALF = 0.5
+private const val SIX_DECIMALS = 1e6
+private const val HUE_SECTORS = 6
+private const val BLUE_SECTOR = 4
+private const val SECTOR_DEGREES = 60
+
 data class Rgb(val r: Int, val g: Int, val b: Int)
 data class Hsl(val h: Double, val s: Double, val l: Double)
 data class Oklch(val l: Double, val c: Double, val h: Double)
@@ -24,30 +34,30 @@ fun Color.toCss(format: CssFormat = CssFormat.HEX): String = when (format) {
     CssFormat.HSL -> "hsl(${cssNumber(hsl.h)} ${cssNumber(hsl.s)}% ${cssNumber(hsl.l)}%)"
     CssFormat.OKLCH -> "oklch(${cssNumber(oklch.l)} ${cssNumber(oklch.c)} ${cssNumber(oklch.h)})"
     CssFormat.DISPLAY_P3 -> css ?: displayP3Css(
-        ColorMath.srgbToP3(intArrayOf(rgb.r, rgb.g, rgb.b)).map { round6(it / 255.0) }
+        ColorMath.srgbToP3(intArrayOf(rgb.r, rgb.g, rgb.b)).map { round6(it / BYTE_MAX) }
     )
 }
 
-internal fun round6(value: Double) = floor(value * 1e6 + 0.5) / 1e6
+internal fun round6(value: Double) = floor(value * SIX_DECIMALS + ROUND_HALF) / SIX_DECIMALS
 
 internal fun renderedColor(bytes: IntArray, gamut: Gamut = Gamut.SRGB): Color {
     if (gamut == Gamut.DISPLAY_P3) return renderedP3(bytes.encoded())
 
-    val (red, green, blue) = bytes.map { it / 255.0 }
+    val (red, green, blue) = bytes.map { it / BYTE_MAX }
     val maximum = maxOf(red, green, blue)
     val minimum = minOf(red, green, blue)
     val delta = maximum - minimum
     val lightness = (maximum + minimum) / 2
     val hue = when {
         delta == 0.0 -> 0.0
-        maximum == red -> (green - blue) / delta + (if (green < blue) 6 else 0)
+        maximum == red -> (green - blue) / delta + (if (green < blue) HUE_SECTORS else 0)
         maximum == green -> (blue - red) / delta + 2
-        else -> (red - green) / delta + 4
+        else -> (red - green) / delta + BLUE_SECTOR
     }
     val saturation = if (delta == 0.0) 0.0 else (maximum - lightness) / minOf(lightness, 1 - lightness)
-    val hex = bytes.joinToString("", prefix = "#") { it.toString(16).padStart(2, '0') }
+    val hex = bytes.joinToString("", prefix = "#") { it.toString(HEX_RADIX).padStart(2, '0') }
     return Color(hex, Rgb(bytes[0], bytes[1], bytes[2]),
-        Hsl(round6(60 * hue) % 360, round6(100 * saturation), round6(100 * lightness)),
+        Hsl(round6(SECTOR_DEGREES * hue) % FULL_TURN, round6(PERCENT * saturation), round6(PERCENT * lightness)),
         ColorMath.oklch(bytes))
 }
 
@@ -56,7 +66,7 @@ fun compositeOver(source: String, alpha: Double, backdrop: String): Color {
     requireOption(alpha in 0.0..1.0) { "Alpha must be between zero and one" }
     val front = parseHex(source)
     val back = parseHex(backdrop)
-    return renderedColor(IntArray(3) { i ->
+    return renderedColor(IntArray(RGB_CHANNELS) { i ->
         ColorMath.channelByte(alpha * ColorMath.linearChannel(front[i]) +
             (1 - alpha) * ColorMath.linearChannel(back[i]))
     })
@@ -64,7 +74,7 @@ fun compositeOver(source: String, alpha: Double, backdrop: String): Color {
 
 internal fun renderedP3(bytes: DoubleArray): Color {
     val (fallback, clipped) = ColorMath.p3Fallback(bytes)
-    val channels = bytes.map { round6(it / 255.0) }
+    val channels = bytes.map { round6(it / BYTE_MAX) }
     val css = displayP3Css(channels)
     return renderedColor(fallback).copy(oklch = ColorMath.oklch(bytes, Gamut.DISPLAY_P3),
         p3 = DisplayP3(channels[0], channels[1], channels[2]), css = css, srgbClipped = clipped)

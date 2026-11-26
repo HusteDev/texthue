@@ -1,5 +1,6 @@
 package com.hustedev.texthue
 
+@Suppress("DestructuringDeclarationWithTooManyEntries") // Named columns of the conformance fixture.
 fun main() {
     val count = generateSequence(::readlnOrNull).map { line ->
         val (source, alpha, backdrop, expected) = line.split('\t')

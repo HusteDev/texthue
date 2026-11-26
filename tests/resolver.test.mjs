@@ -94,6 +94,13 @@ test('strict hex enforces only the selected role requirements', () => {
   assert.throws(() => resolver.hex('sample', {theme:'light',role:'text',strict:1}), {code:'INVALID_OPTIONS'});
 });
 
+test('equivalent policies can replay the same registry', () => {
+  const simple = createResolver({foregrounds:['#ffffff']});
+  const alternate = createResolver({foregrounds:['#FFFFFF','#ffffff'], foregroundPolicy:'first-passing', paletteMode:'anchors'});
+  const registry = simple.exportRegistry(simple.assign(['research']).assignments);
+  assert.deepEqual(alternate.importRegistry(registry), simple.importRegistry(registry));
+});
+
 test('configuration round trips validate portable fingerprints', async () => {
   const {readFile} = await import('node:fs/promises');
   const {importConfig, exportConfig} = await import('../packages/npm/dist/index.js');

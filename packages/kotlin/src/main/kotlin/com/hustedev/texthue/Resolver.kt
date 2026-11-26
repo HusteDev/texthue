@@ -7,10 +7,15 @@ import java.security.MessageDigest
 
 data class ThemePalette(val colors: Map<String, String>, val contrast: Map<String, ContrastRelationship> = emptyMap(),
     private val renditions: Map<String, Color> = emptyMap()) {
-    fun color(role: String): Color = renditions[role] ?: renderedColor(parseHex(colors.getValue(role)))
+    fun color(role: String): Color = renditions[role] ?: colors[role]?.let { renderedColor(parseHex(it)) }
+        ?: throw TextColorException("INVALID_OPTIONS", "Unknown color role: $role")
 }
-data class Palette(val hue: Double, val light: ThemePalette, val dark: ThemePalette, val source: String, val hueFraction: Double)
+data class Palette(
+    val hue: Double, val light: ThemePalette, val dark: ThemePalette, val source: String, val hueFraction: Double,
+)
 
+// The five preset definitions are numerical constants from the resolver specification.
+@Suppress("MagicNumber")
 enum class Preset(internal val minScale: Double, internal val maxScale: Double, internal val target: Double = 4.5) {
     LABELS(0.6, 0.8),
     CONTROLS(0.6, 0.8, 7.0),
@@ -37,11 +42,37 @@ private val paletteRoles = listOf(
     "background", "subtle", "muted", "fill", "onFill", "fillHover", "fillActive", "border", "text", "strong"
 )
 
+private const val HEX_CHANNEL_WIDTH = 2
+private const val HUE_SNAP_STEPS = 1024
+private const val APCA_TARGET = 60.0
+private const val APCA_LIMIT = 106.0
+private const val WCAG_LIMIT = 21.0
+private const val BIAS_SECTOR = 30
+private const val FILL_CAP = 0.16
+private const val TEXT_CAP = 0.19
+private const val SUBTLE_OFFSET = 0.04
+private const val MUTED_OFFSET = 0.10
+private const val HOVER_OFFSET = 0.025
+private const val ACTIVE_OFFSET = 0.05
+private const val BORDER_OFFSET = 0.39
+private const val STRONG_OFFSET = 0.10
+private const val FIXED_PROFILE_MIDPOINT = 0.5
+// These three intervals are the default role profiles in the resolver specification.
+@Suppress("MagicNumber")
+private val lightFillRange = UnitRange(0.72, 0.82)
+@Suppress("MagicNumber")
+private val darkFillRange = UnitRange(0.4, 0.5)
+@Suppress("MagicNumber")
+private val lightTextRange = UnitRange(0.43, 0.53)
+
 private val hexColor = Regex("#[0-9A-Fa-f]{6}")
 
 internal fun parseHex(hex: String): IntArray {
     requireOption(hexColor.matches(hex)) { "Expected a six-digit hex color" }
-    return IntArray(3) { i -> hex.substring(1 + 2 * i, 3 + 2 * i).toInt(16) }
+    return IntArray(RGB_CHANNELS) { i ->
+        val start = 1 + HEX_CHANNEL_WIDTH * i
+        hex.substring(start, start + HEX_CHANNEL_WIDTH).toInt(HEX_RADIX)
+    }
 }
 
 private class ThemeBackground(hex: String) {
@@ -58,14 +89,14 @@ private data class RankedEntry(val id: ByteArray, val colors: Pair<FixedTone, Fi
 private class FixedTone(hex: String) {
     val bytes = parseHex(hex)
     private val coordinates = ColorMath.oklch(bytes)
-    val hue = (floor(coordinates.h * 1024 + 0.5) / 1024) % 360
+    val hue = (floor(coordinates.h * HUE_SNAP_STEPS + ROUND_HALF) / HUE_SNAP_STEPS) % FULL_TURN
     val lightness = snapLightness(coordinates.l)
     val neutral = coordinates.c == 0.0
 
     fun fraction(): Double {
-        val angle = if (hue < anchors.first()) hue + 360 else hue
+        val angle = if (hue < anchors.first()) hue + FULL_TURN else hue
         val i = anchors.indexOfFirst { it > angle } - 1
-        return (i + (angle - anchors[i]) / (anchors[i + 1] - anchors[i])) / 12
+        return (i + (angle - anchors[i]) / (anchors[i + 1] - anchors[i])) / anchors.lastIndex
     }
 }
 
@@ -84,7 +115,7 @@ class Resolver(
     private val contrastTargets: ContrastTargets = ContrastTargets(),
     foregrounds: List<String> = listOf("#000000", "#ffffff"),
     private val foregroundPolicy: ForegroundPolicy = ForegroundPolicy.BEST,
-    hueRange: HueArc = HueArc(0.0, 360.0),
+    hueRange: HueArc = HueArc(0.0, FULL_TURN),
     excludeHues: List<HueArc> = emptyList(),
     backgrounds: Backgrounds = Backgrounds(),
     private val profiles: Profiles = Profiles(),
@@ -93,7 +124,7 @@ class Resolver(
     private val gamut: Gamut = Gamut.SRGB,
 ) {
     private val apca = contrastModel == ContrastModel.APCA
-    val target = contrastTarget ?: if (apca) 60.0 else preset.target
+    val target = contrastTarget ?: if (apca) APCA_TARGET else preset.target
     private val hueDomain = HueDomain(hueRange, excludeHues)
     private val scope = normalization.apply(namespace)
 
@@ -113,7 +144,7 @@ class Resolver(
 
     init {
         requireOption(candidates.isNotEmpty()) { "At least one foreground is required" }
-        val range = if (apca) 0.0..106.0 else 1.0..21.0
+        val range = if (apca) 0.0..APCA_LIMIT else 1.0..WCAG_LIMIT
         with(contrastTargets) {
             val thresholds = listOfNotNull(target, fill, fillHover, fillActive, border, text, textOnSubtle, strong)
             requireOption(thresholds.all { it in range })
@@ -125,8 +156,10 @@ class Resolver(
         val ids = mutableSetOf<String>()
         val compiled = entries.map { entry ->
             requireOption(ids.add(entry.id) && Charsets.UTF_8.newEncoder().canEncode(entry.id)) { "Invalid palette ID" }
-            val light = FixedTone(requireNotNull(entry.light ?: entry.dark))
-            val dark = FixedTone(requireNotNull(entry.dark ?: entry.light))
+            val fallback = entry.light ?: entry.dark
+                ?: throw TextColorException("INVALID_OPTIONS", "Missing palette fill")
+            val light = FixedTone(entry.light ?: fallback)
+            val dark = FixedTone(entry.dark ?: fallback)
             RankedEntry(entry.id.toByteArray(Charsets.UTF_8), light to dark)
         }
         val required = contrastTargets.fill ?: target
@@ -167,7 +200,7 @@ class Resolver(
         val (uH, uL, uC) = Identity.fractions(digest)
         val override = fixedColors[name]
         (override ?: rankedEntries.selectEntry(digest))?.let { pair ->
-            return Mapping(pair.first.hue, 0.5, 0.5, pair.first.fraction(),
+            return Mapping(pair.first.hue, FIXED_PROFILE_MIDPOINT, FIXED_PROFILE_MIDPOINT, pair.first.fraction(),
                 if (override != null) "override" else "palette", pair)
         }
         return Mapping(hueDomain.mappedHue(uH), uL, uC, uH, "hash")
@@ -227,36 +260,30 @@ class Resolver(
     fun color(text: String, dark: Boolean = false, role: String = "fill"): Color =
         theme(dark, mapping(normalization.apply(text)), role).color(role)
 
-    private fun theme(dark: Boolean, mapped: Mapping, selected: String? = null): ThemePalette {
-        val fixed = if (dark) mapped.fixed?.second else mapped.fixed?.first
-        val hue = fixed?.hue ?: mapped.hue
-        val uL = mapped.uL
-        val uC = mapped.uC
-        val base = if (dark) darkBackground else lightBackground
-        val background = canonical(base.bytes)
-        val direction = if (dark) 1 else -1
-        val lb = if (gamut == Gamut.SRGB) base.lightness else snapLightness(ColorMath.oklch(background, gamut).l)
-        val profile = if (dark) profiles.dark else profiles.light
-        val defaultScale = preset.minScale + (preset.maxScale - preset.minScale) * uC
-        fun sample(low: Double, high: Double, role: Int): Double {
-            val bias = biases[(if (dark) 2 else 0) + role]
-            val segment = (hue / 30).toInt()
-            val correction = bias[segment] + (bias[(segment + 1) % 12] - bias[segment]) * (hue / 30 - segment)
-            return (low + (high - low) * uL + correction + ringOffsets[mapped.ring]).coerceIn(0.0, 1.0)
-        }
-        val fillRange = profile.fill.lightness ?: if (dark) UnitRange(0.4, 0.5) else UnitRange(0.72, 0.82)
-        val fillL = fixed?.lightness ?: sample(fillRange.low, fillRange.high, 0)
-        val textRange = profile.text.lightness ?: if (dark) UnitRange(0.72, 0.82) else UnitRange(0.43, 0.53)
-        val textL = sample(textRange.low, textRange.high, 1)
-        val adjustments = if (selected == null) mutableMapOf<String, ToneAdjustment>() else null
-        fun tone(name: String, l: Double, role: RoleProfile, defaultCap: Double, target: Double, backdrop: DoubleArray? = null, second: DoubleArray? = null, secondTarget: Double = target, surface: Boolean = false): DoubleArray {
+    private fun sample(range: UnitRange, mapped: Mapping, dark: Boolean, hue: Double, role: Int): Double {
+        val bias = biases[(if (dark) 2 else 0) + role]
+        val position = hue / BIAS_SECTOR
+        val segment = position.toInt()
+        val correction = bias[segment] + (bias[(segment + 1) % bias.size] - bias[segment]) * (position - segment)
+        return (range.sample(mapped.uL) + correction + ringOffsets[mapped.ring]).coerceIn(0.0, 1.0)
+    }
+
+    private inner class ToneRenderer(
+        val hue: Double, val uC: Double, val defaultScale: Double, val ring: Int, val neutral: Boolean,
+        val adjustments: MutableMap<String, ToneAdjustment>?,
+    ) {
+        operator fun invoke(
+            name: String, l: Double, role: RoleProfile, defaultCap: Double, target: Double,
+            backdrop: DoubleArray? = null, second: DoubleArray? = null,
+            secondTarget: Double = target, surface: Boolean = false,
+        ): DoubleArray {
             val lightness = l.coerceIn(0.0, 1.0)
-            val scale = (role.chromaScale?.sample(uC) ?: defaultScale) * ringScale(mapped.ring)
-            val cap = if (fixed?.neutral == true) 0.0 else role.chromaCap ?: defaultCap
+            val scale = (role.chromaScale?.sample(uC) ?: defaultScale) * ringScale(ring)
+            val cap = if (neutral) 0.0 else role.chromaCap ?: defaultCap
             val requested = ColorMath.cusp(lightness, hue, gamut) * scale
             val chroma = minOf(cap, requested)
             val threshold = if (target == 0.0 && second != null) secondTarget else target
-            val repaired = repairTone(lightness, chroma, hue, gamut, threshold) { fitted ->
+            val repaired = repairTone(Oklch(lightness, chroma, hue), gamut, threshold) { fitted ->
                 val rgb = fitted.encoded()
                 if (hueDomain.excludes(rgb, gamut)) return@repairTone Double.NEGATIVE_INFINITY
                 val primary = if (backdrop == null || surface) contrast(backdrop ?: foreground(rgb, target), rgb)
@@ -271,39 +298,73 @@ class Resolver(
                 repaired.color.chroma < chroma, repaired.fallback))
             return repaired.color.bytes.encoded()
         }
-        val unconstrained = if (apca) 0.0 else 1.0
-        val borderTarget = contrastTargets.required("border", target, apca)
-        val subtle by lazy(LazyThreadSafetyMode.NONE) {
-            tone("subtle", lb + direction * 0.04, profile.fill, 0.16, unconstrained)
+    }
+
+    private fun theme(dark: Boolean, mapped: Mapping, selected: String? = null): ThemePalette =
+        ThemeRenderer(dark, mapped, selected == null).render(selected)
+
+    private inner class ThemeRenderer(dark: Boolean, mapped: Mapping, full: Boolean) {
+        private val fixed = if (dark) mapped.fixed?.second else mapped.fixed?.first
+        private val hue = fixed?.hue ?: mapped.hue
+        private val uC = mapped.uC
+        private val base = if (dark) darkBackground else lightBackground
+        private val background = canonical(base.bytes)
+        private val direction = if (dark) 1 else -1
+        private val lb = if (gamut == Gamut.SRGB) base.lightness
+            else snapLightness(ColorMath.oklch(background, gamut).l)
+        private val profile = if (dark) profiles.dark else profiles.light
+        private val defaultScale = preset.minScale + (preset.maxScale - preset.minScale) * uC
+        private val fillRange = profile.fill.lightness ?: if (dark) darkFillRange else lightFillRange
+        private val fillL = fixed?.lightness ?: sample(fillRange, mapped, dark, hue, 0)
+        private val textRange = profile.text.lightness ?: if (dark) lightFillRange else lightTextRange
+        private val textL = sample(textRange, mapped, dark, hue, 1)
+        private val adjustments = if (full) mutableMapOf<String, ToneAdjustment>() else null
+        private val tone = ToneRenderer(hue, uC, defaultScale, mapped.ring, fixed?.neutral == true, adjustments)
+        private val unconstrained = if (apca) 0.0 else 1.0
+        private val borderTarget = contrastTargets.required("border", target, apca)
+        private val subtle by lazy(LazyThreadSafetyMode.NONE) {
+            tone("subtle", lb + direction * SUBTLE_OFFSET, profile.fill, FILL_CAP, unconstrained)
         }
-        val fill by lazy(LazyThreadSafetyMode.NONE) {
-            fixed?.bytes?.let(::canonical) ?: tone("fill", fillL, profile.fill, 0.16, contrastTargets.fill ?: target)
+        private val fill by lazy(LazyThreadSafetyMode.NONE) {
+            fixed?.bytes?.let(::canonical)
+                ?: tone("fill", fillL, profile.fill, FILL_CAP, contrastTargets.fill ?: target)
         }
-        val onFill by lazy(LazyThreadSafetyMode.NONE) { foreground(fill, contrastTargets.fill ?: target) }
-        fun bytes(role: String): DoubleArray = when (role) {
+        private val onFill by lazy(LazyThreadSafetyMode.NONE) { foreground(fill, contrastTargets.fill ?: target) }
+        private fun required(pair: String) = contrastTargets.required(pair, target, apca)
+
+        private fun bytes(role: String): DoubleArray = when (role) {
             "background" -> background
             "subtle" -> subtle
-            "muted" -> tone(role, lb + direction * 0.10, profile.fill, 0.16, unconstrained)
+            "muted" -> tone(role, lb + direction * MUTED_OFFSET, profile.fill, FILL_CAP, unconstrained)
             "fill" -> fill
             "onFill" -> onFill
-            "fillHover" -> tone(role, fillL + direction * 0.025, profile.fill, 0.16,
-                contrastTargets.fillHover ?: target, onFill, surface = true)
-            "fillActive" -> tone(role, fillL + direction * 0.05, profile.fill, 0.16,
-                contrastTargets.fillActive ?: target, onFill, surface = true)
-            "border" -> tone(role, lb + direction * 0.39, profile.fill, 0.16, borderTarget, background)
-            "text" -> tone(role, textL, profile.text, 0.19,
-                contrastTargets.text ?: target, background, subtle, contrastTargets.textOnSubtle ?: target)
-            "strong" -> tone(role, textL + direction * 0.10, profile.text, 0.19,
-                contrastTargets.strong ?: target, background)
+            "fillHover" -> tone(role, fillL + direction * HOVER_OFFSET, profile.fill, FILL_CAP,
+                required(role), onFill, surface = true)
+            "fillActive" -> tone(role, fillL + direction * ACTIVE_OFFSET, profile.fill, FILL_CAP,
+                required(role), onFill, surface = true)
+            "border" -> tone(role, lb + direction * BORDER_OFFSET, profile.fill, FILL_CAP, borderTarget, background)
+            "text" -> tone(role, textL, profile.text, TEXT_CAP,
+                required(role), background, subtle, required("textOnSubtle"))
+            "strong" -> tone(role, textL + direction * STRONG_OFFSET, profile.text, TEXT_CAP,
+                required(role), background)
             else -> throw TextColorException("INVALID_OPTIONS", "Unknown color role: $role")
         }
-        val roles = selected?.let { listOf(it) } ?: paletteRoles
-        val colors = roles.associateWith(::bytes)
+
+        fun render(selected: String?): ThemePalette {
+            val roles = selected?.let { listOf(it) } ?: paletteRoles
+            val colors = roles.associateWith(::bytes)
+            return formatTheme(colors, adjustments, fixed != null)
+        }
+    }
+
+    private fun formatTheme(
+        colors: Map<String, DoubleArray>, adjustments: Map<String, ToneAdjustment>?, fixed: Boolean,
+    ): ThemePalette {
         val renditions = if (gamut == Gamut.DISPLAY_P3) colors.mapValues { renderedP3(it.value) } else emptyMap()
         val hex = if (renditions.isNotEmpty()) renditions.mapValues { it.value.hex } else colors.mapValues { (_, rgb) ->
-            rgb.joinToString("", prefix = "#") { it.toInt().toString(16).padStart(2, '0') }
+            rgb.joinToString("", prefix = "#") { it.toInt().toString(HEX_RADIX).padStart(2, '0') }
         }
-        val report = adjustments?.let { relationshipReport(colors, it, contrastModel, gamut, fixed != null) { pair ->
+        val report = adjustments?.let { relationshipReport(colors, it, contrastModel, gamut, fixed) { pair ->
             contrastTargets.required(pair, target, apca)
         } }.orEmpty()
         return ThemePalette(

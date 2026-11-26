@@ -44,7 +44,7 @@ Identity is the text used to look up a color. Normalization can make different s
 
 ## Fingerprint
 
-A digest of the expanded configuration. TextHue checks it when importing saved data so placements can be matched to the settings that produced them.
+A digest of the effective resolver settings. Current registries use it to recognize equivalent behavior across JavaScript, Python and Go. Legacy v1 snapshots use a digest of their expanded configuration.
 
 ## Pinned placements
 

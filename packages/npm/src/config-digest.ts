@@ -91,6 +91,10 @@ export function behaviorFingerprint(
   const behavior = Object.fromEntries(
     fields.filter((key) => Object.hasOwn(options, key)).map((key) => [key, options[key]]),
   );
+  const foregrounds = [...new Set(options.foregrounds as string[])];
+  behavior.foregrounds = foregrounds;
+  if (foregrounds.length === 1) behavior.foregroundPolicy = 'best';
+  if (!Object.hasOwn(options, 'palette')) delete behavior.paletteMode;
   behavior.namespace = identity(options.namespace as string);
   behavior.overrides = Object.fromEntries(
     Object.entries(options.overrides as Record<string, unknown>).map(([key, pair]) => [

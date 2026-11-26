@@ -54,6 +54,11 @@ def behavior_fingerprint(algorithm, settings):
         "paletteMode",
     )
     behavior = {key: options[key] for key in fields if key in options}
+    behavior["foregrounds"] = list(dict.fromkeys(options["foregrounds"]))
+    if len(behavior["foregrounds"]) == 1:
+        behavior["foregroundPolicy"] = "best"
+    if "palette" not in options:
+        behavior.pop("paletteMode", None)
     normalize = settings["normalize"]
     behavior["namespace"] = settings["namespace"]
     behavior["overrides"] = {normalize(key): pair for key, pair in options["overrides"].items()}

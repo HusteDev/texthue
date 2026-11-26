@@ -85,10 +85,6 @@ tasks.named('test') {
 }
 tasks.named('publishLibraryPublicationToStagingRepository') { dependsOn tasks.named('check') }
 
-detekt {
-    baseline = file('detekt-baseline.xml')
-}
-
 sourceSets {
     benchmark {
         compileClasspath += sourceSets.main.output
