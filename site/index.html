@@ -23,7 +23,7 @@ engineering</textarea></label><label>Resolver options or exported configuration 
 <label><span><input id="markers" type="checkbox"> Show identity shapes</span></label>
 <label>Minimum OKLab distance<input id="minimum-distance" type="number" min="0" step="any" value="0" required></label>
 <label>Saved registry (optional JSON)<textarea id="registry"></textarea></label><label>Load registry file<input id="registry-file" type="file" accept=".json,application/json"></label><button type="submit">Generate Palette</button></form>
-<p role="status">Loading palette inspector...</p><section id="results"></section></main><dialog id="help-dialog" aria-labelledby="help-title" aria-describedby="help-definition"><h2 id="help-title"></h2><p id="help-definition"></p><p><a target="_blank" rel="noopener noreferrer">Read the Wiki guide (opens in a new tab)</a></p><button type="button" autofocus>Close</button></dialog><script type="module">
+<p role="status">Loading palette inspector...</p><section id="results"></section></main><dialog id="help-dialog" aria-labelledby="help-title" aria-describedby="help-definition"><h2 id="help-title">Palette help</h2><p id="help-definition"></p><p><a href="https://github.com/HusteDev/texthue/wiki/Read-the-palette-inspector" target="_blank" rel="noopener noreferrer">Read the Wiki guide (opens in a new tab)</a></p><button type="button" autofocus>Close</button></dialog><script type="module">
 import('./app.mjs').catch(error => {
   document.querySelector('[role=status]').textContent = 'Palette inspector could not start: ' + error.message;
   document.querySelector('button[type=submit]').disabled = true;
