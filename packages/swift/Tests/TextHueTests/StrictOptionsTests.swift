@@ -14,6 +14,9 @@ final class StrictOptionsTests: XCTestCase {
     func testRawUTF16() throws {
         let renderer = try Renderer()
         XCTAssertEqual(try renderer.resolve(utf16: [0xd83d, 0xde00]), try renderer.resolve("😀"))
+        XCTAssertEqual(try renderer.resolve(utf16: [0xfffd]), try renderer.resolve("\u{fffd}"))
+        XCTAssertEqual(try renderer.resolve(utf16: [0x65, 0x301]), try renderer.resolve("e\u{301}"))
+        XCTAssertThrowsError(try renderer.resolve(utf16: [0xdc00]))
         XCTAssertThrowsError(try renderer.resolve(utf16: [0xd800])) { error in
             XCTAssertEqual((error as? RenderError)?.code, "INVALID_TEXT")
         }

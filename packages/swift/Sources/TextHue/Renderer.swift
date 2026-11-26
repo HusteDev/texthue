@@ -333,9 +333,10 @@ public struct Renderer: Sendable {
         try self.init(options: options)
     }
 
-    /// Validates raw UTF-16 before Swift can replace a malformed code unit.
+    /// Rejects raw UTF-16 that cannot be decoded without replacing code units.
     public func resolve(utf16 units: [UInt16]) throws -> RenderedPalette {
-        guard let text = String(validating: units, as: UTF16.self) else { throw RenderError.invalidText }
+        let text = String(decoding: units, as: UTF16.self)
+        guard text.utf16.elementsEqual(units) else { throw RenderError.invalidText }
         return try resolve(text)
     }
 
