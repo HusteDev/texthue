@@ -242,7 +242,12 @@ export function assignCollection(
   for (const [text, identity] of identities) {
     const color = colors[identity];
     if (!color) throw new Error('Missing assigned color');
-    colorsByInput[text] = color;
+    Object.defineProperty(colorsByInput, text, {
+      value: color,
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
   }
   return {
     colors,
