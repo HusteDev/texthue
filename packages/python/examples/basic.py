@@ -1,8 +1,9 @@
-"""Resolve one string and print every role in every output format for both themes."""
+"""Resolve one label and inspect the fill in both themes."""
 
-from texthue import resolve_text_colors
+from texthue import Resolver
 
-colors = resolve_text_colors("research")
+colors = Resolver().resolve("research")
+assert (colors.light.fill.hex, colors.dark.fill.hex) == ("#59b8d8", "#255464")
 print("Algorithm:", colors.version)
 for name in ("light", "dark"):
     theme = getattr(colors, name)

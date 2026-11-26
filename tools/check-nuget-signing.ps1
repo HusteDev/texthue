@@ -9,7 +9,7 @@ $archive = $packages[0]
 $project = Join-Path $PSScriptRoot 'NuGetState'
 dotnet build $project -c Release --nologo
 if ($LASTEXITCODE) { throw 'NuGet state checker build failed' }
-$checker = Join-Path $project 'bin/Release/net9.0/NuGetState.dll'
+$checker = Join-Path $project 'bin/Release/net10.0/NuGetState.dll'
 $temp = [System.IO.Directory]::CreateTempSubdirectory('texthue-signing-')
 try {
     $rsa = [System.Security.Cryptography.RSA]::Create(3072)

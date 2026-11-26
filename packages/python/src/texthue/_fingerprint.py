@@ -5,8 +5,8 @@ import math
 import struct
 
 
-def fingerprint(value):
-    digest = hashlib.sha256(b"texthue-config-v1\0")
+def fingerprint(value, domain="texthue-config-v1"):
+    digest = hashlib.sha256(domain.encode("ascii") + b"\0")
 
     def count(size):
         digest.update(struct.pack(">I", size))
@@ -35,3 +35,34 @@ def fingerprint(value):
 
     write(value)
     return digest.hexdigest()
+
+
+def behavior_fingerprint(algorithm, settings):
+    options = settings["exportOptions"]
+    fields = (
+        "seed",
+        "normalize",
+        "contrastTarget",
+        "contrastTargets",
+        "profiles",
+        "backgrounds",
+        "foregroundPolicy",
+        "foregrounds",
+        "gamut",
+        "contrastModel",
+        "palette",
+        "paletteMode",
+    )
+    behavior = {key: options[key] for key in fields if key in options}
+    normalize = settings["normalize"]
+    behavior["namespace"] = settings["namespace"]
+    behavior["overrides"] = {normalize(key): pair for key, pair in options["overrides"].items()}
+    behavior["hueSegments"] = settings["hueSegments"]
+    merged = []
+    for lo, hi in sorted(settings["excludedArcs"]):
+        if merged and lo <= merged[-1][1]:
+            merged[-1][1] = max(hi, merged[-1][1])
+        else:
+            merged.append([lo, hi])
+    behavior["excludeHues"] = merged
+    return fingerprint({"algorithm": algorithm, "behavior": behavior}, "texthue-behavior-v1")

@@ -6,9 +6,7 @@
     <ID>DestructuringDeclarationWithTooManyEntries:CompositeTest.kt$val (source, alpha, backdrop, expected) = line.split('\t')</ID>
     <ID>DestructuringDeclarationWithTooManyEntries:IdentityTest.kt$val (text, namespace, seed, hash, fractions) = line.split('\t')</ID>
     <ID>LongMethod:ResolverTest.kt$fun main()</ID>
-    <ID>LongParameterList:Resolver.kt$Resolver$( namespace: String = "", private val seed: UInt = 0u, contrastTarget: Double? = null, private val normalization: Normalization = Normalization(), private val preset: Preset = Preset.LABELS, private val contrastModel: ContrastModel = ContrastModel.WCAG2, private val contrastTargets: ContrastTargets = ContrastTargets(), foregrounds: List&lt;String&gt; = listOf("#000000", "#ffffff"), private val foregroundPolicy: ForegroundPolicy = ForegroundPolicy.BEST, hueRange: HueArc = HueArc(0.0, 360.0), excludeHues: List&lt;HueArc&gt; = emptyList(), backgrounds: Backgrounds = Backgrounds(), private val profiles: Profiles = Profiles(), overrides: Map&lt;String, BrandColors&gt; = emptyMap(), palette: List&lt;PaletteEntry&gt;? = null, )</ID>
     <ID>LongParameterList:ToneRepair.kt$( lightness: Double, chroma: Double, hue: Double, gamut: Gamut, target: Double, measure: (IntArray) -&gt; Double, )</ID>
-    <ID>LoopWithTooManyJumpStatements:Resolver.kt$Resolver$for</ID>
     <ID>MagicNumber:Color.kt$0.5</ID>
     <ID>MagicNumber:Color.kt$100</ID>
     <ID>MagicNumber:Color.kt$16</ID>
@@ -156,7 +154,6 @@
     <ID>MagicNumber:Resolver.kt$FixedTone$1024</ID>
     <ID>MagicNumber:Resolver.kt$FixedTone$12</ID>
     <ID>MagicNumber:Resolver.kt$FixedTone$360</ID>
-    <ID>MagicNumber:Resolver.kt$FixedTone$4096</ID>
     <ID>MagicNumber:Resolver.kt$Preset.CHART$0.8</ID>
     <ID>MagicNumber:Resolver.kt$Preset.CONTROLS$0.6</ID>
     <ID>MagicNumber:Resolver.kt$Preset.CONTROLS$0.8</ID>
@@ -182,13 +179,9 @@
     <ID>MagicNumber:Resolver.kt$Resolver$12</ID>
     <ID>MagicNumber:Resolver.kt$Resolver$16</ID>
     <ID>MagicNumber:Resolver.kt$Resolver$21.0</ID>
-    <ID>MagicNumber:Resolver.kt$Resolver$3.0</ID>
     <ID>MagicNumber:Resolver.kt$Resolver$30</ID>
-    <ID>MagicNumber:Resolver.kt$Resolver$360</ID>
     <ID>MagicNumber:Resolver.kt$Resolver$360.0</ID>
     <ID>MagicNumber:Resolver.kt$Resolver$60.0</ID>
-    <ID>MagicNumber:Resolver.kt$ThemeBackground$0.5</ID>
-    <ID>MagicNumber:Resolver.kt$ThemeBackground$4096</ID>
     <ID>MagicNumber:Tables.kt$0.0002</ID>
     <ID>MagicNumber:Tables.kt$0.0003</ID>
     <ID>MagicNumber:Tables.kt$0.0021</ID>
@@ -238,20 +231,12 @@
     <ID>MagicNumber:ToneRepair.kt$4096.0</ID>
     <ID>MatchingDeclarationName:ToneRepair.kt$RepairedTone</ID>
     <ID>MaxLineLength:Resolver.kt$Palette</ID>
-    <ID>MaxLineLength:Resolver.kt$Resolver$"fillActive" to tone(fillL + direction * 0.05, profile.fill, 0.16, contrastTargets.fillActive ?: target, onFill, surface = true)</ID>
-    <ID>MaxLineLength:Resolver.kt$Resolver$"fillHover" to tone(fillL + direction * 0.025, profile.fill, 0.16, contrastTargets.fillHover ?: target, onFill, surface = true)</ID>
-    <ID>MaxLineLength:Resolver.kt$Resolver$"strong" to tone(textL + direction * 0.10, profile.text, 0.19, contrastTargets.strong ?: target, background)</ID>
-    <ID>MaxLineLength:Resolver.kt$Resolver$"text" to tone(textL, profile.text, 0.19, contrastTargets.text ?: target, background, subtle, contrastTargets.textOnSubtle ?: target)</ID>
     <ID>MaxLineLength:Resolver.kt$Resolver$fun</ID>
-    <ID>MaxLineLength:Resolver.kt$Resolver$require(listOfNotNull(target, fill, fillHover, fillActive, border, text, textOnSubtle, strong).all { it in range })</ID>
-    <ID>MaxLineLength:Resolver.kt$Resolver$return ThemePalette(java.util.Collections.unmodifiableMap(colors.mapValues { (_, rgb) -&gt; rgb.joinToString("", prefix = "#") { it.toString(16).padStart(2, '0') } }))</ID>
-    <ID>MaxLineLength:Resolver.kt$Resolver$theme(true, dark.hue, 0.5, 0.5, dark)</ID>
     <ID>MaxLineLength:ResolverTest.kt$Profiles(ThemeProfiles(profile(row[16]), profile(row[17])), ThemeProfiles(profile(row[18]), profile(row[19])))</ID>
     <ID>MaxLineLength:ResolverTest.kt$check(runCatching { Resolver(backgrounds = Backgrounds(light = "#ffff")) }.exceptionOrNull() is IllegalArgumentException)</ID>
     <ID>MaxLineLength:ResolverTest.kt$check(runCatching { Resolver(contrastTargets = ContrastTargets(textOnSubtle = invalid)) }.exceptionOrNull() is IllegalArgumentException)</ID>
     <ID>MaxLineLength:ResolverTest.kt$val</ID>
     <ID>MaxLineLength:Tables.kt$internal val anchors = doubleArrayOf(10.0, 48.3199, 78.2602, 111.4561, 134.6058, 154.0668, 181.1972, 220.7925, 257.1497, 299.695, 322.6721, 340.0645, 370.0)</ID>
-    <ID>ReturnCount:Contrast.kt$Contrast$fun measure(text: IntArray, background: IntArray, model: ContrastModel, gamut: Gamut): Double</ID>
     <ID>ReturnCount:HueDomain.kt$HueDomain$fun map(hue: Double): Double</ID>
     <ID>ReturnCount:ToneRepair.kt$internal fun repairTone( lightness: Double, chroma: Double, hue: Double, gamut: Gamut, target: Double, measure: (IntArray) -&gt; Double, ): RepairedTone</ID>
   </CurrentIssues>

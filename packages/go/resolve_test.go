@@ -13,6 +13,68 @@ import (
 	"testing"
 )
 
+func TestHueDomainWrapsRoundedEndpoint(t *testing.T) {
+	resolver, err := NewResolver(&Options{HueRange: &Range{350, 360}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := resolver.domain.mapHue(math.Nextafter(360, 0)); got != 0 {
+		t.Fatalf("rounded hue = %v, want zero", got)
+	}
+	pins := map[string]Assignment{"endpoint": {HueFraction: 0.9721623713205613}}
+	original, err := resolver.Assign([]string{"endpoint"}, pins)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := resolver.ExportRegistry(pins)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restored, err := resolver.ImportRegistry(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	replay, err := resolver.Assign([]string{"endpoint"}, restored)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(original, replay) {
+		t.Fatal("registry replay changed the endpoint color")
+	}
+}
+
+func TestMixedResolverOptions(t *testing.T) {
+	base := &Options{Namespace: "n"}
+	expected, err := Resolve("label", &Options{Namespace: "n", Seed: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, options := range [][]Option{{WithSeed(1), base}, {base, WithSeed(1)}} {
+		got, err := Resolve("label", options...)
+		if err != nil || !reflect.DeepEqual(got, expected) {
+			t.Fatalf("mixed options lost a setting: %v", err)
+		}
+	}
+}
+
+func TestCompareAssignmentsAfterNormalization(t *testing.T) {
+	before, err := NewResolver()
+	if err != nil {
+		t.Fatal(err)
+	}
+	after, err := NewResolver(WithNormalize(NormalizeOptions{Whitespace: "trim"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := CompareAssignments(MigrationSide{Resolver: before}, MigrationSide{Resolver: after}, []string{" label", "label"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(report.Moved) == 0 || report.Moved[0] != " label" || len(report.Colors) == 0 || len(report.Contrast) == 0 {
+		t.Fatalf("missing identity or rendition changes: %+v", report)
+	}
+}
+
 func TestContrastRepairGridTie(t *testing.T) {
 	selectColor := func(rgb encodedRGB, _ float64) encodedRGB { return foreground(rgb) }
 	for _, tc := range []struct{ start, expected int }{{2321, 1907}, {2322, 1907}, {2323, 2737}} {
@@ -377,8 +439,12 @@ func TestPortableConfigFingerprint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var roundTrip map[string]any
-	if err := json.Unmarshal(exported, &roundTrip); err != nil || !reflect.DeepEqual(value, roundTrip) {
+	var roundTrip, current map[string]any
+	golden, err := os.ReadFile("../../conformance/config-v2.json")
+	if err != nil || json.Unmarshal(golden, &current) != nil {
+		t.Fatalf("reading current configuration fixture: %v", err)
+	}
+	if err := json.Unmarshal(exported, &roundTrip); err != nil || !reflect.DeepEqual(current, roundTrip) {
 		t.Fatalf("round trip mismatch: %s, %v", exported, err)
 	}
 	colors, err := resolver.Resolve("🐈")
@@ -448,12 +514,9 @@ func TestRegistryReplay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	original, err := r.Assign([]string{"old", "keep", "__proto__"}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(next.Colors["old"], original.Colors["old"]) {
-		t.Fatal("changed rendered colors")
+	old := next.Colors["old"]
+	if old.Light.Fill.Hex != "#6fc49e" || old.Dark.Fill.Hex != "#325d4a" {
+		t.Fatalf("historical registry fill changed: %s, %s", old.Light.Fill.Hex, old.Dark.Fill.Hex)
 	}
 	for key, p := range pins {
 		if next.Assignments[key] != p {
@@ -649,6 +712,41 @@ func TestSelectedRolesMatchBothFullThemes(t *testing.T) {
 					t.Fatalf("%s %s.%s: got %+v, want %+v, error %v", gamut, theme, role, got, want, err)
 				}
 			}
+		}
+	}
+}
+
+func TestVisionAssignmentMatchesReference(t *testing.T) {
+	r, err := NewResolver(WithPreset("chart"), WithNormalize(NormalizeOptions{Whitespace: "trim"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := r.AssignWithOptions([]string{" research ", "engineering", "design"},
+		AssignmentOptions{Markers: true, Vision: []string{"deutan", "normal"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][3]string{
+		"engineering": {"#23cad2", "#0b6165", "cross"},
+		"research":    {"#4f8563", "#14281c", "hexagon"},
+		"design":      {"#f6eae3", "#af7959", "triangle"},
+	}
+	for label, expected := range want {
+		color := got.Colors[label]
+		if actual := [3]string{color.Light.Fill.Hex, color.Dark.Fill.Hex, got.Markers[label]}; actual != expected {
+			t.Errorf("%s: got %v, want %v", label, actual, expected)
+		}
+	}
+	if got.ColorsByInput[" research "].Light.Fill.Hex != want["research"][0] {
+		t.Fatal("Missing raw input alias")
+	}
+	if searches := got.Report.Searches; len(searches) != 3 || searches[0].BestDistance != nil ||
+		searches[1].PositionsConsidered != 24 || searches[2].ColorsEvaluated != 22 {
+		t.Fatalf("Unexpected search report: %+v", searches)
+	}
+	for _, profiles := range [][]string{{}, {"unknown"}} {
+		if _, err := r.AssignWithOptions(nil, AssignmentOptions{Vision: profiles}); err == nil {
+			t.Fatalf("Accepted invalid profiles: %v", profiles)
 		}
 	}
 }

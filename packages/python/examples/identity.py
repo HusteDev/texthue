@@ -1,25 +1,16 @@
-"""Show that text is used exactly as given, that namespaces separate domains,
-and that a stable identifier always maps to the same colors."""
+"""Compare exact identities and resolver-controlled NFC normalization."""
 
-import unicodedata
+from texthue import Resolver
 
-from texthue import resolve_text_colors
+exact = Resolver()
+canonical = Resolver(normalize={"unicode": "NFC"})
+composed, decomposed = "\u00e9", "e\u0301"
+assert exact.identity(composed) != exact.identity(decomposed)
+assert canonical.resolve(composed) == canonical.resolve(decomposed)
 
-for text in ("research", "Research", "research ", "\u00e9", "e\u0301"):
-    print(ascii(text), resolve_text_colors(text).light.fill.hex)
-
-composed = resolve_text_colors(unicodedata.normalize("NFC", "\u00e9"))
-decomposed = resolve_text_colors(unicodedata.normalize("NFC", "e\u0301"))
-print(
-    "Caller-selected NFC matches:",
-    composed.light.fill.hex == decomposed.light.fill.hex,
-)
-
-labels = resolve_text_colors("42", {"namespace": "labels"})
-projects = resolve_text_colors("42", {"namespace": "projects"})
-print("Namespace mappings:", labels.light.fill.hex, projects.light.fill.hex)
-
-settings = {"namespace": "projects"}
-first = resolve_text_colors("project-id:42", settings)
-second = resolve_text_colors("project-id:42", settings)
-print("Repeated assignment matches:", first == second)
+labels = Resolver(namespace="labels")
+projects = Resolver(namespace="projects")
+label_fill = labels.hex("42", theme="light", role="fill")
+project_fill = projects.hex("42", theme="light", role="fill")
+assert label_fill != project_fill
+print("Namespace mappings:", label_fill, project_fill)

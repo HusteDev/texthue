@@ -315,6 +315,54 @@ console.log(JSON.stringify(requests.map(({texts,migration:{old,next}})=>compareA
             )
             self.compare(json.loads(result.stdout), expected)
 
+    def test_anchored_assignment_matches_javascript(self):
+        from texthue import Resolver, import_config
+
+        options = {
+            "paletteMode": "anchors",
+            "palette": [{"id": "warm", "light": "#ab4433"}, {"id": "cool", "dark": "#3189ae"}],
+            "normalize": {"whitespace": "trim"},
+            "overrides": {"fixed": "#884477"},
+        }
+        labels = ["  red", "red", "green", "fixed", "__proto__"]
+        vision = ["deutan", "normal", "tritan"]
+        script = """
+import {createResolver} from 'texthue';
+import {readFileSync} from 'node:fs';
+const {options,labels,vision} = JSON.parse(readFileSync(0,'utf8'));
+const resolver = createResolver(options);
+const {colors,assignments,markers,report} = resolver.assign(labels,{markers:true,vision});
+const fills = Object.fromEntries(Object.entries(colors).map(([key,c])=>[key,[c.light.fill.hex,c.dark.fill.hex]]));
+console.log(JSON.stringify({assignments,markers,fills,report}));
+"""
+        expected = json.loads(
+            subprocess.check_output(
+                ["node", "--input-type=module", "-e", script],
+                input=json.dumps({"options": options, "labels": labels, "vision": vision}),
+                cwd=ROOT,
+                text=True,
+            )
+        )
+        resolver = Resolver(options)
+        result = resolver.assign(labels, vision=vision, markers=True)
+        self.assertEqual(expected["markers"], result["markers"])
+        self.assertEqual(
+            expected["assignments"], {k: v.to_dict() for k, v in result["assignments"].items()}
+        )
+        self.assertEqual(
+            expected["fills"],
+            {k: [v.light.fill.hex, v.dark.fill.hex] for k, v in result["colors"].items()},
+        )
+        self.compare(expected["report"], result["report"])
+        self.assertIs(result["colorsByInput"]["  red"], result["colors"]["red"])
+        self.assertEqual(
+            resolver.resolve("green"), import_config(resolver.export_config()).resolve("green")
+        )
+        self.assertEqual(
+            resolver.project("green", roles=["fill_hover"]),
+            resolver.project("green", roles=["fillHover"]),
+        )
+
     def test_display_p3_fit(self):
         from texthue import to_css
         from texthue._core import _XYZ_TO_P3, _cusp, _fit, _p3_fallback
@@ -486,10 +534,12 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
         saved = json.loads((ROOT / "conformance/registry-v1.json").read_text(encoding="utf-8"))
         resolver = Resolver(seed=123)
         pins = resolver.import_registry(saved)
-        self.assertEqual(resolver.export_registry(pins), saved)
+        current = json.loads((ROOT / "conformance/registry-v2.json").read_text(encoding="utf-8"))
+        self.assertEqual(resolver.export_registry(pins), current)
+        self.assertEqual(resolver.import_registry(current), pins)
         updated = resolver.assign(["new", "old"], pinned=pins)
-        original = resolver.assign(saved["assignments"])
-        self.assertEqual(updated["colors"]["old"], original["colors"]["old"])
+        old = updated["colors"]["old"]
+        self.assertEqual((old.light.fill.hex, old.dark.fill.hex), ("#6fc49e", "#325d4a"))
         for key, placement in pins.items():
             self.assertEqual(updated["assignments"][key], placement)
         with self.assertRaises(TextColorError):
@@ -508,6 +558,16 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
         commands["python"] = [sys.executable, *commands["python"][1:]]
         cases = [
             {"text": " research ", "options": {}},
+            {
+                "text": "anchor",
+                "options": {
+                    "gamut": "display-p3",
+                    "paletteMode": "anchors",
+                    "contrastModel": "apca",
+                    "excludeHues": [[350, 10], [5, 20]],
+                    "palette": [{"id": "blue", "light": "#1177cc", "dark": "#ffaa77"}],
+                },
+            },
             {
                 "text": "É",
                 "options": {
@@ -541,7 +601,7 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
         for producer, command in commands.items():
             configs = run(command, [{**item, "exportConfig": True} for item in cases])
             for case, config in zip(cases, configs, strict=True):
-                self.assertEqual(config["schema"], "texthue-config-v1", producer)
+                self.assertEqual(config["schema"], "texthue-config-v2", producer)
                 replays.append({"text": case["text"], "config": config})
         for consumer, command in commands.items():
             with self.subTest(consumer=consumer):
@@ -553,7 +613,9 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
         saved = json.loads((ROOT / "conformance/config-v1.json").read_text(encoding="utf-8"))
         from texthue import import_config
 
-        self.assertEqual(import_config(saved).export_config(), saved)
+        current = json.loads((ROOT / "conformance/config-v2.json").read_text(encoding="utf-8"))
+        self.assertEqual(import_config(saved).export_config(), current)
+        self.assertEqual(import_config(current).export_config(), current)
         expected = saved.pop("fingerprint")
         self.assertEqual(fingerprint(saved), expected)
         self.assertEqual(fingerprint(-0.0), fingerprint(0.0))

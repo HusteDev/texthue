@@ -157,7 +157,7 @@ jobs:
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         if: steps.bundle.outputs.state == 'absent'
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
       - uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1
         if: steps.bundle.outputs.state == 'absent'
         with:
@@ -509,13 +509,13 @@ jobs:
           path: artifacts
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
       - name: Compare NuGet package content hashes
         id: state
         run: |
           set -euo pipefail
           dotnet build tools/NuGetState --configuration Release
-          STATE=$(dotnet tools/NuGetState/bin/Release/net9.0/NuGetState.dll "$VERSION" "artifacts/TextHue.${VERSION}.nupkg")
+          STATE=$(dotnet tools/NuGetState/bin/Release/net10.0/NuGetState.dll "$VERSION" "artifacts/TextHue.${VERSION}.nupkg")
           echo "state=$STATE" >> "$GITHUB_OUTPUT"
       - name: Push the tested archive
         if: steps.state.outputs.state == 'absent'

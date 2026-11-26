@@ -82,13 +82,13 @@ Each line prints **username, independent badge fill, badge lettering, assigned b
 
 | Run | What to look for |
 | --- | --- |
-| 1. Mira and Lee join | Mira’s badge and board fills are both `#a79de9`. Lee’s independent badge fill is `#dbb2ee`; assignment gives Lee `#e4aeee` on this board. Both badges use black lettering. |
-| 2. Lee leaves and Nico joins | The command starts a new process and reads the snapshot. Mira keeps her board fill. Nico gets `#ec9d89`. Lee is absent from the printed rows and still present in the saved registry. |
+| 1. Mira and Lee join | Mira’s badge and board fills are both `#a79de9`. Lee’s independent badge fill is `#dbb2ee`; assignment gives Lee `#cfc163` on this board. Both badges use black lettering. |
+| 2. Lee leaves and Nico joins | The command starts a new process and reads the snapshot. Mira keeps her board fill. Nico gets `#5ec3a5`. Lee is absent from the printed rows and still present in the saved registry. |
 | 3. Lee returns | Lee gets the same board fill as in run 1, even though the membership and order changed. The final output is shown below. |
 
 ```text
-@lee #dbb2ee #000000 #e4aeee
-@nico #ec9d89 #000000 #ec9d89
+@lee #dbb2ee #000000 #cfc163
+@nico #ec9d89 #000000 #5ec3a5
 @mira #a79de9 #000000 #a79de9
 ```
 

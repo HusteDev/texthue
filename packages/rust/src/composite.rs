@@ -5,9 +5,11 @@ pub fn composite_over(
     source: [u8; 3],
     alpha: f64,
     backdrop: [u8; 3],
-) -> Result<Color, &'static str> {
+) -> Result<Color, crate::TextColorError> {
     if !(0.0..=1.0).contains(&alpha) {
-        return Err("alpha must be finite and between zero and one");
+        return Err(crate::TextColorError::InvalidOptions(
+            "alpha must be finite and between zero and one",
+        ));
     }
     let rgb = std::array::from_fn(|i| {
         let front = linear_channel(f64::from(source[i]) / 255.0);

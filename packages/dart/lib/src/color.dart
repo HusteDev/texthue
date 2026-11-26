@@ -1,5 +1,7 @@
+import 'errors.dart';
 import 'dart:math' as math;
 import 'contrast.dart';
+import 'cube_root.dart';
 import 'gamut_fit.dart';
 
 const _xyzToLMS = <List<double>>[
@@ -26,7 +28,7 @@ List<double> _lab(double r, double g, double b, Gamut gamut) {
       [linearChannel(r), linearChannel(g), linearChannel(b)]);
   final lms = multiply(_xyzToLMS, xyz);
   return multiply(_lmsToLab,
-      [for (final x in lms) x.sign * math.pow(x.abs(), 1 / 3).toDouble()]);
+      [for (final x in lms) cubeRoot(x)]);
 }
 
 enum CssFormat { hex, rgb, hsl, oklch, displayP3 }
@@ -50,6 +52,14 @@ final class Color {
   const Color._(this.hex, this.rgb, this.hsl, this.oklch,
       [this.p3, this.css, this.srgbClipped]);
 
+  @override
+  bool operator ==(Object other) => other is Color &&
+      (hex, rgb, hsl, oklch, p3, css, srgbClipped) ==
+          (other.hex, other.rgb, other.hsl, other.oklch, other.p3, other.css, other.srgbClipped);
+
+  @override
+  int get hashCode => Object.hash(hex, rgb, hsl, oklch, p3, css, srgbClipped);
+
   /// Serialize this rendition in the selected CSS color notation.
   String toCss([CssFormat format = CssFormat.hex]) => switch (format) {
     CssFormat.hex => hex,
@@ -64,7 +74,7 @@ final class Color {
   /// Composite this sRGB color over an opaque backdrop in linear light.
   Color compositeOver(double alpha, Color backdrop) {
     if (!(alpha >= 0 && alpha <= 1)) {
-      throw RangeError.value(
+      throw OptionRangeError.value(
           alpha, 'alpha', 'Expected a value between zero and one');
     }
     int blend(int front, int back) =>
@@ -77,7 +87,7 @@ final class Color {
   factory Color.fromRgb(int red, int green, int blue) {
     final bytes = [red, green, blue];
     for (final byte in bytes) {
-      RangeError.checkValueInInterval(byte, 0, 255, 'channel');
+      OptionRangeError.check(byte, 0, 255, 'channel');
     }
     final hex = rgbHex(bytes);
     final r = red / 255, g = green / 255, b = blue / 255;
@@ -121,7 +131,7 @@ final class Color {
     final channels = [red, green, blue];
     for (final channel in channels) {
       if (!(channel >= 0 && channel <= 1))
-        throw RangeError.range(channel, 0, 1, 'channel');
+        throw OptionRangeError.range(channel, 0, 1, 'channel');
     }
     final fallback =
         p3Fallback([for (final channel in channels) channel * 255]);

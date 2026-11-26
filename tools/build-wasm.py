@@ -1,6 +1,7 @@
 """Build the Rust-backed ESM package with a matching wasm-bindgen CLI."""
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -40,3 +41,6 @@ subprocess.run(
     ],
     check=True,
 )
+
+# The shared type declarations contain only TypeScript types.
+shutil.copyfile(ROOT / "packages/npm/src/types.ts", ROOT / "packages/wasm/dist/types.d.ts")

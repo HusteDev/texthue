@@ -28,7 +28,7 @@ public static class Contrast
             (Gamut.SRgb, ContrastModel.Apca) => (0.2126729, 0.7151522, 0.0721750),
             (Gamut.DisplayP3, ContrastModel.Wcag2) => (35783.0 / 156275, 247089.0 / 357200, 198249.0 / 2500400),
             (Gamut.DisplayP3, ContrastModel.Apca) => (0.2289829594805780, 0.6917492625852380, 0.0792677779341829),
-            _ => throw new ArgumentException("Unknown gamut or contrast model.")
+            _ => throw TextHueErrors.WithCode(new ArgumentException("Unknown gamut or contrast model."))
         };
         double Channel(double value) => model == ContrastModel.Apca
             ? Math.Pow(value, 2.4) : LinearChannel(value);

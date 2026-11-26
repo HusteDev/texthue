@@ -20,7 +20,7 @@ test('single-color entry loads only renderer dependencies', async () => {
     assert.throws(() => resolveTextColor('research', {...select,format:'p3'}), {code:'INVALID_OPTIONS'});
     assert.equal(resolveTextColors('research').light.fill.hex, '#59b8d8');
     assert.deepEqual([...modules].sort(), [
-      'bytes.js', 'color-math.js', 'renderer.js', 'sha256.js', 'single.js', 'tables.js',
+      'bytes.js', 'color-math.js','errors.js', 'renderer.js', 'sha256.js', 'single.js', 'tables.js',
     ]);
   } finally {
     session.disconnect();

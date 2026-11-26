@@ -5,11 +5,12 @@
 :root{font:1rem/1.55 "Source Sans 3",system-ui,sans-serif;color:#172a32;background:#f7f6f2}main{max-width:66rem;margin:auto;padding:2rem 1rem}h1,h2{line-height:1.15}form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr));gap:1rem}label{display:grid;align-content:start;gap:.3rem}textarea,select,button{font:inherit;padding:.45rem}textarea{resize:vertical}td,th{padding:.55rem;text-align:left;border-bottom:1px solid #b7c0bd}table{border-collapse:collapse}section{overflow:auto}pre{white-space:pre-wrap}button{cursor:pointer}
 
 fieldset,form>div{min-width:0}.field-title{display:flex;align-items:baseline;gap:.35rem}.field-title label{display:inline}.field-control{display:grid;align-content:start;gap:.3rem}dialog{box-sizing:border-box;width:min(30rem,calc(100% - 2rem));border:1px solid #456069;border-radius:.5rem;padding:1.3rem;color:inherit}dialog::backdrop{background:rgb(15 30 36 / .55)}dialog p{white-space:pre-line}dialog h2{margin:0}summary{cursor:pointer}td details{font-size:.9rem}details pre{max-height:24rem;max-width:min(36rem,75vw);overflow:auto;overflow-wrap:anywhere}.help-button{flex:none}.help-button{border:1px solid currentColor;background:transparent;color:#245361;border-radius:50%;font:bold .8rem/1 system-ui;padding:.28rem .4rem}.help-button:focus-visible{outline:3px solid #176897;outline-offset:2px}
-</style><main><h1>TextHue palette inspector</h1>
-<p>Enter one label per line and select <strong>Generate Palette</strong>. Each row below shows three ways to color the same label. Try adding a label and compare the swatches. After changing settings, select Generate Palette again. Select a question mark for a definition.</p>
+form{align-items:start}form>details{grid-column:1/-1}.advanced-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr));gap:1rem;padding:1rem 0}form>button{justify-self:start}#advanced>summary{font-weight:600}</style><main><h1>TextHue palette inspector</h1>
+<p>Enter one label per line and select <strong>Generate Palette</strong>. Compare each label’s independent color with its placement in the collection.</p>
 <form><label>Labels, one per line<textarea id="labels" rows="5">research
 design
-engineering</textarea></label><label>Resolver options or exported configuration (JSON)<textarea id="options" rows="5">{}</textarea></label>
+engineering</textarea></label><label>Theme<select id="theme"><option>light</option><option>dark</option></select></label><button type="submit">Generate Palette</button>
+<details id="advanced"><summary>Advanced settings</summary><div class="advanced-fields"><label>Resolver options or exported configuration (JSON)<textarea id="options" rows="5">{}</textarea></label>
 <label>Load configuration file<input id="config-file" type="file" accept=".json,application/json"></label>
 <fieldset><legend>Preset</legend><label>Role defaults<select id="preset"><option>labels</option><option>controls</option><option>chart</option><option>subdued</option><option>mono</option></select></label>
 <button type="button" id="apply-preset">Apply preset</button></fieldset>
@@ -17,13 +18,13 @@ engineering</textarea></label><label>Resolver options or exported configuration 
 <option value="">Choose an example</option><option value="duo">Coastal duo · 2 colors</option><option value="studio">Print studio · 4 colors</option><option value="market">Market stalls · 8 colors</option><option value="none">Clear palette · generated colors</option></select></label><label>Palette ID<input id="brand-id"></label>
 <label>Light fill<input type="color" id="brand-light" value="#387eb5"></label><label>Dark fill<input type="color" id="brand-dark" value="#6ca8d6"></label>
 <button type="button" id="save-entry">Add or update color</button> <button type="button" id="remove-entry">Remove color</button></fieldset>
-<label>Theme<select id="theme"><option>light</option><option>dark</option></select></label>
+
 <label>Vision profile<select id="vision"><option>normal</option><option>deutan</option><option>protan</option><option>tritan</option></select></label>
 <label><span><input id="optimize-vision" type="checkbox"> Optimize new placements for normal vision and the selected profile</span></label>
 <label><span><input id="markers" type="checkbox"> Show identity shapes</span></label>
 <label>Minimum OKLab distance<input id="minimum-distance" type="number" min="0" step="any" value="0" required></label>
-<label>Saved registry (optional JSON)<textarea id="registry"></textarea></label><label>Load registry file<input id="registry-file" type="file" accept=".json,application/json"></label><button type="submit">Generate Palette</button></form>
-<p role="status">Loading palette inspector...</p><section id="results"></section></main><dialog id="help-dialog" aria-labelledby="help-title" aria-describedby="help-definition"><h2 id="help-title">Palette help</h2><p id="help-definition"></p><p><a href="https://github.com/HusteDev/texthue/wiki/Read-the-palette-inspector" target="_blank" rel="noopener noreferrer">Read the Wiki guide (opens in a new tab)</a></p><button type="button" autofocus>Close</button></dialog><script type="module">
+<label>Saved registry (optional JSON)<textarea id="registry"></textarea></label><label>Load registry file<input id="registry-file" type="file" accept=".json,application/json"></label></div></details></form>
+<p role="status">Loading palette inspector...</p><section id="results"></section></main><dialog id="help-dialog" aria-labelledby="help-title" aria-describedby="help-definition"><h2 id="help-title">Palette help</h2><p id="help-definition"></p><p><a href="https://github.com/HusteDev/texthue/blob/main/docs/INSPECTOR.md" target="_blank" rel="noopener noreferrer">Read the guide (opens in a new tab)</a></p><button type="button" autofocus>Close</button></dialog><script type="module">
 import('./app.mjs').catch(error => {
   document.querySelector('[role=status]').textContent = 'Palette inspector could not start: ' + error.message;
   document.querySelector('button[type=submit]').disabled = true;

@@ -2,17 +2,20 @@
 name = "texthue"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.88"
 description = "Deterministic text-to-color assignments"
 license-file = "LICENSE"
 repository = "https://github.com/HusteDev/texthue"
 
 [features]
-wasm-bindgen = ["dep:wasm-bindgen"]
+wasm-bindgen = ["dep:wasm-bindgen", "dep:serde", "dep:serde_json"]
 
 [dependencies]
-wasm-bindgen = { version = "=0.2.130", optional = true }
-sha2 = "=0.11.1"
-unicode-normalization = "=0.1.26"
+serde = { version = "1", features = ["derive"], optional = true }
+serde_json = { version = "1", features = ["float_roundtrip"], optional = true }
+wasm-bindgen = { version = "0.2.130", optional = true }
+sha2 = "0.11.1"
+unicode-normalization = "0.1.26"
 
 [dev-dependencies]
 serde = { version = "1", features = ["derive"] }

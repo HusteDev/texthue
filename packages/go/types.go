@@ -2,8 +2,7 @@
 // colors using the text-to-color-v1 algorithm. Results match the TextHue
 // npm and Python libraries for identical inputs and options.
 //
-// The package uses only the Go standard library, holds no global mutable
-// state, and is safe for concurrent use.
+// A compiled Resolver is safe for concurrent use.
 //
 //	colors, err := texthue.Resolve("research", nil)
 //	if err != nil {
@@ -32,9 +31,10 @@ type Range [2]float64
 type Profile struct {
 	// Lightness bounds, both in 0..1.
 	Lightness *Range `json:"lightness,omitempty"`
-	// Chroma bounds, both in 0..0.4. {0, 0} requests grayscale.
-	ChromaScale *Range   `json:"chromaScale,omitempty"`
-	ChromaCap   *float64 `json:"chromaCap,omitempty"`
+	// Fractions of maximum in-gamut chroma, both in 0..1.
+	ChromaScale *Range `json:"chromaScale,omitempty"`
+	// Maximum absolute chroma in 0..0.4. Zero requests grayscale.
+	ChromaCap *float64 `json:"chromaCap,omitempty"`
 }
 
 // ThemeProfiles holds the profiles for the two color roles of one theme.
@@ -58,22 +58,24 @@ type Backgrounds struct {
 	Dark  *string `json:"dark,omitempty"`
 }
 
-// Options controls hashing, contrast, and color preferences for Resolve.
-//
-// A nil *Options selects every default, as does &Options{}. Pointer fields
-// distinguish an omitted value from a meaningful zero. Options are never
-// modified by this package, but callers must not mutate them concurrently
-// with a call.
+// NormalizeOptions configures identity transformations before hashing.
 type NormalizeOptions struct {
 	Unicode    string `json:"unicode,omitempty"`
 	Case       string `json:"case,omitempty"`
 	Whitespace string `json:"whitespace,omitempty"`
 }
 
+// Options controls hashing, contrast, and color preferences for Resolve.
+//
+// A nil *Options selects every default, as does &Options{}. Pointer fields
+// distinguish an omitted value from a meaningful zero. Options are never
+// modified by this package, but callers must not mutate them concurrently
+// with a call.
 type Options struct {
 	Gamut            string              `json:"gamut,omitempty"`
 	ContrastModel    string              `json:"contrastModel,omitempty"`
 	Overrides        map[string]Override `json:"overrides,omitempty"`
+	PaletteMode      string              `json:"paletteMode,omitempty"`
 	Palette          []PaletteEntry      `json:"palette,omitempty"`
 	Foregrounds      []string            `json:"foregrounds,omitempty"`
 	ForegroundPolicy string              `json:"foregroundPolicy,omitempty"`

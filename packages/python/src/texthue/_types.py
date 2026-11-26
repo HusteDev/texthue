@@ -5,9 +5,9 @@ validity are enforced at runtime by :func:`texthue.resolve_text_colors`;
 the types alone cannot express them.
 """
 
-from typing import TypedDict
+from typing import Literal, NotRequired, TypedDict
 
-from ._models import Color
+from ._models import Assignment, Color, ColorSet
 
 #: An ordered pair of bounds supplied as a two-item list or tuple.
 #: Equal endpoints request a fixed value. Contrast enforcement may move lightness
@@ -60,6 +60,7 @@ class TextColorOptions(TypedDict, total=False):
     """
 
     overrides: dict[str, str | dict[str, str]]
+    paletteMode: Literal["fixed", "anchors"]
     palette: list[dict[str, str]]
     foregrounds: list[str]
     foregroundPolicy: str
@@ -80,3 +81,26 @@ class TextColorOptions(TypedDict, total=False):
     contrastTarget: float
     #: Per-theme, per-role lightness and chroma preferences.
     profiles: Profiles
+
+
+class AssignmentSearch(TypedDict):
+    label: str
+    positionsConsidered: int
+    colorsEvaluated: int
+    bestDistance: float | None
+
+
+class AssignmentReport(TypedDict):
+    minDistance: float | None
+    closestPairs: list[list[str]]
+    withinRingCapacity: bool
+    distinctFills: bool
+    searches: NotRequired[list[AssignmentSearch]]
+
+
+class AssignedColors(TypedDict):
+    colors: dict[str, ColorSet]
+    colorsByInput: dict[str, ColorSet]
+    assignments: dict[str, Assignment]
+    report: AssignmentReport
+    markers: NotRequired[dict[str, str]]

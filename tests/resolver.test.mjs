@@ -99,7 +99,9 @@ test('configuration round trips validate portable fingerprints', async () => {
   const {importConfig, exportConfig} = await import('../packages/npm/dist/index.js');
   const saved = JSON.parse(await readFile(new URL('../conformance/config-v1.json',import.meta.url),'utf8'));
   const restored = importConfig(saved);
-  assert.deepEqual(exportConfig(restored),saved);
+  const current = JSON.parse(await readFile(new URL('../conformance/config-v2.json',import.meta.url),'utf8'));
+  assert.deepEqual(exportConfig(restored),current);
+  assert.deepEqual(importConfig(current).exportConfig(),current);
   assert.deepEqual(restored.resolve('🐈'),createResolver(saved.options).resolve('🐈'));
   saved.options.seed--;
   assert.throws(() => importConfig(saved),{code:'INVALID_OPTIONS'});
@@ -115,9 +117,12 @@ test('registry replay preserves absent labels and rejects incompatible configura
   const r = createResolver({seed:123});
   const pins = r.importRegistry(saved);
   const next = r.assign(['new','old'],{pinned:pins});
-  assert.deepEqual(next.colors.old,r.assign(Object.keys(saved.assignments)).colors.old);
+  assert.equal(next.colors.old.light.fill.hex, '#6fc49e');
+  assert.equal(next.colors.old.dark.fill.hex, '#325d4a');
   for (const [key,p] of Object.entries(saved.assignments)) assert.deepEqual(next.assignments[key],p);
-  assert.deepEqual(JSON.parse(JSON.stringify(r.exportRegistry(pins))),saved);
+  const current = JSON.parse(await readFile(new URL('../conformance/registry-v2.json',import.meta.url),'utf8'));
+  assert.deepEqual(JSON.parse(JSON.stringify(r.exportRegistry(pins))),current);
+  assert.deepEqual(r.importRegistry(current),pins);
   assert.throws(()=>createResolver().importRegistry(saved),{code:'INVALID_OPTIONS'});
   delete saved.assignments.old.moved;
   assert.throws(()=>r.importRegistry(saved),{code:'INVALID_OPTIONS'});
@@ -272,4 +277,31 @@ test('opt-in fitted coordinates reproduce emitted bytes in both gamuts', async (
     const emitted = wide ? Object.values(ordinary.p3).map(v => Math.round(v * 255)) : Object.values(ordinary.rgb);
     assert.deepEqual(bytes, emitted);
   }
+});
+
+test('collection settings and output selections are independent of resolver configuration', async () => {
+  const {assignTextColors} = await import('texthue');
+  const options = {normalize:{whitespace:'trim'}};
+  const labels = [' bug', 'docs'];
+  const wanted = createResolver(options).assign(labels, {markers:true});
+  assert.deepEqual(assignTextColors(labels,{resolver:options,markers:true}),wanted);
+  const selection = {themes:['light'],roles:['fill'],formats:['hex']};
+  assert.deepEqual(resolveTextColors(' bug',options,selection),createResolver(options).project('bug',selection));
+  for (const method of ['color','hex','project']) {
+    assert.throws(() => createResolver()[method]('label',null), {code:'INVALID_OPTIONS'});
+  }
+});
+
+
+test('registries accept equivalent resolved profiles, hue intervals and normalized names', () => {
+  const normalize = {case:'lower', whitespace:'trim'};
+  const preset = createResolver({preset:'chart',normalize,namespace:' DEMO ',
+    overrides:{' Mira ':'#abcdef'},excludeHues:[[350,10],[5,20]]});
+  const pair = {chromaScale:[0.8,1]};
+  const explicit = createResolver({profiles:{light:{fill:pair,text:pair},dark:{fill:pair,text:pair}},
+    normalize,namespace:'demo',overrides:{mira:'#abcdef'},excludeHues:[[0,20],[350,360]]});
+  assert.deepEqual(preset.resolve('Nico'),explicit.resolve('Nico'));
+  const saved = preset.exportRegistry(preset.assign(['Mira','Nico']).assignments);
+  assert.deepEqual(explicit.importRegistry(saved),saved.assignments);
+  assert.throws(() => createResolver({preset:'labels'}).importRegistry(saved),{code:'INVALID_OPTIONS'});
 });

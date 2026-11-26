@@ -40,7 +40,7 @@ private val paletteRoles = listOf(
 private val hexColor = Regex("#[0-9A-Fa-f]{6}")
 
 internal fun parseHex(hex: String): IntArray {
-    require(hexColor.matches(hex)) { "Expected a six-digit hex color" }
+    requireOption(hexColor.matches(hex)) { "Expected a six-digit hex color" }
     return IntArray(3) { i -> hex.substring(1 + 2 * i, 3 + 2 * i).toInt(16) }
 }
 
@@ -100,8 +100,8 @@ class Resolver(
     private val fixedColors = buildMap {
         for ((name, colors) in overrides) {
             val key = normalization.apply(name)
-            require(Charsets.UTF_8.newEncoder().canEncode(name)) { "Malformed override name" }
-            require(!containsKey(key)) { "Duplicate normalized override" }
+            requireOption(Charsets.UTF_8.newEncoder().canEncode(name)) { "Malformed override name" }
+            requireOption(!containsKey(key)) { "Duplicate normalized override" }
             put(key, FixedTone(colors.light) to FixedTone(colors.dark))
         }
     }
@@ -112,18 +112,19 @@ class Resolver(
     private val darkBackground = ThemeBackground(backgrounds.dark)
 
     init {
-        require(candidates.isNotEmpty()) { "At least one foreground is required" }
+        requireOption(candidates.isNotEmpty()) { "At least one foreground is required" }
         val range = if (apca) 0.0..106.0 else 1.0..21.0
         with(contrastTargets) {
-            require(listOfNotNull(target, fill, fillHover, fillActive, border, text, textOnSubtle, strong).all { it in range })
+            val thresholds = listOfNotNull(target, fill, fillHover, fillActive, border, text, textOnSubtle, strong)
+            requireOption(thresholds.all { it in range })
         }
     }
 
     private val rankedEntries = palette?.let { entries ->
-        require(entries.isNotEmpty()) { "Empty palette" }
+        requireOption(entries.isNotEmpty()) { "Empty palette" }
         val ids = mutableSetOf<String>()
         val compiled = entries.map { entry ->
-            require(ids.add(entry.id) && Charsets.UTF_8.newEncoder().canEncode(entry.id)) { "Invalid palette ID" }
+            requireOption(ids.add(entry.id) && Charsets.UTF_8.newEncoder().canEncode(entry.id)) { "Invalid palette ID" }
             val light = FixedTone(requireNotNull(entry.light ?: entry.dark))
             val dark = FixedTone(requireNotNull(entry.dark ?: entry.light))
             RankedEntry(entry.id.toByteArray(Charsets.UTF_8), light to dark)
@@ -200,7 +201,7 @@ class Resolver(
         val colors = mappings.mapValues { (name, mapped) ->
             val pinnedPlacement = placements[name]
             if (pinnedPlacement != null) placed(mapped, pinnedPlacement) else {
-                val initial = place(mapped.fraction, placements.values, separation)
+                val initial = place(mapped.fraction, placements.values, separation, size)
                 val (p, palette) = repairPlacement(initial, placements.values, separation, occupied) {
                     placed(mapped, it)
                 }
@@ -217,10 +218,10 @@ class Resolver(
         val result = theme(dark, mapped, if (strict) null else role)
         if (strict) {
             for ((pair, _, _) in contrastPairs(role)) {
-                check(result.contrast.getValue(pair).meetsTarget) { "Contrast target for $pair was not met" }
+                if (!result.contrast.getValue(pair).meetsTarget) throw UnmetConstraintException(pair)
             }
         }
-        return result.colors.getValue(role)
+        return result.colors[role] ?: throw TextColorException("INVALID_OPTIONS", "Unknown color role: $role")
     }
 
     fun color(text: String, dark: Boolean = false, role: String = "fill"): Color =
@@ -294,7 +295,7 @@ class Resolver(
                 contrastTargets.text ?: target, background, subtle, contrastTargets.textOnSubtle ?: target)
             "strong" -> tone(role, textL + direction * 0.10, profile.text, 0.19,
                 contrastTargets.strong ?: target, background)
-            else -> throw IllegalArgumentException("Unknown color role: $role")
+            else -> throw TextColorException("INVALID_OPTIONS", "Unknown color role: $role")
         }
         val roles = selected?.let { listOf(it) } ?: paletteRoles
         val colors = roles.associateWith(::bytes)

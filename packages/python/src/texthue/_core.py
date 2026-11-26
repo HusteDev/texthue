@@ -73,7 +73,13 @@ class TextColorError(ValueError):
 
 def _multiply(matrix, vector):
     """Multiply a 3x3 matrix by a column vector, evaluating each row as ``(m0*v0 + m1*v1) + m2*v2``."""
-    return [row[0] * vector[0] + row[1] * vector[1] + row[2] * vector[2] for row in matrix]
+    x, y, z = vector
+    a, b, c = matrix
+    return [
+        a[0] * x + a[1] * y + a[2] * z,
+        b[0] * x + b[1] * y + b[2] * z,
+        c[0] * x + c[1] * y + c[2] * z,
+    ]
 
 
 def _decode(value):
@@ -103,29 +109,32 @@ _P3_TO_XYZ = [
 ]
 
 
-def _linear(lightness, chroma, hue, target=_XYZ_TO_RGB):
+def _linear(lightness, chroma, cosine, sine, target):
     """Convert OKLCH to linear sRGB without clamping.
 
     Channels outside ``[0, 1]`` indicate a color outside the sRGB gamut.
     """
-    angle = hue * math.pi / 180
-    lab = [lightness, chroma * math.cos(angle), chroma * math.sin(angle)]
-    lms = [value * value * value for value in _multiply(_LAB_TO_LMS, lab)]
+    lab = (lightness, chroma * cosine, chroma * sine)
+    l_value, m_value, s_value = _multiply(_LAB_TO_LMS, lab)
+    lms = (l_value * l_value * l_value, m_value * m_value * m_value, s_value * s_value * s_value)
     return _multiply(target, _multiply(_LMS_TO_XYZ, lms))
 
 
 def _inside(rgb):
     """Return whether every linear channel lies within the sRGB gamut, allowing ``1e-12`` of residue."""
-    return all(-1e-12 <= value <= 1 + 1e-12 for value in rgb)
+    r, g, b = rgb
+    return -1e-12 <= r <= 1 + 1e-12 and -1e-12 <= g <= 1 + 1e-12 and -1e-12 <= b <= 1 + 1e-12
 
 
 def _cusp(lightness, hue, target=_XYZ_TO_RGB):
     if lightness in (0, 1):
         return 0
+    angle = hue * math.pi / 180
+    cosine, sine = math.cos(angle), math.sin(angle)
     low, high = 0, 0.4
     for _ in range(20):
         mid = (low + high) / 2
-        if _inside(_linear(lightness, mid, hue, target)):
+        if _inside(_linear(lightness, mid, cosine, sine, target)):
             low = mid
         else:
             high = mid
@@ -145,18 +154,20 @@ def _fit(lightness, chroma, hue, target=_XYZ_TO_RGB):
     """
     if lightness == 0 or lightness == 1:
         return {"rgb": [int(lightness * 255)] * 3, "chroma": 0, "lightness": lightness}
+    angle = hue * math.pi / 180
+    cosine, sine = math.cos(angle), math.sin(angle)
     retained = chroma
-    linear = _linear(lightness, retained, hue, target)
+    linear = _linear(lightness, retained, cosine, sine, target)
     if not _inside(linear):
         low, high = 0, chroma
         for _ in range(24):
             mid = (low + high) / 2
-            if _inside(_linear(lightness, mid, hue, target)):
+            if _inside(_linear(lightness, mid, cosine, sine, target)):
                 low = mid
             else:
                 high = mid
         retained = low
-        linear = _linear(lightness, retained, hue, target)
+        linear = _linear(lightness, retained, cosine, sine, target)
     rgb = [math.floor(_encode(max(0, min(1, value))) * 255 + 0.5) for value in linear]
     return {"rgb": rgb, "chroma": retained, "lightness": lightness}
 
@@ -473,11 +484,11 @@ def _hue_domain(allowed, excluded):
         distance = hue / 360 * total
         for lo, hi in segments:
             if distance < hi - lo:
-                return lo + distance
+                return (lo + distance) % 360
             distance -= hi - lo
         return segments[0][0]
 
-    return remap, exclusions
+    return remap, exclusions, [list(arc) for arc in segments if arc[0] < arc[1]]
 
 
 def _options(options):
@@ -491,6 +502,7 @@ def _options(options):
         (
             "overrides",
             "palette",
+            "paletteMode",
             "foregrounds",
             "foregroundPolicy",
             "contrastModel",
@@ -625,6 +637,9 @@ def _options(options):
             else _record(value, ("light", "dark"), "override")
         )
         pairs[name] = {k: parse_hex(pair.get(k)) for k in ("light", "dark")}
+    palette_mode = source.get("paletteMode", "fixed")
+    if palette_mode not in ("fixed", "anchors"):
+        raise TextColorError("INVALID_OPTIONS", "Unknown palette mode")
     raw_palette = source.get("palette", [])
     if not isinstance(raw_palette, list) or ("palette" in source and not raw_palette):
         raise TextColorError("INVALID_OPTIONS", "Empty palette")
@@ -644,15 +659,32 @@ def _options(options):
         )
         palette[ident] = (passing, pair)
 
+    anchors = (
+        [
+            {theme: _oklch(rgb, _RGB_TO_XYZ) for theme, rgb in palette[ident][1].items()}
+            for ident in sorted(palette)
+        ]
+        if palette_mode == "anchors"
+        else []
+    )
+
+    def anchor(fraction, theme):
+        if not anchors:
+            return None
+        position = fraction * len(anchors)
+        color = anchors[int(position)][theme]
+        hue = domain((color["h"] + (position % 1 - 0.5) * 30 + 360) % 360)
+        return hue, color["c"] * 1.25
+
     def brand(name, digest):
         if name in pairs:
             return "override", pairs[name]
-        if palette:
+        if palette_mode == "fixed" and palette:
             ident = max(palette, key=lambda i: (palette[i][0], hashlib.sha256(digest + i).digest()))
             return "palette", palette[ident][1]
         return None, None
 
-    domain, exclusions = _hue_domain(
+    domain, exclusions, segments = _hue_domain(
         source.get("hueRange", [0, 360]), source.get("excludeHues", [])
     )
 
@@ -684,6 +716,8 @@ def _options(options):
         expanded["gamut"] = gamut
     if apca:
         expanded["contrastModel"] = model
+    if palette_mode == "anchors":
+        expanded["paletteMode"] = palette_mode
     if palette:
         expanded["palette"] = [
             {"id": ident.decode(), **{k: hex_color(rgb) for k, rgb in palette[ident][1].items()}}
@@ -699,11 +733,13 @@ def _options(options):
         "exportOptions": expanded,
         "apca": apca,
         "brand": brand,
+        "anchor": anchor,
         "selectForeground": select_foreground,
         "foreground_formats": foreground_formats,
         "namespace": normalize(namespace),
         "hueDomain": domain,
         "excludedArcs": exclusions,
+        "hueSegments": segments,
         "normalize": normalize,
         "seed": int(seed),
         "targets": targets,
@@ -790,20 +826,22 @@ def render(
     natural_hue = hue
     if brand:
         fractions[1:3] = [0.5, 0.5]
+    light_guide = None if brand else settings["anchor"](hue_fraction, "light")
     result = {
         "version": VERSION,
         "source": source or ("assigned" if placement else "hash"),
-        "hue": snapped(brand["light"]) if brand else hue,
+        "hue": snapped(brand["light"]) if brand else (light_guide[0] if light_guide else hue),
         "hueFraction": fixed_fraction(brand["light"]) if brand else hue_fraction,
     }
     for theme in themes:
         background = settings["backgrounds"][theme]
         base = bases[theme]
         lb = settings["background_lightness"][theme]
-        hue = snapped(brand[theme]) if brand else natural_hue
+        guide = None if brand else settings["anchor"](hue_fraction, theme)
+        hue = snapped(brand[theme]) if brand else (guide[0] if guide else natural_hue)
         direction = -1 if theme == "light" else 1
 
-        def sample(role, theme=theme, hue=hue):
+        def sample(role, theme=theme, hue=hue, guide=guide):
             profile = settings["profiles"][theme][role]
             low, high = profile["lightness"]
             bias = BIASES[(0 if theme == "light" else 2) + (0 if role == "fill" else 1)]
@@ -817,7 +855,7 @@ def render(
             return (
                 lightness,
                 (low + (high - low) * fractions[2]) * (1 if ring < 3 else 0.6),
-                profile["chromaCap"],
+                min(profile["chromaCap"], guide[1]) if guide else profile["chromaCap"],
                 sampled,
             )
 

@@ -37,7 +37,15 @@ from ._models import (
     ThemeContrast,
     _wire_name,
 )
-from ._types import Backgrounds, ColorProfile, Profiles, Range, TextColorOptions, ThemeProfiles
+from ._types import (
+    AssignedColors,
+    Backgrounds,
+    ColorProfile,
+    Profiles,
+    Range,
+    TextColorOptions,
+    ThemeProfiles,
+)
 
 #: Package release version. Independent of :data:`VERSION`, the algorithm identifier.
 __version__ = "0.1.0"
@@ -48,6 +56,7 @@ _OMITTED_OPTIONS = cast(TextColorOptions, _OMITTED)
 
 
 _ALIASES = {
+    "palette_mode": "paletteMode",
     "foreground_policy": "foregroundPolicy",
     "hue_range": "hueRange",
     "exclude_hues": "excludeHues",
@@ -136,25 +145,28 @@ class Resolver:
             raise TextColorError("INVALID_OPTIONS", "Use an options mapping or keyword options")
         source = kwargs if options is _OMITTED else options
         self._compiled = _core.compile_settings(_native_options(source))
+        self._behavior_digest = None
 
     def export_config(self):
         from copy import deepcopy
 
-        from ._fingerprint import fingerprint
+        from ._fingerprint import behavior_fingerprint
 
+        if self._behavior_digest is None:
+            self._behavior_digest = behavior_fingerprint(VERSION, self._compiled[0])
         payload = {
-            "schema": "texthue-config-v1",
+            "schema": "texthue-config-v2",
             "algorithm": VERSION,
             "options": deepcopy(self._compiled[0]["exportOptions"]),
         }
-        return {**payload, "fingerprint": fingerprint(payload)}
+        return {**payload, "fingerprint": self._behavior_digest}
 
     def identity(self, text: str) -> str:
         return self._compiled[0]["normalize"](_core._text(text, "text", "INVALID_TEXT"))
 
     def export_registry(self, assignments):
         return {
-            "schema": "texthue-registry-v1",
+            "schema": "texthue-registry-v2",
             "algorithm": VERSION,
             "fingerprint": self.export_config()["fingerprint"],
             "assignments": {k: v.to_dict() for k, v in _registry_assignments(assignments).items()},
@@ -164,11 +176,20 @@ class Resolver:
         if (
             not isinstance(value, dict)
             or set(value) != {"schema", "algorithm", "fingerprint", "assignments"}
-            or value["schema"] != "texthue-registry-v1"
+            or value["schema"] not in ("texthue-registry-v1", "texthue-registry-v2")
             or value["algorithm"] != VERSION
-            or value["fingerprint"] != self.export_config()["fingerprint"]
         ):
             raise TextColorError("INVALID_OPTIONS", "Incompatible assignment registry")
+        from ._fingerprint import fingerprint
+
+        config = self.export_config()
+        expected = config["fingerprint"]
+        if value["schema"] == "texthue-registry-v1":
+            expected = fingerprint(
+                {"schema": "texthue-config-v1", "algorithm": VERSION, "options": config["options"]}
+            )
+        if value["fingerprint"] != expected:
+            raise TextColorError("INVALID_OPTIONS", "Incompatible assignment registry fingerprint")
         return _registry_assignments(value["assignments"])
 
     def resolve(self, text: str) -> ColorSet:
@@ -204,6 +225,8 @@ class Resolver:
             return values
 
         themes = select(themes, ("light", "dark"), ("light", "dark"))
+        if isinstance(roles, (list, tuple)):
+            roles = [_wire_name(role) if isinstance(role, str) else role for role in roles]
         roles = select(roles, role_names, role_names)
         formats = select(formats, (*standard, "trace"), standard)
         result = _core.render(
@@ -219,9 +242,11 @@ class Resolver:
             for theme in themes
         }
 
-    def assign(self, texts: Iterable[str], *, pinned=None):
+    def assign(
+        self, texts: Iterable[str], *, pinned=None, markers: bool = False, vision=None
+    ) -> AssignedColors:
         placements = _registry_assignments({} if pinned is None else pinned)
-        return assign_collection(texts, placements, self._compiled)
+        return assign_collection(texts, placements, self._compiled, markers, vision)
 
     def batch(self, texts: Iterable[str]) -> list[ColorSet]:
         cache = {}
@@ -291,16 +316,19 @@ def import_config(value) -> Resolver:
     if (
         not isinstance(value, dict)
         or set(value) != keys
-        or value["schema"] != "texthue-config-v1"
+        or value["schema"] not in ("texthue-config-v1", "texthue-config-v2")
         or value["algorithm"] != VERSION
     ):
         raise TextColorError("INVALID_OPTIONS", "Unsupported configuration schema or algorithm")
     resolver = Resolver(value["options"])
     payload = {key: value[key] for key in ("schema", "algorithm", "options")}
-    if (
-        resolver.export_config()["fingerprint"] != value["fingerprint"]
-        or fingerprint(payload) != value["fingerprint"]
-    ):
+    exported = resolver.export_config()
+    expected = exported["fingerprint"]
+    if value["schema"] == "texthue-config-v1":
+        expected = fingerprint({**payload, "options": exported["options"]})
+        if fingerprint(payload) != value["fingerprint"]:
+            raise TextColorError("INVALID_OPTIONS", "Configuration fingerprint mismatch")
+    if expected != value["fingerprint"]:
         raise TextColorError("INVALID_OPTIONS", "Configuration fingerprint mismatch")
     return resolver
 
@@ -313,8 +341,10 @@ def resolve_text_colors(
     return Resolver(options, **kwargs).resolve(text)
 
 
-def assign_text_colors(texts, options=_OMITTED_OPTIONS, *, pinned=None, **kwargs):
-    return Resolver(options, **kwargs).assign(texts, pinned=pinned)
+def assign_text_colors(
+    texts, options=_OMITTED_OPTIONS, *, pinned=None, markers=False, vision=None, **kwargs
+) -> AssignedColors:
+    return Resolver(options, **kwargs).assign(texts, pinned=pinned, markers=markers, vision=vision)
 
 
 __all__ = [
@@ -325,6 +355,7 @@ __all__ = [
     "import_config",
     "assign_text_colors",
     "Assignment",
+    "AssignedColors",
     "css_variables",
     "to_css",
     "Resolver",

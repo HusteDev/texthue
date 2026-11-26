@@ -5,16 +5,52 @@ namespace TextHue;
 
 public readonly record struct Placement(double HueFraction, long Ring, bool Moved);
 public sealed record AssignmentReport(double? MinDistance, IReadOnlyList<(string First, string Second)> ClosestPairs,
-    bool WithinRingCapacity, bool DistinctFills);
+    bool WithinRingCapacity, bool DistinctFills)
+{
+    public bool Equals(AssignmentReport? other) => other is not null && MinDistance == other.MinDistance
+        && WithinRingCapacity == other.WithinRingCapacity && DistinctFills == other.DistinctFills
+        && ClosestPairs.SequenceEqual(other.ClosestPairs);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(MinDistance);
+        hash.Add(WithinRingCapacity);
+        hash.Add(DistinctFills);
+        foreach (var pair in ClosestPairs) hash.Add(pair);
+        return hash.ToHashCode();
+    }
+}
 public sealed record AssignmentResult(IReadOnlyDictionary<string, Placement> Assignments,
-    IReadOnlyDictionary<string, RenderedPalette> Colors, AssignmentReport Report);
+    IReadOnlyDictionary<string, RenderedPalette> Colors, AssignmentReport Report)
+{
+    public bool Equals(AssignmentResult? other) => other is not null && Report == other.Report
+        && ResultEquality.SameMap(Assignments, other.Assignments) && ResultEquality.SameMap(Colors, other.Colors);
+
+    public override int GetHashCode() =>
+        HashCode.Combine(ResultEquality.MapHash(Assignments), ResultEquality.MapHash(Colors), Report);
+}
 
 public sealed partial class Renderer
 {
     private static readonly double[] RingOffsets = [0, 0.08, -0.08, 0.16, -0.16];
 
-    private static Placement Place(double natural, IEnumerable<Placement> occupied, double separation)
+    private static Placement Place(double natural, ICollection<Placement> occupied, double separation, int size)
     {
+        if (size <= 8 && occupied.Count > 0)
+        {
+            double best = -1, chosen = natural;
+            for (int step = 0; step < 24; step++)
+            {
+                double hue = (natural + step / 24.0) % 1;
+                double distance = occupied.Min(p => {
+                    double delta = Math.Abs(p.HueFraction - hue);
+                    return Math.Min(delta, 1 - delta);
+                });
+                if (distance > best) { best = distance; chosen = hue; }
+            }
+            return new(chosen, 0, chosen != natural);
+        }
         for (long ring = 0; ; ring++)
         {
             var neighbors = occupied.Where(p => p.Ring == ring).ToArray();
@@ -33,12 +69,13 @@ public sealed partial class Renderer
 
     public AssignmentResult Assign(IEnumerable<string> labels, IReadOnlyDictionary<string, Placement>? pinned = null)
     {
+        if (labels is null) throw TextHueErrors.WithCode(new ArgumentNullException(nameof(labels)), "INVALID_TEXT");
         var placements = new Dictionary<string, Placement>(StringComparer.Ordinal);
         if (pinned != null)
             foreach (var (name, p) in pinned)
                 if (!(p.HueFraction >= 0 && p.HueFraction < 1) || p.Ring is < 0 or > 9007199254740991 ||
-                    !placements.TryAdd(normalization.Apply(name), p))
-                    throw new ArgumentException("Invalid pinned placement.", nameof(pinned));
+                    !placements.TryAdd(normalization.Apply(name, "INVALID_OPTIONS"), p))
+                    throw TextHueErrors.WithCode(new ArgumentException("Invalid pinned placement.", nameof(pinned)));
         var entries = labels.Select(normalization.Apply).Distinct(StringComparer.Ordinal).Select(name => {
             var digest = Identity.Digest(name, scope, seed);
             return (Name: name, Digest: digest, Mapping: Map(name, digest));
@@ -71,7 +108,7 @@ public sealed partial class Renderer
         foreach (var e in entries)
         {
             bool fixedPlacement = placements.TryGetValue(e.Name, out var p);
-            if (!fixedPlacement) p = Place(e.Mapping.Fraction, placements.Values, separation);
+            if (!fixedPlacement) p = Place(e.Mapping.Fraction, placements.Values, separation, size);
             var result = Placed(e.Mapping, p);
             if (!fixedPlacement)
             {

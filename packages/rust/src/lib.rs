@@ -1,5 +1,7 @@
 #![doc = include_str!("../README.md")]
 mod composite;
+mod error;
+pub use error::TextColorError;
 mod hue;
 #[cfg(feature = "wasm-bindgen")]
 mod wasm;
@@ -10,8 +12,8 @@ mod tables;
 mod work;
 pub use renderer::{
     Assignment, AssignmentReport, BrandColors, CompiledRenderer, ContrastRelationship,
-    ContrastReport, ForegroundPolicy, Placement, Preset, RenderedPalette, Renderer, RoleProfile,
-    ThemeProfile,
+    ContrastReport, ForegroundPolicy, Placement, Preset, RenderedPalette, Renderer, Role,
+    RoleProfile, ThemeProfile,
 };
 mod color;
 pub use color::{Color, CssFormat, Hsl, Oklch};

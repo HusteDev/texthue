@@ -58,8 +58,8 @@ def check_roster(label, command, directory, env):
     """Run three fresh processes and check both visible colors and the saved placements."""
     expected = {
         "@mira": "@mira #a79de9 #000000 #a79de9",
-        "@lee": "@lee #dbb2ee #000000 #e4aeee",
-        "@nico": "@nico #ec9d89 #000000 #ec9d89",
+        "@lee": "@lee #dbb2ee #000000 #cfc163",
+        "@nico": "@nico #ec9d89 #000000 #5ec3a5",
     }
     previous = {}
     for users in (["@mira", "@lee"], ["@mira", "@nico"], ["@lee", "@nico", "@mira"]):

@@ -91,7 +91,7 @@ func (side MigrationSide) snapshot(labels []string) (Collection, []FillCollision
 
 func colorDistance(x, y OKLCH) float64 {
 	ax, ay := x.H*math.Pi/180, y.H*math.Pi/180
-	return math.Hypot(x.L-y.L, math.Hypot(x.C*math.Cos(ax)-y.C*math.Cos(ay), x.C*math.Sin(ax)-y.C*math.Sin(ay)))
+	return math.Hypot(x.L-y.L, math.Hypot(float64(x.C*math.Cos(ax))-float64(y.C*math.Cos(ay)), float64(x.C*math.Sin(ax))-float64(y.C*math.Sin(ay))))
 }
 
 // CompareAssignments previews both configurations over the same complete set.

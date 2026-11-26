@@ -1,6 +1,8 @@
 #![no_main]
 
-#[path = "../../examples/support/options.rs"]
+use texthue::*;
+
+#[path = "../../src/wire/options.rs"]
 mod options;
 
 use libfuzzer_sys::fuzz_target;

@@ -8,6 +8,38 @@ use std::sync::Arc;
 
 pub type Theme = BTreeMap<&'static str, Color>;
 
+/// A color role selectable without a runtime string lookup at the call site.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Role {
+    Background,
+    Subtle,
+    Muted,
+    Fill,
+    OnFill,
+    FillHover,
+    FillActive,
+    Border,
+    Text,
+    Strong,
+}
+
+impl AsRef<str> for Role {
+    fn as_ref(&self) -> &str {
+        match self {
+            Self::Background => "background",
+            Self::Subtle => "subtle",
+            Self::Muted => "muted",
+            Self::Fill => "fill",
+            Self::OnFill => "onFill",
+            Self::FillHover => "fillHover",
+            Self::FillActive => "fillActive",
+            Self::Border => "border",
+            Self::Text => "text",
+            Self::Strong => "strong",
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct ContrastRelationship {
     pub ratio: f64,
@@ -35,6 +67,13 @@ pub struct RenderedPalette {
     pub dark: Theme,
     pub light_contrast: ContrastReport,
     pub dark_contrast: ContrastReport,
+}
+
+impl RenderedPalette {
+    pub fn role(&self, dark: bool, role: Role) -> Option<&Color> {
+        let theme = if dark { &self.dark } else { &self.light };
+        theme.get(role.as_ref())
+    }
 }
 
 #[derive(Clone, Copy, Default)]
@@ -206,14 +245,19 @@ impl CompiledRenderer<'_> {
         self.domain.map(hue)
     }
 
-    pub fn resolve(&self, text: &str) -> Result<RenderedPalette, &'static str> {
+    pub fn resolve(&self, text: &str) -> Result<RenderedPalette, crate::TextColorError> {
         let normalized = self.renderer.normalization.apply(text);
         self.renderer.resolve_normalized(&normalized, self)
     }
 
-    fn selected(&self, text: &str, dark: bool, role: &str) -> Result<[f64; 3], &'static str> {
+    fn selected(
+        &self,
+        text: &str,
+        dark: bool,
+        role: &str,
+    ) -> Result<[f64; 3], crate::TextColorError> {
         if !ROLES.contains(&role) {
-            return Err("Unknown role");
+            return Err(crate::TextColorError::InvalidOptions("Unknown role"));
         }
         let mapped = self
             .renderer
@@ -221,20 +265,38 @@ impl CompiledRenderer<'_> {
         Ok(self.renderer.role_bytes(dark, &mapped, Some(role)).roles[role])
     }
 
-    pub fn color(&self, text: &str, dark: bool, role: &str) -> Result<Color, &'static str> {
+    pub fn color(
+        &self,
+        text: &str,
+        dark: bool,
+        role: impl AsRef<str>,
+    ) -> Result<Color, crate::TextColorError> {
+        let role = role.as_ref();
         self.selected(text, dark, role)
             .map(|channels| self.renderer.display(channels))
     }
 
-    pub fn hex(&self, text: &str, dark: bool, role: &str) -> Result<String, &'static str> {
+    pub fn hex(
+        &self,
+        text: &str,
+        dark: bool,
+        role: impl AsRef<str>,
+    ) -> Result<String, crate::TextColorError> {
+        let role = role.as_ref();
         let [r, g, b] = self.renderer.fallback(self.selected(text, dark, role)?);
         Ok(format!("#{r:02x}{g:02x}{b:02x}"))
     }
 
     /// Return the selected hex only when its required contrast relationships pass.
-    pub fn hex_strict(&self, text: &str, dark: bool, role: &str) -> Result<String, &'static str> {
+    pub fn hex_strict(
+        &self,
+        text: &str,
+        dark: bool,
+        role: impl AsRef<str>,
+    ) -> Result<String, crate::TextColorError> {
+        let role = role.as_ref();
         if !ROLES.contains(&role) {
-            return Err("Unknown role");
+            return Err(crate::TextColorError::InvalidOptions("Unknown role"));
         }
         let renderer = self.renderer;
         let mapped = renderer.mapping(&renderer.normalization.apply(text), self)?;
@@ -256,7 +318,9 @@ impl CompiledRenderer<'_> {
                 .abs()
                 < target
             {
-                Err("Unmet contrast target")
+                Err(crate::TextColorError::UnmetConstraint(
+                    "Unmet contrast target",
+                ))
             } else {
                 Ok(())
             }
@@ -279,7 +343,7 @@ impl CompiledRenderer<'_> {
     pub fn batch<S: AsRef<str>>(
         &self,
         labels: impl IntoIterator<Item = S>,
-    ) -> Result<Vec<Arc<RenderedPalette>>, &'static str> {
+    ) -> Result<Vec<Arc<RenderedPalette>>, crate::TextColorError> {
         let mut cache = HashMap::new();
         let mut result = Vec::new();
         for label in labels {
@@ -299,14 +363,14 @@ impl CompiledRenderer<'_> {
 }
 
 impl Renderer {
-    pub fn resolve(&self, text: &str) -> Result<RenderedPalette, &'static str> {
+    pub fn resolve(&self, text: &str) -> Result<RenderedPalette, crate::TextColorError> {
         self.compile()?.resolve(text)
     }
 
     pub fn batch<S: AsRef<str>>(
         &self,
         labels: impl IntoIterator<Item = S>,
-    ) -> Result<Vec<Arc<RenderedPalette>>, &'static str> {
+    ) -> Result<Vec<Arc<RenderedPalette>>, crate::TextColorError> {
         self.compile()?.batch(labels)
     }
 
@@ -334,16 +398,20 @@ impl Renderer {
     }
 
     /// Validate once and reuse the hue domain, palette filter and normalized overrides.
-    pub fn compile(&self) -> Result<CompiledRenderer<'_>, &'static str> {
+    pub fn compile(&self) -> Result<CompiledRenderer<'_>, crate::TextColorError> {
         if self.foregrounds.is_empty() {
-            return Err("At least one foreground is required");
+            return Err(crate::TextColorError::InvalidOptions(
+                "At least one foreground is required",
+            ));
         }
         let range = match self.contrast_model {
             ContrastModel::Wcag2 => 1.0..=21.0,
             ContrastModel::Apca => 0.0..=106.0,
         };
         if self.contrast_target.is_some_and(|v| !range.contains(&v)) {
-            return Err("Invalid contrast target");
+            return Err(crate::TextColorError::InvalidOptions(
+                "Invalid contrast target",
+            ));
         }
         for (role, value) in &self.contrast_targets {
             if !matches!(
@@ -351,12 +419,16 @@ impl Renderer {
                 "fill" | "fillHover" | "fillActive" | "border" | "text" | "textOnSubtle" | "strong"
             ) || !range.contains(value)
             {
-                return Err("Invalid relationship target");
+                return Err(crate::TextColorError::InvalidOptions(
+                    "Invalid relationship target",
+                ));
             }
         }
         for theme in [self.light_profile, self.dark_profile] {
             if !theme.fill.valid() || !theme.text.valid() {
-                return Err("Invalid role profile");
+                return Err(crate::TextColorError::InvalidOptions(
+                    "Invalid role profile",
+                ));
             }
         }
         let domain = HueDomain::new(self.hue_range, &self.exclude_hues)?;
@@ -366,13 +438,17 @@ impl Renderer {
                 .insert(self.normalization.apply(key), *colors)
                 .is_some()
             {
-                return Err("Duplicate normalized override");
+                return Err(crate::TextColorError::InvalidOptions(
+                    "Duplicate normalized override",
+                ));
             }
         }
         let mut palette = Vec::new();
         if let Some(entries) = &self.palette {
             if entries.is_empty() {
-                return Err("Empty approved palette");
+                return Err(crate::TextColorError::InvalidOptions(
+                    "Empty approved palette",
+                ));
             }
             let target = self
                 .contrast_targets
@@ -414,7 +490,7 @@ impl Renderer {
         &self,
         text: &str,
         prepared: &CompiledRenderer<'_>,
-    ) -> Result<RenderedPalette, &'static str> {
+    ) -> Result<RenderedPalette, crate::TextColorError> {
         Ok(self.render_mapping(self.mapping(text, prepared)?))
     }
 
@@ -437,7 +513,7 @@ impl Renderer {
         &self,
         text: &str,
         prepared: &CompiledRenderer<'_>,
-    ) -> Result<Mapping, &'static str> {
+    ) -> Result<Mapping, crate::TextColorError> {
         let fixed = |colors: BrandColors, source| {
             let light = FixedTone::from(colors.light);
             let dark = FixedTone::from(colors.dark);
@@ -1005,7 +1081,9 @@ mod tests {
                 assert_eq!(compiled.hex("gray", false, role).unwrap(), "#777777");
                 assert_eq!(
                     compiled.hex_strict("gray", false, role),
-                    Err("Unmet contrast target")
+                    Err(crate::TextColorError::UnmetConstraint(
+                        "Unmet contrast target"
+                    ))
                 );
             }
             assert_eq!(
@@ -1014,7 +1092,7 @@ mod tests {
             );
             assert_eq!(
                 compiled.hex_strict("gray", false, "missing"),
-                Err("Unknown role")
+                Err(crate::TextColorError::InvalidOptions("Unknown role"))
             );
         }
     }

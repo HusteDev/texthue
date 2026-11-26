@@ -20,8 +20,9 @@ export type Range = readonly [minimum: number, maximum: number];
 export interface ColorProfile {
   /** Preferred OKLCH lightness range; both endpoints in `0..1`. */
   lightness?: Range;
-  /** Preferred OKLCH chroma range; both endpoints in `0..0.4`. `[0, 0]` requests grayscale. */
+  /** Absolute maximum OKLCH chroma in `0..0.4`. Zero requests grayscale. */
   chromaCap?: number;
+  /** Sampled fraction of the available in-gamut chroma, in `0..1`. */
   chromaScale?: Range;
 }
 
@@ -39,25 +40,32 @@ export interface ThemeProfiles {
  * Every field is optional and omitted fields keep their defaults. Explicit
  * `null` and unknown keys are invalid at every level. Options are never mutated.
  */
-export type ContrastRole = 'fill' | 'fillHover' | 'fillActive' | 'border' | 'text' | 'textOnSubtle' | 'strong';
+export type ContrastRole =
+  | 'fill'
+  | 'fillHover'
+  | 'fillActive'
+  | 'border'
+  | 'text'
+  | 'textOnSubtle'
+  | 'strong';
 export interface NormalizeOptions {
-  unicode?: 'none'|'NFC'|'NFKC';
-  case?: 'none'|'lower';
-  whitespace?: 'none'|'trim'|'collapse';
+  unicode?: 'none' | 'NFC' | 'NFKC';
+  case?: 'none' | 'lower';
+  whitespace?: 'none' | 'trim' | 'collapse';
 }
 export interface TextColorOptions {
-  gamut?: 'srgb'|'display-p3';
-  contrastModel?: 'wcag2'|'apca';
-  overrides?: Readonly<Record<string,string | {light:string;dark:string}>>;
-  paletteMode?: 'fixed'|'anchors';
-  palette?: readonly {id:string;light?:string;dark?:string}[];
+  gamut?: 'srgb' | 'display-p3';
+  contrastModel?: 'wcag2' | 'apca';
+  overrides?: Readonly<Record<string, string | { light: string; dark: string }>>;
+  paletteMode?: 'fixed' | 'anchors';
+  palette?: readonly { id: string; light?: string; dark?: string }[];
   foregrounds?: readonly string[];
-  foregroundPolicy?: 'best'|'first-passing';
-  preset?: 'labels'|'controls'|'chart'|'subdued'|'mono';
+  foregroundPolicy?: 'best' | 'first-passing';
+  preset?: 'labels' | 'controls' | 'chart' | 'subdued' | 'mono';
   hueRange?: Range;
   excludeHues?: readonly Range[];
   normalize?: NormalizeOptions;
-  contrastTargets?: Partial<Record<ContrastRole,number>>;
+  contrastTargets?: Partial<Record<ContrastRole, number>>;
   /**
    * Domain separator mixed into the hash. Default `''`.
    *
@@ -68,20 +76,39 @@ export interface TextColorOptions {
   seed?: number;
   /** Theme backgrounds used for text contrast, as opaque `#RRGGBB` strings. Defaults `#ffffff` and `#121212`. */
   backgrounds?: { light?: string | Color; dark?: string | Color };
-  /** WCAG contrast ratio required for both contrast pairs in both themes; `1..21` inclusive. Default `4.5`. */
+  /** Default target for contrast relationships. WCAG accepts 1–21 (default 4.5, controls 7). APCA accepts 0–106 (default 60). */
   contrastTarget?: number;
   /** Per-theme, per-role lightness and chroma preferences. */
   profiles?: { light?: ThemeProfiles; dark?: ThemeProfiles };
 }
 
 /** sRGB channels as integers in `0..255`. */
-export interface RGB { r: number; g: number; b: number }
+export interface RGB {
+  r: number;
+  g: number;
+  b: number;
+}
+
+/** Encoded Display-P3 channels, each in the unit interval. */
+export interface DisplayP3 {
+  r: number;
+  g: number;
+  b: number;
+}
 
 /** Hue in degrees `[0, 360)`; saturation and lightness in percent, rounded to six decimals. */
-export interface HSL { h: number; s: number; l: number }
+export interface HSL {
+  h: number;
+  s: number;
+  l: number;
+}
 
 /** OKLCH lightness in `0..1`, numeric chroma, and hue in degrees `[0, 360)`, rounded to six decimals. */
-export interface OKLCH { l: number; c: number; h: number }
+export interface OKLCH {
+  l: number;
+  c: number;
+  h: number;
+}
 
 /**
  * One opaque sRGB color in four equivalent representations.
@@ -89,12 +116,12 @@ export interface OKLCH { l: number; c: number; h: number }
  * The RGB bytes are canonical; `hex`, `hsl`, and `oklch` are derived from them.
  */
 export type ToneTrace =
-  | {source:'generated';requested:OKLCH;biased:OKLCH;repaired:OKLCH;fitted:OKLCH}
-  | {source:'supplied';hex:string};
+  | { source: 'generated'; requested: OKLCH; biased: OKLCH; repaired: OKLCH; fitted: OKLCH }
+  | { source: 'supplied'; hex: string };
 
 export interface Color {
   trace?: ToneTrace;
-  p3?: RGB;
+  p3?: DisplayP3;
   css?: string;
   srgbClipped?: boolean;
   /** Lowercase six-digit `#rrggbb`. */
@@ -108,7 +135,7 @@ export interface Color {
 export interface ContrastResult {
   /** Signed Lc when APCA is selected. ratio always measures WCAG 2 contrast. */
   value?: number;
-  model?: 'apca'|'wcag2';
+  model?: 'apca' | 'wcag2';
   /** WCAG contrast ratio of the final RGB pair, at full computational precision. */
   ratio: number;
   /** Whether `ratio` is at least the configured target. */
@@ -139,12 +166,15 @@ export interface ThemeColors {
   text: Color;
   strong: Color;
   /** The configured target plus measurements for the fill/onFill and text/background pairs. */
-  contrast: { target: number } & Record<'fill'|'fillHover'|'fillActive'|'border'|'text'|'textOnSubtle'|'strong', ContrastResult>;
+  contrast: { target: number } & Record<
+    'fill' | 'fillHover' | 'fillActive' | 'border' | 'text' | 'textOnSubtle' | 'strong',
+    ContrastResult
+  >;
 }
 
 /** Complete result of `resolveTextColors`. */
 export interface ColorSet {
-  source: 'hash'|'assigned'|'palette'|'override';
+  source: 'hash' | 'assigned' | 'palette' | 'override';
   /** Algorithm identifier that produced this result. */
   version: 'text-to-color-v1';
   /** Hash-derived identity hue in degrees, unrounded. Shared by all four roles before gamut fitting. */
@@ -166,29 +196,47 @@ export type Triple = [number, number, number];
 export type Matrix = [Triple, Triple, Triple];
 
 /** A gamut-fitted color: final RGB bytes plus the retained pre-quantization lightness and chroma. */
-export interface FittedColor { rgb: Triple; chroma: number; lightness: number }
+export interface FittedColor {
+  rgb: Triple;
+  chroma: number;
+  lightness: number;
+}
 
 /** The selected color for a role and its contrast metadata. */
-export interface ChosenColor { rgb: Triple; metadata: ContrastResult; fitted:FittedColor; trace?:ToneTrace }
+export interface ChosenColor {
+  rgb: Triple;
+  metadata: ContrastResult;
+  fitted: FittedColor;
+  trace?: ToneTrace;
+}
 
 /** A profile with both ranges present. */
-export interface ResolvedProfile { lightness: Range; chromaCap: number; chromaScale: Range }
+export interface ResolvedProfile {
+  lightness: Range;
+  chromaCap: number;
+  chromaScale: Range;
+}
 
 /** Options after validation, with defaults applied and backgrounds parsed to RGB bytes. */
 export interface ResolvedOptions {
-  gamut: 'srgb'|'display-p3';
-  canonical: (rgb:Triple)=>Triple;
-  contrastModel: 'wcag2'|'apca';
-  measure: (text:Triple, background:Triple)=>number;
-  exportOptions: () => Record<string,unknown>;
-  anchor: (fraction:number,theme:'light'|'dark')=>{hue:number; cap:number}|undefined;
-  brand: (name:string,digest:DataView)=>{light:Triple;dark:Triple;source:'palette'|'override'}|undefined;
-  selectForeground: (rgb:Triple, target:number)=>Triple;
-  formatForeground: (rgb:Triple)=>Color;
-  hueDomain: (hue:number)=>number;
-  excludesHue: ((hue:number)=>boolean) | undefined;
-  normalize: (text:string)=>string;
-  targets: Record<ContrastRole,number>;
+  gamut: 'srgb' | 'display-p3';
+  canonical: (rgb: Triple) => Triple;
+  contrastModel: 'wcag2' | 'apca';
+  measure: (text: Triple, background: Triple) => number;
+  segments: Range[];
+  exclusions: Range[];
+  exportOptions: () => Record<string, unknown>;
+  anchor: (fraction: number, theme: 'light' | 'dark') => { hue: number; cap: number } | undefined;
+  brand: (
+    name: string,
+    digest: DataView,
+  ) => { light: Triple; dark: Triple; source: 'palette' | 'override' } | undefined;
+  selectForeground: (rgb: Triple, target: number) => Triple;
+  formatForeground: (rgb: Triple) => Color;
+  hueDomain: (hue: number) => number;
+  excludesHue: ((hue: number) => boolean) | undefined;
+  normalize: (text: string) => string;
+  targets: Record<ContrastRole, number>;
   namespace: string;
   seed: number;
   backgrounds: Record<'light' | 'dark', Triple>;

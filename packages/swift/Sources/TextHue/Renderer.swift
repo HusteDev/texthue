@@ -1,9 +1,19 @@
 import Foundation
 
-public struct RoleProfile: Decodable {
+public struct RoleProfile: Decodable, Sendable {
     public var lightness: [Double]?
     public var chromaScale: [Double]?
     public var chromaCap: Double?
+
+    private enum CodingKeys: String, CodingKey, CaseIterable { case lightness, chromaScale, chromaCap }
+
+    public init(from decoder: Decoder) throws {
+        try validateOptionKeys(decoder, allowed: Set(CodingKeys.allCases.map(\.stringValue)))
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        lightness = try values.decodeIfPresent([Double].self, forKey: .lightness)
+        chromaScale = try values.decodeIfPresent([Double].self, forKey: .chromaScale)
+        chromaCap = try values.decodeIfPresent(Double.self, forKey: .chromaCap)
+    }
 
     public init(lightness: [Double]? = nil, chromaScale: [Double]? = nil, chromaCap: Double? = nil) {
         self.lightness = lightness
@@ -21,12 +31,12 @@ public struct RoleProfile: Decodable {
     }
 }
 
-public enum ForegroundPolicy: String, Decodable {
+public enum ForegroundPolicy: String, Decodable, Sendable {
     case best
     case firstPassing = "first-passing"
 }
 
-public enum Preset: String, Decodable {
+public enum Preset: String, Decodable, Sendable {
     case labels, controls, chart, subdued, mono
 
     fileprivate var chromaScale: [Double] {
@@ -39,9 +49,19 @@ public enum Preset: String, Decodable {
     }
 }
 
-public struct PaletteEntry: Decodable {
+public struct PaletteEntry: Decodable, Sendable {
     public let id: String
     public let light, dark: String?
+
+    private enum CodingKeys: String, CodingKey, CaseIterable { case id, light, dark }
+
+    public init(from decoder: Decoder) throws {
+        try validateOptionKeys(decoder, allowed: Set(CodingKeys.allCases.map(\.stringValue)))
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(String.self, forKey: .id)
+        light = try values.decodeIfPresent(String.self, forKey: .light)
+        dark = try values.decodeIfPresent(String.self, forKey: .dark)
+    }
 
     public init(id: String, light: String? = nil, dark: String? = nil) {
         self.id = id
@@ -50,7 +70,7 @@ public struct PaletteEntry: Decodable {
     }
 }
 
-public struct BrandColors: Decodable {
+public struct BrandColors: Decodable, Sendable {
     public let light, dark: String
 
     public init(light: String, dark: String) {
@@ -64,6 +84,7 @@ public struct BrandColors: Decodable {
         if let hex = try? decoder.singleValueContainer().decode(String.self) {
             self.init(light: hex, dark: hex)
         } else {
+            try validateOptionKeys(decoder, allowed: ["light", "dark"])
             let values = try decoder.container(keyedBy: CodingKeys.self)
             try self.init(light: values.decode(String.self, forKey: .light),
                           dark: values.decode(String.self, forKey: .dark))
@@ -71,7 +92,7 @@ public struct BrandColors: Decodable {
     }
 }
 
-public struct RenderOptions: Decodable {
+public struct RenderOptions: Decodable, Sendable {
     public var gamut: Gamut?
     public var hueRange: [Double]?
     public var excludeHues: [[Double]]?
@@ -89,10 +110,39 @@ public struct RenderOptions: Decodable {
     public var backgrounds: [String: String]?
     public var profiles: [String: [String: RoleProfile]]?
 
+    private enum CodingKeys: String, CodingKey, CaseIterable { case gamut, hueRange, excludeHues, palette, overrides, preset, normalize, namespace, seed, foregrounds, foregroundPolicy, contrastModel, contrastTarget, contrastTargets, backgrounds, profiles }
+
+    public init(from decoder: Decoder) throws {
+        try validateOptionKeys(decoder, allowed: Set(CodingKeys.allCases.map(\.stringValue)))
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        gamut = try values.decodeIfPresent(Gamut.self, forKey: .gamut)
+        hueRange = try values.decodeIfPresent([Double].self, forKey: .hueRange)
+        excludeHues = try values.decodeIfPresent([[Double]].self, forKey: .excludeHues)
+        palette = try values.decodeIfPresent([PaletteEntry].self, forKey: .palette)
+        overrides = try values.decodeIfPresent([String: BrandColors].self, forKey: .overrides)
+        preset = try values.decodeIfPresent(Preset.self, forKey: .preset)
+        normalize = try values.decodeIfPresent(Normalization.self, forKey: .normalize)
+        namespace = try values.decodeIfPresent(String.self, forKey: .namespace)
+        seed = try values.decodeIfPresent(UInt32.self, forKey: .seed)
+        foregrounds = try values.decodeIfPresent([String].self, forKey: .foregrounds)
+        foregroundPolicy = try values.decodeIfPresent(ForegroundPolicy.self, forKey: .foregroundPolicy)
+        contrastModel = try values.decodeIfPresent(ContrastModel.self, forKey: .contrastModel)
+        contrastTarget = try values.decodeIfPresent(Double.self, forKey: .contrastTarget)
+        contrastTargets = try values.decodeIfPresent([String: Double].self, forKey: .contrastTargets)
+        backgrounds = try values.decodeIfPresent([String: String].self, forKey: .backgrounds)
+        profiles = try values.decodeIfPresent([String: [String: RoleProfile]].self, forKey: .profiles)
+    }
+
     public init() {}
 }
 
-public enum RenderError: Error { case invalidOptions, unmetConstraint }
+public enum RenderError: String, Error, Sendable {
+    case invalidText = "INVALID_TEXT"
+    case invalidOptions = "INVALID_OPTIONS"
+    case unmetConstraint = "UNMET_CONSTRAINT"
+
+    public var code: String { rawValue }
+}
 
 private extension RGB {
     init(hex raw: String) throws {
@@ -136,7 +186,7 @@ private struct ThemeBackground {
     }
 }
 
-public struct ContrastRelationship: Equatable, Codable {
+public struct ContrastRelationship: Equatable, Codable, Sendable {
     public let ratio: Double
     public let meetsTarget, lightnessAdjusted, chromaCapped, chromaReduced: Bool
     public let fallback: String?
@@ -160,7 +210,7 @@ public struct ContrastRelationship: Equatable, Codable {
     }
 }
 
-public struct ContrastReport: Equatable, Encodable {
+public struct ContrastReport: Equatable, Encodable, Sendable {
     public let target: Double
     public let relationships: [String: ContrastRelationship]
     enum CodingKeys: String, CodingKey { case target }
@@ -182,7 +232,7 @@ private struct ReportedTheme: Equatable, Encodable {
     }
 }
 
-public struct RenderedPalette: Equatable, Encodable {
+public struct RenderedPalette: Equatable, Encodable, Sendable {
     public let version: String
     public let source: String
     public let hueFraction: Double
@@ -197,7 +247,7 @@ public struct RenderedPalette: Equatable, Encodable {
     }
 }
 
-public struct Renderer {
+public struct Renderer: Sendable {
     let options: RenderOptions
 
     private let normalization: Normalization
@@ -281,6 +331,12 @@ public struct Renderer {
         options.seed = seed
         options.contrastTarget = contrastTarget
         try self.init(options: options)
+    }
+
+    /// Validates raw UTF-16 before Swift can replace a malformed code unit.
+    public func resolve(utf16 units: [UInt16]) throws -> RenderedPalette {
+        guard let text = String(validating: units, as: UTF16.self) else { throw RenderError.invalidText }
+        return try resolve(text)
     }
 
     public func resolve(_ text: String) throws -> RenderedPalette {
@@ -566,7 +622,7 @@ extension Renderer {
                 colors[name] = try placed(original, fixed)
                 continue
             }
-            let initial = Placement.choose(original.fraction, placements.values, separation)
+            let initial = Placement.choose(original.fraction, placements.values, separation, size: size)
             var selected = initial
             var palette = try placed(original, initial)
             var points = project(palette)

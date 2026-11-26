@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {labelColors} from '@texthue/tailwind';
+import {labelColors, namedLabelColors} from '@texthue/tailwind';
 import {createResolver, cssVariables} from 'texthue';
 
 test('Tailwind tokens reproduce assigned colors across themes and normalized aliases', () => {
@@ -14,4 +14,16 @@ test('Tailwind tokens reproduce assigned colors across themes and normalized ali
     assert.deepEqual({...tokens},Object.fromEntries(expected));
     assert.deepEqual(tokens,labelColors([...labels].reverse(),options,theme));
   }
+});
+
+test('named tokens support both themes and normalized input aliases', () => {
+  const options = {normalize: {whitespace: 'trim'}};
+  const labels = {issue: ' Bug ', docs: 'Documentation'};
+  const {colorsByInput} = createResolver(options).assign(Object.values(labels));
+  const tokens = namedLabelColors(labels, options);
+  for (const theme of ['light','dark']) {
+    assert.equal(tokens[`texthue-issue-${theme}-fill`], colorsByInput[' Bug '][theme].fill.hex);
+    assert.equal(tokens[`texthue-docs-${theme}-on-fill`], colorsByInput.Documentation[theme].onFill.hex);
+  }
+  assert.throws(() => namedLabelColors({'bad alias': 'label'}), {code:'INVALID_OPTIONS'});
 });

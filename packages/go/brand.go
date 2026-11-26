@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"math"
+	"sort"
 	"unicode/utf8"
 )
 
@@ -41,12 +42,21 @@ type brandEntry struct {
 	passing bool
 }
 type brandConfig struct {
-	overrides map[string][2]encodedRGB
-	palette   []brandEntry
+	overrides  map[string][2]encodedRGB
+	palette    []brandEntry
+	anchorMode bool
+	anchors    [][2]OKLCH
 }
 
 func compileBrand(raw Options, normal NormalizeOptions, target float64, selectFg func(encodedRGB, float64) encodedRGB) (brandConfig, error) {
 	config := brandConfig{overrides: map[string][2]encodedRGB{}}
+	switch raw.PaletteMode {
+	case "", "fixed":
+	case "anchors":
+		config.anchorMode = true
+	default:
+		return config, invalid("palette mode")
+	}
 	parse := func(pair BrandPair) ([2]encodedRGB, error) {
 		var colors [2]encodedRGB
 		for i, hex := range []string{pair.Light, pair.Dark} {
@@ -101,12 +111,29 @@ func compileBrand(raw Options, normal NormalizeOptions, target float64, selectFg
 		}
 		config.palette = append(config.palette, brandEntry{item.ID, colors, passing})
 	}
+	if config.anchorMode {
+		sort.Slice(config.palette, func(i, j int) bool { return config.palette[i].id < config.palette[j].id })
+		for _, entry := range config.palette {
+			config.anchors = append(config.anchors, [2]OKLCH{formats(entry.colors[0]).OKLCH, formats(entry.colors[1]).OKLCH})
+		}
+	}
 	return config, nil
+}
+
+func (config brandConfig) anchor(fraction float64, theme int, domain hueDomain) (hue, cap float64) {
+	position := float64(fraction * float64(len(config.anchors)))
+	index := int(position)
+	color := config.anchors[index][theme]
+	offset := float64((position - float64(index) - .5) * 30)
+	return domain.mapHue(math.Mod(color.H+offset+360, 360)), color.C * 1.25
 }
 
 func (config brandConfig) selectBrand(name string, digest []byte) (string, *[2]encodedRGB) {
 	if fixed, ok := config.overrides[name]; ok {
 		return "override", &fixed
+	}
+	if config.anchorMode {
+		return "", nil
 	}
 	var winner *brandEntry
 	var best []byte
@@ -127,7 +154,7 @@ func (config brandConfig) selectBrand(name string, digest []byte) (string, *[2]e
 }
 
 func snappedHue(rgb encodedRGB) float64 {
-	return math.Mod(math.Floor(formats(rgb).OKLCH.H*1024+.5)/1024, 360)
+	return math.Mod(math.Floor(float64(formats(rgb).OKLCH.H*1024)+.5)/1024, 360)
 }
 
 func fixedFraction(rgb encodedRGB) float64 {

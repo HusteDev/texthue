@@ -17,6 +17,7 @@ internal val ringOffsets = listOf(0.0, LIGHTNESS_STEP, -LIGHTNESS_STEP, WIDE_STE
 private const val MUTED_RING = 3
 private const val MUTED_SCALE = 0.6
 private const val MAX_SAFE_RING = 9007199254740991L
+private const val SMALL_COLLECTION_LIMIT = 8
 private const val MIN_SLOTS = 12
 private const val MAX_SLOTS = 24
 private const val CANDIDATES = 385
@@ -36,13 +37,29 @@ internal fun normalizePins(pinned: Map<String, Placement>, normalize: (String) -
 ): MutableMap<String, Placement> {
     val result = mutableMapOf<String, Placement>()
     for ((label, p) in pinned) {
-        require(p.hueFraction >= 0 && p.hueFraction < 1 && p.ring in 0..MAX_SAFE_RING)
-        require(result.put(normalize(label), p) == null) { "Duplicate normalized pin" }
+        requireOption(p.hueFraction >= 0 && p.hueFraction < 1 && p.ring in 0..MAX_SAFE_RING)
+        requireOption(result.put(normalize(label), p) == null) { "Duplicate normalized pin" }
     }
     return result
 }
 
-internal fun place(natural: Double, occupied: Collection<Placement>, separation: Double): Placement {
+internal fun place(natural: Double, occupied: Collection<Placement>, separation: Double, size: Int): Placement {
+    if (size <= SMALL_COLLECTION_LIMIT && occupied.isNotEmpty()) {
+        var best = -1.0
+        var chosen = natural
+        for (step in 0 until MAX_SLOTS) {
+            val hue = (natural + step.toDouble() / MAX_SLOTS) % 1.0
+            val distance = occupied.minOf { previous ->
+                val delta = abs(previous.hueFraction - hue)
+                minOf(delta, 1.0 - delta)
+            }
+            if (distance > best) {
+                best = distance
+                chosen = hue
+            }
+        }
+        return Placement(chosen, 0, chosen != natural)
+    }
     var ring = 0L
     while (true) {
         val neighbors = occupied.filter { it.ring == ring }

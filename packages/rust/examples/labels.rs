@@ -1,6 +1,6 @@
-use texthue::Renderer;
+use texthue::{Renderer, Role, TextColorError};
 
-fn main() -> Result<(), &'static str> {
+fn main() -> Result<(), TextColorError> {
     let renderer = Renderer {
         namespace: "project".into(),
         seed: 42,
@@ -9,8 +9,8 @@ fn main() -> Result<(), &'static str> {
     let compiled = renderer.compile()?;
     println!(
         "{} {}",
-        compiled.hex("apple", false, "fill")?,
-        compiled.color("apple", true, "onFill")?.hex
+        compiled.hex("apple", false, Role::Fill)?,
+        compiled.color("apple", true, Role::OnFill)?.hex
     );
     Ok(())
 }

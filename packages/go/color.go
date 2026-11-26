@@ -182,7 +182,7 @@ func round6(x float64) float64 { return math.Floor(float64(x*1e6)+.5) / 1e6 }
 func formats(rgb encodedRGB) Color {
 	r, g, b := float64(rgb[0])/255, float64(rgb[1])/255, float64(rgb[2])/255
 	maximum, minimum := math.Max(r, math.Max(g, b)), math.Min(r, math.Min(g, b))
-	delta, light := maximum-minimum, (maximum+minimum)/2
+	delta, light := maximum-minimum, float64((maximum+minimum)/2)
 	hue, saturation := 0.0, 0.0
 	if delta != 0 {
 		saturation = (maximum - light) / math.Min(light, 1-light)
@@ -386,8 +386,8 @@ func CompositeOver(source Color, alpha float64, backdrop Color) (Color, error) {
 		if channel < 0 || channel > 255 || back[i] < 0 || back[i] > 255 {
 			return Color{}, invalid("sRGB bytes")
 		}
-		linear := alpha*decode(float64(channel)/255) + (1-alpha)*decode(float64(back[i])/255)
-		result[i] = math.Floor(255*encode(linear) + 0.5)
+		linear := float64(alpha*decode(channel/255)) + float64((1-alpha)*decode(back[i]/255))
+		result[i] = math.Floor(float64(255*encode(linear)) + 0.5)
 	}
 	return formats(result), nil
 }
@@ -398,7 +398,10 @@ func apcaContrast(text, background encodedRGB) float64 {
 }
 func weightedAPCA(text, background encodedRGB, weights triple) float64 {
 	luminance := func(rgb encodedRGB) float64 {
-		y := weights[0]*math.Pow(float64(rgb[0])/255, 2.4) + weights[1]*math.Pow(float64(rgb[1])/255, 2.4) + weights[2]*math.Pow(float64(rgb[2])/255, 2.4)
+		r := float64(weights[0] * math.Pow(rgb[0]/255, 2.4))
+		g := float64(weights[1] * math.Pow(rgb[1]/255, 2.4))
+		b := float64(weights[2] * math.Pow(rgb[2]/255, 2.4))
+		y := (r + g) + b
 		if y < .022 {
 			y += math.Pow(.022-y, 1.414)
 		}
@@ -412,7 +415,7 @@ func weightedAPCA(text, background encodedRGB, weights triple) float64 {
 	if bg < fg {
 		backPower, frontPower, offset = .65, .62, -.027
 	}
-	raw := 1.14 * (math.Pow(bg, backPower) - math.Pow(fg, frontPower))
+	raw := float64(1.14 * (math.Pow(bg, backPower) - math.Pow(fg, frontPower)))
 	if math.Abs(raw) < .1 {
 		return 0
 	}
@@ -439,7 +442,7 @@ func p3Fallback(rgb encodedRGB) (encodedRGB, bool) {
 	linear := multiply(xyzToRGB, multiply(p3ToXYZ, decoded))
 	var fallback encodedRGB
 	for i, c := range linear {
-		fallback[i] = math.Floor(255*encode(math.Max(0, math.Min(1, c))) + 0.5)
+		fallback[i] = math.Floor(float64(255*encode(math.Max(0, math.Min(1, c)))) + 0.5)
 	}
 	return fallback, !inside(linear)
 }

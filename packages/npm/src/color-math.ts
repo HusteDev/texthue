@@ -28,14 +28,14 @@ const XYZ_TO_RGB: Matrix = [
   [705 / 12673, -2585 / 12673, 705 / 667],
 ];
 export const XYZ_TO_P3: Matrix = [
-    [446124 / 178915, -333277 / 357830, -72051 / 178915],
-    [-14852 / 17905, 63121 / 35810, 423 / 17905],
-    [11844 / 330415, -50337 / 660830, 316169 / 330415],
+  [446124 / 178915, -333277 / 357830, -72051 / 178915],
+  [-14852 / 17905, 63121 / 35810, 423 / 17905],
+  [11844 / 330415, -50337 / 660830, 316169 / 330415],
 ];
 export const P3_TO_XYZ: Matrix = [
-    [608311 / 1250200, 189793 / 714400, 198249 / 1000160],
-    [35783 / 156275, 247089 / 357200, 198249 / 2500400],
-    [0 / 1, 32229 / 714400, 5220557 / 5000800],
+  [608311 / 1250200, 189793 / 714400, 198249 / 1000160],
+  [35783 / 156275, 247089 / 357200, 198249 / 2500400],
+  [0 / 1, 32229 / 714400, 5220557 / 5000800],
 ];
 /** Linear sRGB to XYZ D65 (M4). */
 const RGB_TO_XYZ: Matrix = [
@@ -57,20 +57,20 @@ const LMS_TO_LAB: Matrix = [
 ];
 
 /** Multiplies a 3x3 matrix by a column vector. Each row is evaluated as `(m0*v0 + m1*v1) + m2*v2`. */
-export const multiply = (matrix: Matrix, v: Triple): Triple => matrix.map(row =>
-  row[0] * v[0] + row[1] * v[1] + row[2] * v[2]) as Triple;
+export const multiply = (matrix: Matrix, v: Triple): Triple =>
+  matrix.map((row) => row[0] * v[0] + row[1] * v[1] + row[2] * v[2]) as Triple;
 /** Clamps a linear channel to `[0, 1]`. */
 const clamp = (x: number) => Math.max(0, Math.min(1, x));
 /** Whether every linear channel lies within the sRGB gamut, allowing `1e-12` of floating-point residue. */
-const inside = (rgb: Triple) => rgb.every(x => x >= -1e-12 && x <= 1 + 1e-12);
+const inside = (rgb: Triple) => rgb.every((x) => x >= -1e-12 && x <= 1 + 1e-12);
 /** Rounds half up to six decimal places. */
 const round6 = (x: number) => Math.floor(x * 1e6 + 0.5) / 1e6;
 /** Normalizes an angle in degrees into `[0, 360)`. */
 const hueDegrees = (x: number) => ((x % 360) + 360) % 360;
 /** sRGB transfer function: encoded channel to linear light. */
-export const decode = (x: number) => x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+export const decode = (x: number) => (x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4);
 /** sRGB transfer function: linear light to encoded channel. */
-export const encode = (x: number) => x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055;
+export const encode = (x: number) => (x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055);
 
 /**
  * Converts OKLCH coordinates to linear sRGB without clamping.
@@ -82,10 +82,15 @@ export const encode = (x: number) => x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (
  * @param hue - OKLCH hue in degrees.
  * @returns Linear sRGB channels.
  */
-export function oklchToLinear(lightness: number, chroma: number, hue: number, target:Matrix = XYZ_TO_RGB): Triple {
-  const angle = hue * Math.PI / 180;
+export function oklchToLinear(
+  lightness: number,
+  chroma: number,
+  hue: number,
+  target: Matrix = XYZ_TO_RGB,
+): Triple {
+  const angle = (hue * Math.PI) / 180;
   const lab: Triple = [lightness, chroma * Math.cos(angle), chroma * Math.sin(angle)];
-  const lms = multiply(LAB_TO_LMS, lab).map(x => x * x * x) as Triple;
+  const lms = multiply(LAB_TO_LMS, lab).map((x) => x * x * x) as Triple;
   return multiply(target, multiply(LMS_TO_XYZ, lms));
 }
 
@@ -102,36 +107,42 @@ export function oklchToLinear(lightness: number, chroma: number, hue: number, ta
  * @param hue - OKLCH hue in degrees.
  * @returns Final RGB bytes plus the retained chroma and the input lightness.
  */
-export function cusp(lightness: number, hue: number, target:Matrix = XYZ_TO_RGB): number {
+export function cusp(lightness: number, hue: number, target: Matrix = XYZ_TO_RGB): number {
   if (lightness === 0 || lightness === 1) return 0;
-  let low = 0, high = 0.4;
+  let low = 0,
+    high = 0.4;
   for (let i = 0; i < 20; i++) {
     const mid = (low + high) / 2;
-    if (inside(oklchToLinear(lightness, mid, hue,target))) low = mid;
+    if (inside(oklchToLinear(lightness, mid, hue, target))) low = mid;
     else high = mid;
   }
   return low;
 }
 
-export function fitColor(lightness: number, chroma: number, hue: number, target:Matrix = XYZ_TO_RGB): FittedColor {
+export function fitColor(
+  lightness: number,
+  chroma: number,
+  hue: number,
+  target: Matrix = XYZ_TO_RGB,
+): FittedColor {
   if (lightness === 0 || lightness === 1) {
     return { rgb: [lightness * 255, lightness * 255, lightness * 255], chroma: 0, lightness };
   }
   let retained = chroma;
-  let linear = oklchToLinear(lightness, retained, hue,target);
+  let linear = oklchToLinear(lightness, retained, hue, target);
   if (!inside(linear)) {
     let low = 0;
     let high = chroma;
     for (let i = 0; i < 24; i++) {
       const mid = (low + high) / 2;
-      if (inside(oklchToLinear(lightness, mid, hue,target))) low = mid;
+      if (inside(oklchToLinear(lightness, mid, hue, target))) low = mid;
       else high = mid;
     }
     retained = low;
-    linear = oklchToLinear(lightness, retained, hue,target);
+    linear = oklchToLinear(lightness, retained, hue, target);
   }
   return {
-    rgb: linear.map(x => Math.floor(encode(clamp(x)) * 255 + 0.5)) as Triple,
+    rgb: linear.map((x) => Math.floor(encode(clamp(x)) * 255 + 0.5)) as Triple,
     chroma: retained,
     lightness,
   };
@@ -143,9 +154,9 @@ export function fitColor(lightness: number, chroma: number, hue: number, target:
  * @param rgb - Integer channels in `0..255`.
  * @returns Relative luminance in `0..1`.
  */
-export function luminance(rgb: Triple, weights:Triple = [0.2126,0.7152,0.0722]): number {
-  const [r, g, b] = rgb.map(x => decode(x / 255)) as Triple;
-  return weights[0]*r + weights[1]*g + weights[2]*b;
+export function luminance(rgb: Triple, weights: Triple = [0.2126, 0.7152, 0.0722]): number {
+  const [r, g, b] = rgb.map((x) => decode(x / 255)) as Triple;
+  return weights[0] * r + weights[1] * g + weights[2] * b;
 }
 
 /**
@@ -153,8 +164,8 @@ export function luminance(rgb: Triple, weights:Triple = [0.2126,0.7152,0.0722]):
  *
  * @returns A ratio in `1..21`, at full computational precision.
  */
-export function contrast(first: Triple, second: Triple, weights?:Triple): number {
-  return contrastRatio(luminance(first,weights), luminance(second,weights));
+export function contrast(first: Triple, second: Triple, weights?: Triple): number {
+  return contrastRatio(luminance(first, weights), luminance(second, weights));
 }
 
 export function contrastRatio(a: number, b: number): number {
@@ -189,10 +200,11 @@ export function formats(rgb: Triple): Color {
   return { hex: hexFormat(rgb), rgb: rgbFormat(rgb), hsl: hslFormat(rgb), oklch: oklchFormat(rgb) };
 }
 
-export const hexFormat = (rgb:Triple) => `#${rgb.map(x => x.toString(16).padStart(2,'0')).join('')}`;
-export const rgbFormat = ([r,g,b]:Triple) => ({r,g,b});
-export function hslFormat(rgb:Triple) {
-  const values = rgb.map(x => x / 255) as Triple;
+export const hexFormat = (rgb: Triple) =>
+  `#${rgb.map((x) => x.toString(16).padStart(2, '0')).join('')}`;
+export const rgbFormat = ([r, g, b]: Triple) => ({ r, g, b });
+export function hslFormat(rgb: Triple) {
+  const values = rgb.map((x) => x / 255) as Triple;
   const maximum = Math.max(...values);
   const minimum = Math.min(...values);
   const delta = maximum - minimum;
@@ -208,20 +220,20 @@ export function hslFormat(rgb:Triple) {
     else hue = (red - green) / delta + 4;
     hue *= 60;
   }
-  return {h:round6(hue)%360,s:round6(saturation*100),l:round6(light*100)};
+  return { h: round6(hue) % 360, s: round6(saturation * 100), l: round6(light * 100) };
 }
-export function toOklab(rgb:Triple, matrix:Matrix=RGB_TO_XYZ):Triple {
-  const values = rgb.map(x => x/255);
+export function toOklab(rgb: Triple, matrix: Matrix = RGB_TO_XYZ): Triple {
+  const values = rgb.map((x) => x / 255);
   const xyz = multiply(matrix, values.map(decode) as Triple);
   return multiply(LMS_TO_LAB, multiply(XYZ_TO_LMS, xyz).map(Math.cbrt) as Triple);
 }
-export function oklchFormat(rgb:Triple, matrix:Matrix=RGB_TO_XYZ) {
-  const [r,g,b] = rgb;
+export function oklchFormat(rgb: Triple, matrix: Matrix = RGB_TO_XYZ) {
+  const [r, g, b] = rgb;
   const lab = toOklab(rgb, matrix);
   const neutral = r === g && g === b;
   const chroma = neutral ? 0 : Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
-  const okHue = neutral ? 0 : hueDegrees(Math.atan2(lab[2], lab[1]) * 180 / Math.PI);
-  return {l:round6(lab[0]),c:round6(chroma),h:round6(okHue)%360};
+  const okHue = neutral ? 0 : hueDegrees((Math.atan2(lab[2], lab[1]) * 180) / Math.PI);
+  return { l: round6(lab[0]), c: round6(chroma), h: round6(okHue) % 360 };
 }
 
 /**
@@ -241,15 +253,33 @@ export function oklchFormat(rgb:Triple, matrix:Matrix=RGB_TO_XYZ) {
  * @returns Final RGB bytes with contrast metadata.
  * @throws {Error} If no lightness candidate passes for a fill. The endpoints guarantee this cannot happen for valid targets.
  */
-export function chooseColor(lightness: number, chroma: number, hue: number, background: Triple | null, target: number, second?: Triple, secondTarget = target, selectForeground: (rgb:Triple, target:number)=>Triple = foreground, score?: (rgb:Triple)=>number, matrix?:Matrix): ChosenColor {
-  const measure = score ?? ((rgb: Triple) => Math.min(contrast(rgb, background ?? selectForeground(rgb,target)), second ? contrast(rgb, second) * (target / secondTarget) : Infinity));
-  const initial = fitColor(lightness, chroma, hue,matrix);
+export function chooseColor(
+  lightness: number,
+  chroma: number,
+  hue: number,
+  background: Triple | null,
+  target: number,
+  second?: Triple,
+  secondTarget = target,
+  selectForeground: (rgb: Triple, target: number) => Triple = foreground,
+  score?: (rgb: Triple) => number,
+  matrix?: Matrix,
+): ChosenColor {
+  const measure =
+    score ??
+    ((rgb: Triple) =>
+      Math.min(
+        contrast(rgb, background ?? selectForeground(rgb, target)),
+        second ? contrast(rgb, second) * (target / secondTarget) : Infinity,
+      ));
+  const initial = fitColor(lightness, chroma, hue, matrix);
   let chosen = initial;
   let ratio = measure(initial.rgb);
   let fallback: ChosenColor['metadata']['fallback'] = null;
   if (ratio < target) {
     if (Math.max(measure([0, 0, 0]), measure([255, 255, 255])) < target) {
-      const rgb: Triple = measure([0,0,0]) >= measure([255,255,255]) ? [0,0,0] : [255,255,255];
+      const rgb: Triple =
+        measure([0, 0, 0]) >= measure([255, 255, 255]) ? [0, 0, 0] : [255, 255, 255];
       chosen = { rgb, lightness: rgb[0] / 255, chroma: 0 };
       ratio = measure(rgb);
       fallback = 'unattainable-contrast';
@@ -259,11 +289,11 @@ export function chooseColor(lightness: number, chroma: number, hue: number, back
       for (const endpoint of [0, 4096]) {
         let pass = endpoint;
         let fail = endpoint === 0 ? Math.ceil(lightness * 4096) : Math.floor(lightness * 4096);
-        let candidate = fitColor(pass / 4096, chroma, hue,matrix);
+        let candidate = fitColor(pass / 4096, chroma, hue, matrix);
         if (measure(candidate.rgb) < target) continue;
         while (Math.abs(pass - fail) > 1) {
           const mid = Math.floor((pass + fail) / 2);
-          const probe = fitColor(mid / 4096, chroma, hue,matrix);
+          const probe = fitColor(mid / 4096, chroma, hue, matrix);
           const measured = measure(probe.rgb);
           if (measured >= target) {
             pass = mid;
@@ -285,7 +315,7 @@ export function chooseColor(lightness: number, chroma: number, hue: number, back
       for (let steps = 0; ratio < target && steps < 64; steps++) {
         grid += endpointStep;
         if (grid < 0 || grid > 4096) break;
-        chosen = fitColor(grid / 4096, chroma, hue,matrix);
+        chosen = fitColor(grid / 4096, chroma, hue, matrix);
         ratio = measure(chosen.rgb);
       }
       if (ratio < target) throw new Error('Contrast repair lost its passing candidate');
@@ -306,56 +336,71 @@ export function chooseColor(lightness: number, chroma: number, hue: number, back
 }
 
 /** Composite validated sRGB bytes in linear light, quantizing once at the end. */
-export function blendOver(source:Triple, alpha:number, background:Triple):Triple {
-  return source.map((byte,i) => {
-    const linear = alpha*decode(byte/255) + (1-alpha)*decode(Number(background[i])/255);
-    return Math.round(255*encode(linear));
+export function blendOver(source: Triple, alpha: number, background: Triple): Triple {
+  return source.map((byte, i) => {
+    const linear = alpha * decode(byte / 255) + (1 - alpha) * decode(Number(background[i]) / 255);
+    return Math.round(255 * encode(linear));
   }) as Triple;
 }
 
 /** Signed APCA-W3 0.1.9 Lc for two opaque sRGB byte triples, text first. */
-export function apcaContrast(text:Triple, background:Triple, weights:Triple=[0.2126729,0.7151522,0.0721750]):number {
-  const luminance = ([r,g,b]:Triple) => {
-    const y = weights[0]*(r/255)**2.4 + weights[1]*(g/255)**2.4 + weights[2]*(b/255)**2.4;
+export function apcaContrast(
+  text: Triple,
+  background: Triple,
+  weights: Triple = [0.2126729, 0.7151522, 0.072175],
+): number {
+  const luminance = ([r, g, b]: Triple) => {
+    const y =
+      weights[0] * (r / 255) ** 2.4 + weights[1] * (g / 255) ** 2.4 + weights[2] * (b / 255) ** 2.4;
     // biome-ignore lint/suspicious/noApproximativeNumericConstant: APCA-W3 specifies 1.414 exactly.
-    return y < 0.022 ? y + (0.022-y)**1.414 : y;
+    return y < 0.022 ? y + (0.022 - y) ** 1.414 : y;
   };
-  const fg = luminance(text), bg = luminance(background);
-  if (Math.abs(fg-bg)<0.0005) return 0;
+  const fg = luminance(text),
+    bg = luminance(background);
+  if (Math.abs(fg - bg) < 0.0005) return 0;
   const positive = bg > fg;
-  const raw = 1.14*(bg**(positive?0.56:0.65) - fg**(positive?0.57:0.62));
-  if (Math.abs(raw)<0.1) return 0;
-  return 100*(raw-(positive?0.027:-0.027));
+  const raw = 1.14 * (bg ** (positive ? 0.56 : 0.65) - fg ** (positive ? 0.57 : 0.62));
+  if (Math.abs(raw) < 0.1) return 0;
+  return 100 * (raw - (positive ? 0.027 : -0.027));
 }
 
 /** Clip a quantized Display-P3 rendition into sRGB for its fallback. */
-export function p3Fallback(rgb:Triple) {
-  const xyz = multiply(P3_TO_XYZ,rgb.map(v=>decode(v/255)) as Triple);
-  const linear = multiply(XYZ_TO_RGB,xyz);
-  return {rgb:linear.map(v=>Math.round(255*encode(clamp(v)))) as Triple,srgbClipped:!inside(linear)};
+export function p3Fallback(rgb: Triple) {
+  const xyz = multiply(P3_TO_XYZ, rgb.map((v) => decode(v / 255)) as Triple);
+  const linear = multiply(XYZ_TO_RGB, xyz);
+  return {
+    rgb: linear.map((v) => Math.round(255 * encode(clamp(v)))) as Triple,
+    srgbClipped: !inside(linear),
+  };
 }
 
-export function srgbToP3(rgb:Triple, fullPrecision = false):Triple {
-  const xyz = multiply(RGB_TO_XYZ,rgb.map(v=>decode(v/255)) as Triple);
-  const channels = multiply(XYZ_TO_P3,xyz).map(v=>encode(clamp(v))) as Triple;
-  return fullPrecision ? channels : channels.map(round6) as Triple;
+export function srgbToP3(rgb: Triple, fullPrecision = false): Triple {
+  const xyz = multiply(RGB_TO_XYZ, rgb.map((v) => decode(v / 255)) as Triple);
+  const channels = multiply(XYZ_TO_P3, xyz).map((v) => encode(clamp(v))) as Triple;
+  return fullPrecision ? channels : (channels.map(round6) as Triple);
 }
 
-export function p3Contrast(text:Triple,background:Triple):number {
-  return contrast(text,background,P3_TO_XYZ[1]);
+export function p3Contrast(text: Triple, background: Triple): number {
+  return contrast(text, background, P3_TO_XYZ[1]);
 }
 
-export function p3ApcaContrast(text:Triple,background:Triple):number {
-  return apcaContrast(text,background,[0.2289829594805780,0.6917492625852380,0.0792677779341829]);
+export function p3ApcaContrast(text: Triple, background: Triple): number {
+  return apcaContrast(text, background, [0.228982959480578, 0.691749262585238, 0.0792677779341829]);
 }
 
-export const p3Channels = (rgb:Triple) => rgb.map(v=>round6(v/255)) as Triple;
-export const p3Css = (channels:Triple) => `color(display-p3 ${channels.join(' ')})`;
+export const p3Channels = (rgb: Triple) => rgb.map((v) => round6(v / 255)) as Triple;
+export const p3Css = (channels: Triple) => `color(display-p3 ${channels.join(' ')})`;
 
-export function p3Formats(rgb:Triple):Color {
+export function p3Formats(rgb: Triple): Color {
   const fallback = p3Fallback(rgb);
   const channels = p3Channels(rgb);
-  return {hex:hexFormat(fallback.rgb),rgb:rgbFormat(fallback.rgb),hsl:hslFormat(fallback.rgb),
-    oklch:oklchFormat(rgb,P3_TO_XYZ),p3:rgbFormat(channels),css:p3Css(channels),
-    srgbClipped:fallback.srgbClipped};
+  return {
+    hex: hexFormat(fallback.rgb),
+    rgb: rgbFormat(fallback.rgb),
+    hsl: hslFormat(fallback.rgb),
+    oklch: oklchFormat(rgb, P3_TO_XYZ),
+    p3: rgbFormat(channels),
+    css: p3Css(channels),
+    srgbClipped: fallback.srgbClipped,
+  };
 }

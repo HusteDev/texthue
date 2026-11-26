@@ -49,12 +49,22 @@ Options are JSON-style records with these keys. Omission selects a default; expl
 | `profiles.dark.text.lightness` | `[0.72, 0.82]` | `0 <= min <= max <= 1` |
 | Each profile's `chromaScale` | [0.6,0.8] | ordered range in [0,1] |
 | Each profile's `chromaCap` | fill 0.16, text 0.19 | [0,0.4] |
-| seed | 0 | uint32 |
-| contrastTargets | contrastTarget, except WCAG border min(3, contrastTarget) | fill, fillHover, fillActive, border, text, textOnSubtle, strong (each uses the selected model's range) |
+| `seed` | 0 | uint32 |
+| `preset` | `labels` | `labels`, `controls`, `chart`, `subdued`, `mono` |
+| `hueRange` | `[0,360]` | Two endpoints in [0,360]. A descending pair crosses zero. |
+| `excludeHues` | `[]` | Up to 16 intervals with the same endpoint rules. At least one allowed hue must remain. |
+| `palette` | absent | Nonempty list of entries with a unique Unicode `id` and at least one opaque hex `light` or `dark` color. An omitted theme inherits the other. |
+| `paletteMode` | `fixed` | `fixed` or `anchors` |
+| `overrides` | `{}` | Map from labels to one opaque hex color or a record with both `light` and `dark`. Reject duplicate normalized identities. |
+| `foregrounds` | `["#000000","#ffffff"]` | Nonempty ordered list of opaque hex colors |
+| `foregroundPolicy` | `best` | `best` or `first-passing` |
+| `contrastTargets` | contrastTarget, except WCAG border min(3, contrastTarget) | fill, fillHover, fillActive, border, text, textOnSubtle, strong (each uses the selected model's range) |
 
 The chroma bound of 0.4 is this API's input limit, not a universal limit on OKLCH. The theme names identify output slots; a supplied background is always used as supplied, even if its brightness differs from its theme name. Background parsing does not accept shorthand, alpha, named colors, or other CSS expressions.
 
 Profile ranges specify starting preferences. Gamut fitting may reduce chroma below its minimum. Contrast adjustment may move lightness outside its range. Only missing fields inherit defaults; supplied invalid fields never silently fall back.
+
+A strict role lookup raises `UNMET_CONSTRAINT` if a required relationship for that role misses its target. Full resolution returns the relationship measurements and fallback metadata.
 
 Invalid text yields error code `INVALID_TEXT`. Invalid options, including an invalid namespace, yield `INVALID_OPTIONS`. Error messages and exception classes are language-specific; error codes are stable. Resource exhaustion and unavailable cryptographic runtimes are execution errors, not color fallbacks.
 
@@ -340,6 +350,52 @@ No clock, random generator, process-native hash, locale, storage, network, theme
 
 Changes to encoding, hash, sampling, defaults, conversion, precision, fitting, or selection that alter the mapping require a new algorithm identifier. New versions must not silently replace v1 for persisted assignments.
 
+## 7. Collection placement
+
+Normalize labels and deduplicate their UTF-8 identities. Reserve caller-pinned placements and fixed brand colors first. Process remaining identities in ascending lexicographic order of their SHA-256 digest bytes. Let `n` count the union of requested and pinned identities. For a nonempty collection, the required hue-fraction spacing within each ring is `clamp(1/n, 1/24, 1/12)`. Fractions wrap modulo one.
+
+For collections of up to eight identities with an occupied placement, choose the initial proposal by farthest-point sampling. Try 24 ring-zero fractions in order, `(natural + step/24) mod 1` for steps 0 through 23. For each fraction, measure the smallest circular hue-fraction distance to any occupied placement, including supplied or reserved pins on other rings. Keep the candidate with the largest minimum distance, retaining the earlier step at a tie. Mark it moved when it differs from the natural fraction. With no occupied placement, use the natural fraction. The subsequent rendered-color check and bounded repair apply to this proposal as usual. For larger collections use the alternating-offset proposal below.
+
+A pinned placement has a finite `hueFraction` in [0, 1), an integer `ring` from 0 through 9,007,199,254,740,991 inclusive, and a boolean `moved`. The upper bound is the largest safe integer in JavaScript and applies to both direct assignment and registry replay.
+
+Starting at ring zero, try the natural hash fraction, then offsets of −1, +1, −2, +2 and so on in units of one quarter of the spacing. Try 385 positions per ring. Take the first position whose circular distance from every occupied fraction on that ring is at least the spacing.
+
+Render the tentative placement. For each occupied identity, compute the Euclidean OKLab distance between the two rendered light fills and between the two rendered dark fills, using their sRGB bytes. The placement score is the minimum of all those distances, or positive infinity for an empty registry. Keep the tentative placement if its score is at least 0.04.
+
+Otherwise, for integer steps 1 through 119, try the tentative fraction plus `(step mod 24)/24` on the tentative ring plus `floor(step/24)`. Skip positions that violate the ring spacing. Keep a candidate only when its score strictly improves the best score so far. Stop at the first score of at least 0.04 or after exhausting the candidates. A replacement has `moved = true`. Preserve pinned and fixed placements throughout. This bounded search can return a smaller separation, particularly when supplied colors coincide.
+
+### Rendering a placement
+
+Replace the first digest fraction with the stored hue fraction before the hue warp. Keep the lightness and chroma fractions from the identity digest. Set `r = ring mod 5`. Add the corresponding offset from `[0, 0.08, -0.08, 0.16, -0.16]` to each bias-adjusted profile lightness before clamping to [0,1]. For r = 3 or 4 multiply each sampled chroma scale by 0.6. Larger ring indices reserve distinct placement space and cycle through the same five renditions.
+
+### Vision profiles and markers
+
+For an explicit nonempty list drawn from `normal`, `protan`, `deutan`, and `tritan`, score the minimum Euclidean OKLab distance over all prior placements, both theme fills, and every requested profile. Use the quantized sRGB fallback fills. For simulated profiles, decode sRGB, multiply by the full-severity Machado matrix for the requested profile, clamp each linear channel, encode, and round to bytes before conversion to OKLab. The three matrices are pinned in the diagnostics reference implementation.
+
+Start with the feasible default placement. Evaluate up to 23 additional positions, numbered 1 through 23. Add `step/24` to the starting fraction modulo one and `step mod 5` to its ring. Skip candidates that violate within-ring spacing. Keep only strict score improvements. With no occupied colors, retain the first placement. Pinned and fixed colors reserve space before this search. A marker uses the final SHA-256 digest byte modulo eight to index circle, square, triangle, diamond, star, cross, pentagon, hexagon in that order.
+
+## 8. Resolver colors and constraints
+
+Presets supply initial values. Explicit profile fields and targets override them. The default chroma scales for labels and controls are [0.6,0.8], chart [0.8,1], subdued [0.2,0.4], and mono [0,0]. Controls raises the default WCAG target to 7.
+
+Split wrapped hue intervals at zero and subtract half-open exclusion arcs from the allowed arcs. Map the warped hue to distance `h / 360 * totalAllowedWidth` along the remaining intervals in ascending order. Select the first interval wider than the remaining distance, add its start, and reduce modulo 360, including when addition rounds to exactly 360. Otherwise subtract the interval width and continue. A full circle preserves the hue. An empty domain is invalid.
+
+A normalized override takes precedence over a palette. For a fixed palette, rank each entry by two keys in descending order. First prefer entries whose selected foreground meets the fill target in both themes. Then compare SHA-256 of the 32 identity digest bytes followed by the exact UTF-8 palette ID, lexicographically by unsigned digest byte. Use the winning theme fills. Preserve the supplied sRGB color and derive the other roles from it. If the selected foreground misses the target on a supplied fill, preserve the fill and report `palette-constraint`.
+
+Select foreground candidates in declaration order. For `best`, maximize absolute contrast in the configured gamut and contrast model, retaining the earliest tie. For `first-passing`, return the first candidate meeting the target, otherwise use the best candidate.
+
+For `anchors`, order entries by UTF-8 ID. Given fraction f and m entries, select entry floor(f*m). Convert its supplied color for each theme to the rounded sRGB OKLCH output coordinates. Add `((f*m mod 1) - 0.5) * 30` degrees to its hue, wrap to [0,360), then apply the configured hue domain. Cap each theme profile's chroma at the smaller of its configured cap and 1.25 times that anchor's chroma. Render generated roles at this hue. An override still supplies an exact fill.
+
+## 9. Saved configurations and registries
+
+Current exports use `texthue-config-v2` and `texthue-registry-v2`. Their four envelope fields match the v1 fields below. The fingerprint describes resolved behavior independently of the envelope version. Importers compile the supplied options and verify the digest before accepting the configuration. A registry from an equivalent resolver can be imported directly.
+
+For v2, encode the object `{algorithm, behavior}` with the binary encoding below and domain prefix `texthue-behavior-v1` followed by a zero byte. The behavior object contains the expanded seed, normalize, contrastTarget, contrastTargets, profiles, backgrounds, foregroundPolicy and foregrounds. Include gamut only for Display-P3, contrastModel only for APCA, palette when populated, and paletteMode for anchors. Use normalized namespace and normalized override keys. Store the ordered allowed nonempty hue intervals as hueSegments and the union of half-open excluded intervals as excludeHues, split at zero and merged in ascending order including adjacent intervals. Presets contribute their resolved profiles and targets. Future optional features contribute a descriptor field only when they change baseline behavior. The config-v2 and registry-v2 conformance files fix the encoding and replay results.
+
+Readers also accept legacy snapshots. The v1 configuration envelope contains exactly `schema` (`texthue-config-v1`), `algorithm` (`text-to-color-v1`), expanded replayable `options`, and a lowercase hexadecimal SHA-256 `fingerprint`. Hash the envelope with the fingerprint field omitted. A v1 registry contains exactly `schema` (`texthue-registry-v1`), `algorithm`, the associated configuration fingerprint, and `assignments` mapping identity strings to placement records from section 7. Reject incompatible schema, algorithm, fingerprint, or invalid placement fields before reuse. Persist placements for absent labels to reserve their positions.
+
+Fingerprint encoding starts with UTF-8 `texthue-config-v1` followed by one zero byte. Recursively encode finite numbers as tag byte 1 followed by big-endian IEEE 754 binary64, canonicalizing negative zero to positive zero. Strings use tag 2, a uint32 big-endian UTF-8 byte count, then the bytes. Arrays use tag 3, a uint32 element count, then their elements in order. Objects use tag 4, a uint32 member count, then each key encoded as a string followed by its encoded value, in lexicographic UTF-8 key order. Reject unsupported values and lengths outside uint32.
+
 ## Appendix A: conversion matrices
 
 Evaluate rational entries as binary64 divisions. Decimal constants below and the operation order in section 3 are fixed for v1.
@@ -375,18 +431,6 @@ M6 (cube-root LMS -> OKLab)
 [ 1.9779985324311684, -2.4285922420485799,  0.4505937096174110 ]
 [ 0.0259040424655478,  0.7827717124575296, -0.8086757549230774 ]
 ```
-
-## Default collection placement
-
-Normalize labels and deduplicate their UTF-8 identities. Reserve caller-pinned placements and fixed brand colors first. Process remaining identities in ascending lexicographic order of their SHA-256 digest bytes. Let `n` count the union of requested and pinned identities. For a nonempty collection, the required hue-fraction spacing within each ring is `clamp(1/n, 1/24, 1/12)`. Fractions wrap modulo one.
-
-A pinned placement has a finite `hueFraction` in [0, 1), an integer `ring` from 0 through 9,007,199,254,740,991 inclusive, and a boolean `moved`. The upper bound is the largest safe integer in JavaScript and applies to both direct assignment and registry replay.
-
-Starting at ring zero, try the natural hash fraction, then offsets of −1, +1, −2, +2 and so on in units of one quarter of the spacing. Try 385 positions per ring. Take the first position whose circular distance from every occupied fraction on that ring is at least the spacing.
-
-Render the tentative placement. For each occupied identity, compute the Euclidean OKLab distance between the two rendered light fills and between the two rendered dark fills, using their sRGB bytes. The placement score is the minimum of all those distances, or positive infinity for an empty registry. Keep the tentative placement if its score is at least 0.04.
-
-Otherwise, for integer steps 1 through 119, try the tentative fraction plus `(step mod 24)/24` on the tentative ring plus `floor(step/24)`. Skip positions that violate the ring spacing. Keep a candidate only when its score strictly improves the best score so far. Stop at the first score of at least 0.04 or after exhausting the candidates. A replacement has `moved = true`. Preserve pinned and fixed placements throughout. This bounded search can return a smaller separation, particularly when supplied colors coincide.
 
 ## Sources and attribution
 

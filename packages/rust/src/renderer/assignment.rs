@@ -22,7 +22,35 @@ pub struct AssignmentReport {
     pub distinct_fills: bool,
 }
 
-fn place(natural: f64, occupied: &BTreeMap<String, Placement>, separation: f64) -> Placement {
+fn place(
+    natural: f64,
+    occupied: &BTreeMap<String, Placement>,
+    separation: f64,
+    size: usize,
+) -> Placement {
+    if size <= 8 && !occupied.is_empty() {
+        let mut best = -1.0;
+        let mut chosen = natural;
+        for step in 0..24 {
+            let hue = (natural + f64::from(step) / 24.0).fract();
+            let distance = occupied
+                .values()
+                .map(|p| {
+                    let delta = (p.hue_fraction - hue).abs();
+                    delta.min(1.0 - delta)
+                })
+                .fold(f64::INFINITY, f64::min);
+            if distance > best {
+                best = distance;
+                chosen = hue;
+            }
+        }
+        return Placement {
+            hue_fraction: chosen,
+            ring: 0,
+            moved: chosen != natural,
+        };
+    }
     for ring in 0.. {
         let neighbors: Vec<_> = occupied.values().filter(|p| p.ring == ring).collect();
         for i in 0..385 {
@@ -49,7 +77,7 @@ impl CompiledRenderer<'_> {
         &self,
         texts: impl IntoIterator<Item = S>,
         pinned: &BTreeMap<String, Placement>,
-    ) -> Result<Assignment, &'static str> {
+    ) -> Result<Assignment, crate::TextColorError> {
         let normalize = |s: &str| self.renderer.normalization.apply(s);
         let names: BTreeSet<_> = texts.into_iter().map(|s| normalize(s.as_ref())).collect();
         let mut assignments = BTreeMap::new();
@@ -58,7 +86,9 @@ impl CompiledRenderer<'_> {
                 || p.ring > (1_u64 << 53) - 1
                 || assignments.insert(normalize(name), *p).is_some()
             {
-                return Err("Invalid pinned placement");
+                return Err(crate::TextColorError::InvalidOptions(
+                    "Invalid pinned placement",
+                ));
             }
         }
         let size = names.len() + assignments.keys().filter(|k| !names.contains(*k)).count();
@@ -103,7 +133,7 @@ impl CompiledRenderer<'_> {
         for (_, name, mapped) in entries {
             let existing = assignments.get(&name).copied();
             let initial =
-                existing.unwrap_or_else(|| place(mapped.fraction, &assignments, separation));
+                existing.unwrap_or_else(|| place(mapped.fraction, &assignments, separation, size));
             let mut palette = placed(mapped, initial);
             if existing.is_none() {
                 let score = |pair: &[[f64; 3]; 2]| {

@@ -7,3 +7,5 @@ environment:
 dependencies:
   crypto: 3.0.8
   unorm_dart: 0.3.3
+dev_dependencies:
+  test: ^1.25.8

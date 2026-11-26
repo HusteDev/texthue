@@ -2,7 +2,7 @@ package com.hustedev.texthue
 
 /** An arc in degrees. A start greater than the end crosses zero. */
 data class HueArc(val start: Double, val end: Double) {
-    init { require(start in 0.0..360.0 && end in 0.0..360.0) }
+    init { requireOption(start in 0.0..360.0 && end in 0.0..360.0) }
     internal fun split() = if (start <= end) listOf(this) else listOf(HueArc(0.0, end), HueArc(start, 360.0))
 }
 
@@ -12,7 +12,7 @@ internal class HueDomain(allowed: HueArc, excluded: List<HueArc>) {
     private val exclusions: List<HueArc>
 
     init {
-        require(excluded.size <= 16)
+        requireOption(excluded.size <= 16)
         var remaining = allowed.split().filter { it.start < it.end }
         exclusions = excluded.flatMap { it.split() }.filter { it.start < it.end }
         for (cut in exclusions) {
@@ -27,7 +27,7 @@ internal class HueDomain(allowed: HueArc, excluded: List<HueArc>) {
         }
         segments = remaining
         width = segments.fold(0.0) { sum, arc -> sum + arc.end - arc.start }
-        require(width > 0.0) { "Empty hue domain" }
+        requireOption(width > 0.0) { "Empty hue domain" }
     }
 
     fun excludes(rgb: DoubleArray, gamut: Gamut): Boolean {
@@ -41,7 +41,7 @@ internal class HueDomain(allowed: HueArc, excluded: List<HueArc>) {
         var distance = hue / 360.0 * width
         for (arc in segments) {
             val span = arc.end - arc.start
-            if (distance < span) return arc.start + distance
+            if (distance < span) return (arc.start + distance) % 360.0
             distance -= span
         }
         return segments.first().start

@@ -21,7 +21,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test:types": "tsc -p tsconfig.examples.json",
-    "examples": "node examples/basic.mjs && node examples/tuning.mjs && node examples/identity.mjs && node examples/errors.mjs && node examples/commonjs.cjs",
+    "examples": "node examples/basic.mjs && node examples/tuning.mjs && node examples/identity.mjs && node examples/errors.mjs && node examples/commonjs.cjs && node examples/collections.mjs",
     "prepack": "npm run build"
   }
 }

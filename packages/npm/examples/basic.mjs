@@ -1,7 +1,10 @@
-// Resolve one string and print every role in every output format for both themes.
-import { resolveTextColors } from 'texthue';
+// Render a badge in each theme and check its documented fill.
+import assert from 'node:assert/strict';
+import { createResolver } from 'texthue';
 
-const colors = resolveTextColors('research');
+const colors = createResolver().resolve('research');
+assert.equal(colors.light.fill.hex, '#59b8d8');
+assert.equal(colors.dark.fill.hex, '#255464');
 console.log('Algorithm:', colors.version);
 for (const themeName of ['light', 'dark']) {
   const theme = colors[themeName];

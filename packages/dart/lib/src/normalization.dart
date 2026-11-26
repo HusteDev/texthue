@@ -23,8 +23,12 @@ final class Normalization {
       r'(?<=\p{Cased}\p{Case_Ignorable}*)Σ(?!\p{Case_Ignorable}*\p{Cased})',
       unicode: true);
 
-  String apply(String input) {
-    validateUtf16(input);
+  String apply(String input) => _apply(input, 'INVALID_TEXT');
+
+  String applyOption(String input) => _apply(input, 'INVALID_OPTIONS');
+
+  String _apply(String input, String code) {
+    validateUtf16(input, code: code);
     var value = switch (unicode) {
       UnicodeForm.none => input,
       UnicodeForm.NFC => unorm.nfc(input),

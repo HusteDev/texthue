@@ -12,7 +12,8 @@ internal object Identity {
         try {
             return Charsets.UTF_8.newEncoder().encode(CharBuffer.wrap(value))
         } catch (error: CharacterCodingException) {
-            throw IllegalArgumentException("Unpaired surrogate in $field", error)
+            val code = if (field == "text") "INVALID_TEXT" else "INVALID_OPTIONS"
+            throw TextColorException(code, "Unpaired surrogate in $field", error)
         }
     }
 

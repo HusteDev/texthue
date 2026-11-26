@@ -9,7 +9,8 @@ import (
 	"strings"
 )
 
-const configSchema = "texthue-config-v1"
+const configSchema = "texthue-config-v2"
+const legacyConfigSchema = "texthue-config-v1"
 
 // replayInputs preserves validated values whose original representation is
 // discarded when compiling the resolver. All mutable fields are copied.
@@ -92,6 +93,9 @@ func (r *Resolver) expandedOptions() map[string]any {
 	if r.apca {
 		result["contrastModel"] = "apca"
 	}
+	if r.brand.anchorMode {
+		result["paletteMode"] = "anchors"
+	}
 	if len(r.brand.palette) > 0 {
 		palette := make([]PaletteEntry, 0, len(r.brand.palette))
 		for _, e := range r.brand.palette {
@@ -115,13 +119,55 @@ func (r *Resolver) configPayload() (map[string]any, error) {
 	return map[string]any{"schema": configSchema, "algorithm": Version, "options": options}, nil
 }
 
+// digestForConfig receives the validated, JSON-shaped options from configPayload.
+func (r *Resolver) digestForConfig(options map[string]any, legacy bool) (string, error) {
+	if legacy {
+		return fingerprint(map[string]any{"schema": legacyConfigSchema, "algorithm": Version, "options": options})
+	}
+	behavior := map[string]any{}
+	for _, key := range []string{"seed", "normalize", "contrastTarget", "contrastTargets", "profiles", "backgrounds",
+		"foregroundPolicy", "foregrounds", "gamut", "contrastModel", "palette", "paletteMode"} {
+		if val, ok := options[key]; ok {
+			behavior[key] = val
+		}
+	}
+	behavior["namespace"] = r.normalize.transform(r.replay.namespace)
+	pairs := map[string]any{}
+	for name, pair := range options["overrides"].(map[string]any) {
+		pairs[r.normalize.transform(name)] = pair
+	}
+	behavior["overrides"] = pairs
+	segments := []any{}
+	for _, arc := range r.domain.arcs {
+		if arc[0] < arc[1] {
+			segments = append(segments, []any{arc[0], arc[1]})
+		}
+	}
+	behavior["hueSegments"] = segments
+	cuts := slices.Clone(r.domain.exclusions)
+	sort.Slice(cuts, func(i, j int) bool { return cuts[i][0] < cuts[j][0] })
+	merged := []any{}
+	for _, cut := range cuts {
+		if n := len(merged); n > 0 {
+			last := merged[n-1].([]any)
+			if cut[0] <= last[1].(float64) {
+				last[1] = math.Max(last[1].(float64), cut[1])
+				continue
+			}
+		}
+		merged = append(merged, []any{cut[0], cut[1]})
+	}
+	behavior["excludeHues"] = merged
+	return fingerprintDomain(map[string]any{"algorithm": Version, "behavior": behavior}, "texthue-behavior-v1")
+}
+
 // ExportConfig returns an independent JSON snapshot suitable for any TextHue port.
 func (r *Resolver) ExportConfig() ([]byte, error) {
 	payload, err := r.configPayload()
 	if err != nil {
 		return nil, err
 	}
-	sum, err := fingerprint(payload)
+	sum, err := r.digestForConfig(payload["options"].(map[string]any), false)
 	if err != nil {
 		return nil, err
 	}
@@ -133,14 +179,20 @@ func (r *Resolver) ExportConfig() ([]byte, error) {
 func ImportConfig(data []byte) (*Resolver, error) {
 	var saved map[string]any
 	if !validJSONUnicode(data) || json.Unmarshal(data, &saved) != nil || len(saved) != 4 ||
-		saved["schema"] != configSchema || saved["algorithm"] != Version {
+		(saved["schema"] != configSchema && saved["schema"] != legacyConfigSchema) || saved["algorithm"] != Version {
 		return nil, invalid("configuration schema or algorithm")
 	}
 	sum, ok := saved["fingerprint"].(string)
 	delete(saved, "fingerprint")
-	actual, err := fingerprint(saved)
-	if !ok || err != nil || sum != actual {
+	if !ok {
 		return nil, invalid("configuration fingerprint")
+	}
+	legacy := saved["schema"] == legacyConfigSchema
+	if legacy {
+		actual, err := fingerprint(saved)
+		if err != nil || sum != actual {
+			return nil, invalid("configuration fingerprint")
+		}
 	}
 	encoded, err := json.Marshal(saved["options"])
 	if err != nil {
@@ -158,7 +210,7 @@ func ImportConfig(data []byte) (*Resolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	actual, err = fingerprint(expanded)
+	actual, err := r.digestForConfig(expanded["options"].(map[string]any), legacy)
 	if err != nil || actual != sum {
 		return nil, invalid("configuration defaults or fingerprint")
 	}

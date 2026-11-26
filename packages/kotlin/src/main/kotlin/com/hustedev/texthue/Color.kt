@@ -53,7 +53,7 @@ internal fun renderedColor(bytes: IntArray, gamut: Gamut = Gamut.SRGB): Color {
 
 /** Composite a six-digit sRGB source over an opaque backdrop in linear light. */
 fun compositeOver(source: String, alpha: Double, backdrop: String): Color {
-    require(alpha in 0.0..1.0) { "Alpha must be between zero and one" }
+    requireOption(alpha in 0.0..1.0) { "Alpha must be between zero and one" }
     val front = parseHex(source)
     val back = parseHex(backdrop)
     return renderedColor(IntArray(3) { i ->
