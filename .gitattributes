@@ -1,1 +1,4 @@
 *.go text eol=lf
+# Match the formatter and generated handbook bytes on Windows checkouts.
+packages/npm/src/**/*.ts text eol=lf
+docs/OPTIONS.md text eol=lf
