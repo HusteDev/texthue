@@ -178,7 +178,6 @@ jobs:
       - uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1
         with:
           sdk: '3.8.1'
-      - run: dart pub get --enforce-lockfile
       - run: python ../../tools/verify.py --port dart
       - name: Compare both theme fills and placements with JavaScript
         working-directory: .
@@ -273,8 +272,6 @@ jobs:
       - uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1
         with:
           sdk: '3.8.1'
-      - run: dart pub get --enforce-lockfile
-        working-directory: packages/dart
       - run: npm ci
       - run: python -m pip install -r requirements-dev.txt
       - run: python tools/check-version.py

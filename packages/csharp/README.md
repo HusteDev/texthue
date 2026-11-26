@@ -36,4 +36,4 @@ Its report measures the closest pairs using rendered light-fill OKLab distance.
 
 NFC and NFKC require runtime globalization data. With invariant globalization enabled, requesting either form raises `PlatformNotSupportedException`. Raw identities work in invariant mode.
 
-The renderer targets .NET 10. NFC and NFKC require globalization data. Under invariant globalization, requesting either form throws a `PlatformNotSupportedException`. Read stable error codes with `TextHueErrors.GetCode(exception)`. Colors, palettes and assignment results compare by value.
+Read stable error codes with `TextHueErrors.GetCode(exception)`. Colors, palettes and assignment results compare by value.

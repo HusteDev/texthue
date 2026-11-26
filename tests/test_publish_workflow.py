@@ -47,7 +47,7 @@ class PublishWorkflowTests(unittest.TestCase):
         self.assertEqual(step["env"]["REQUESTED"], "${{ inputs.version }}")
         self.assertNotIn("${{", step["run"])
         bash = shutil.which("bash")
-        if os.name == "nt":
+        if os.name == "nt" and shutil.which("git"):
             # Resolve Git for Windows through git itself, including shimmed installs.
             git_exec = subprocess.check_output(["git", "--exec-path"], text=True).strip()
             for directory in Path(git_exec).parents:

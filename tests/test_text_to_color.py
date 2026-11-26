@@ -812,6 +812,17 @@ console.log(JSON.stringify(JSON.parse(readFileSync(0,'utf8')).map(
                     command[0] = sys.executable
                 else:
                     command[0] = shutil.which(command[0]) or command[0]
+                if setup := package.get("conformanceSetup"):
+                    setup_run = subprocess.run(
+                        setup,
+                        cwd=ROOT / package["dir"],
+                        env=env,
+                        text=True,
+                        encoding="utf-8",
+                        capture_output=True,
+                        timeout=180,
+                    )
+                    self.assertEqual(setup_run.returncode, 0, setup_run.stdout + setup_run.stderr)
                 run = subprocess.run(
                     command,
                     cwd=ROOT,

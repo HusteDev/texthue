@@ -7,7 +7,7 @@ packages/go/        Go module, executable examples, bundled conformance test dat
 conformance/        Frozen language-neutral valid and invalid vectors
 tests/              JavaScript and cross-language Python tests
 tools/              Verification, package builds, lint runners, shared-file synchronization
-docs/               Maintainer release procedure
+docs/               Versioned handbook, development and release procedures
 SPECIFICATION.md    Canonical algorithm specification
 ```
 

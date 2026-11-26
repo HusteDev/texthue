@@ -118,7 +118,10 @@ def main():
     if options.port:
         package = ports[options.port]
         cwd = ROOT / package["dir"]
-        for command in package["verifyCommands"]:
+        commands = package["verifyCommands"]
+        if setup := package.get("conformanceSetup"):
+            commands = [setup, *commands]
+        for command in commands:
             program, *args = command
             if program == "python":
                 program = sys.executable

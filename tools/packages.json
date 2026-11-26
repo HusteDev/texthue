@@ -101,6 +101,7 @@
         { "path": "packages/dart/pubspec.yaml", "kind": "pyRegex", "pattern": "^version: ([^\\s]+)$" }
       ],
       "sharedFiles": ["SPECIFICATION.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+      "conformanceSetup": ["dart", "pub", "get", "--enforce-lockfile"],
       "verifyCommands": [["dart", "analyze", "--fatal-infos"], ["dart", "test"], ["dart", "run", "{suite}"]],
       "verifySuites": "tool/check_*.dart",
       "optionalToolchain": true,

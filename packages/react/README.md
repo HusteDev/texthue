@@ -2,7 +2,7 @@
 
 Build the core package from the checkout with `npm ci` and `npm run build` at the repository root. The workspace links `@texthue/react` to the local core.
 
-Use `useTextColors(label)` to resolve a single identity. Use `useAssignedColors(labels, settings)` when the labels appear together and need [collection assignment](../../docs/GLOSSARY.md#collection-assignment-assigned). Both hooks return the core [resolver](../../docs/GLOSSARY.md#resolver) result during render.
+Use `useTextColors(label)` to resolve a single identity. Use `useAssignedColors(labels, settings)` when the labels appear together and need [collection assignment](https://github.com/HusteDev/texthue/blob/main/docs/GLOSSARY.md#collection-assignment-assigned). Both hooks return the core [resolver](https://github.com/HusteDev/texthue/blob/main/docs/GLOSSARY.md#resolver) result during render.
 
 ```jsx
 import {TextHueProvider, useAssignedColors} from '@texthue/react';
