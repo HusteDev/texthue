@@ -238,17 +238,14 @@ export function assignCollection(
       if (distance === minDistance) closestPairs.push([first.name, second.name]);
     }
   }
-  const colorsByInput: Record<string, ColorSet> = Object.create(null);
-  for (const [text, identity] of identities) {
-    const color = colors[identity];
-    if (!color) throw new Error('Missing assigned color');
-    Object.defineProperty(colorsByInput, text, {
-      value: color,
-      enumerable: true,
-      configurable: true,
-      writable: true,
-    });
-  }
+  const colorsByInput = Object.fromEntries<ColorSet>(
+    identities.map(([text, identity]) => {
+      const color = colors[identity];
+      if (!color) throw new Error('Missing assigned color');
+      return [text, color] as const;
+    }),
+  );
+  Object.setPrototypeOf(colorsByInput, null);
   return {
     colors,
     colorsByInput,
